@@ -1,0 +1,40 @@
+# env
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+ml/data/
+ml/mlruns/
+ml/mlartifacts/
+
+# node / next
+node_modules/
+web/.next/
+web/out/
+.vercel/
+
+# large raw assets (keep prompts)
+assets-src/**/*.glb
+assets-src/**/*.fbx
+assets-src/**/*.png
+assets-src/**/*.blend
+assets-src/**/*.blend1
+!assets-src/masks/*.png
+
+# os
+.DS_Store
+Thumbs.db
+
+# web extras
+web/coverage/
+web/next-env.d.ts
+*.tsbuildinfo
+
+# local tooling
+.pipeline/

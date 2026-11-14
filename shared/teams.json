@@ -1,0 +1,1000 @@
+{
+  "_meta": {
+    "description": "Single source of truth for the 30 NBA teams. ids match nba_api / stats.nba.com team ids.",
+    "colors_note": "Hex values are approximations of each team's public brand colors (UTA reflects the 2025-26 'Mountain Basketball' palette as sampled by third parties; no official hex published). Verify against each team's current brand before launch. Jersey colorways are generic designs in team colors, not official uniforms.",
+    "arena_coords_note": "Approximate city/arena coordinates, used only for travel-distance features.",
+    "jersey_number_note": "Every generic player wears #26 (for the 2026-27 season). Change freely."
+  },
+  "teams": [
+    {
+      "team_id": 1610612737,
+      "abbr": "ATL",
+      "city": "Atlanta",
+      "name": "Hawks",
+      "conference": "East",
+      "division": "Southeast",
+      "colors": {
+        "primary": "#E03A3E",
+        "secondary": "#C1D32F",
+        "tertiary": "#26282A"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "HAWKS",
+        "primary": {
+          "base": "#E03A3E",
+          "trim": "#C1D32F",
+          "text": "#FFFFFF",
+          "shorts": "#E03A3E"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#E03A3E",
+          "text": "#E03A3E",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 33.757,
+        "lon": -84.396
+      }
+    },
+    {
+      "team_id": 1610612738,
+      "abbr": "BOS",
+      "city": "Boston",
+      "name": "Celtics",
+      "conference": "East",
+      "division": "Atlantic",
+      "colors": {
+        "primary": "#007A33",
+        "secondary": "#BA9653",
+        "tertiary": "#FFFFFF"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "CELTICS",
+        "primary": {
+          "base": "#007A33",
+          "trim": "#FFFFFF",
+          "text": "#FFFFFF",
+          "shorts": "#007A33"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#007A33",
+          "text": "#007A33",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 42.366,
+        "lon": -71.062
+      }
+    },
+    {
+      "team_id": 1610612751,
+      "abbr": "BKN",
+      "city": "Brooklyn",
+      "name": "Nets",
+      "conference": "East",
+      "division": "Atlantic",
+      "colors": {
+        "primary": "#000000",
+        "secondary": "#FFFFFF",
+        "tertiary": "#707271"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "NETS",
+        "primary": {
+          "base": "#000000",
+          "trim": "#FFFFFF",
+          "text": "#FFFFFF",
+          "shorts": "#000000"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#000000",
+          "text": "#000000",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 40.683,
+        "lon": -73.976
+      }
+    },
+    {
+      "team_id": 1610612766,
+      "abbr": "CHA",
+      "city": "Charlotte",
+      "name": "Hornets",
+      "conference": "East",
+      "division": "Southeast",
+      "colors": {
+        "primary": "#1D1160",
+        "secondary": "#00788C",
+        "tertiary": "#A1A1A4"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "HORNETS",
+        "primary": {
+          "base": "#00788C",
+          "trim": "#1D1160",
+          "text": "#FFFFFF",
+          "shorts": "#00788C"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#00788C",
+          "text": "#1D1160",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 35.225,
+        "lon": -80.839
+      }
+    },
+    {
+      "team_id": 1610612741,
+      "abbr": "CHI",
+      "city": "Chicago",
+      "name": "Bulls",
+      "conference": "East",
+      "division": "Central",
+      "colors": {
+        "primary": "#CE1141",
+        "secondary": "#000000",
+        "tertiary": "#FFFFFF"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "BULLS",
+        "primary": {
+          "base": "#CE1141",
+          "trim": "#000000",
+          "text": "#FFFFFF",
+          "shorts": "#CE1141"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#CE1141",
+          "text": "#CE1141",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 41.881,
+        "lon": -87.674
+      }
+    },
+    {
+      "team_id": 1610612739,
+      "abbr": "CLE",
+      "city": "Cleveland",
+      "name": "Cavaliers",
+      "conference": "East",
+      "division": "Central",
+      "colors": {
+        "primary": "#860038",
+        "secondary": "#FDBB30",
+        "tertiary": "#041E42"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "CAVALIERS",
+        "primary": {
+          "base": "#860038",
+          "trim": "#FDBB30",
+          "text": "#FFFFFF",
+          "shorts": "#860038"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#860038",
+          "text": "#860038",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 41.497,
+        "lon": -81.688
+      }
+    },
+    {
+      "team_id": 1610612742,
+      "abbr": "DAL",
+      "city": "Dallas",
+      "name": "Mavericks",
+      "conference": "West",
+      "division": "Southwest",
+      "colors": {
+        "primary": "#00538C",
+        "secondary": "#002B5E",
+        "tertiary": "#B8C4CA"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "MAVERICKS",
+        "primary": {
+          "base": "#00538C",
+          "trim": "#B8C4CA",
+          "text": "#FFFFFF",
+          "shorts": "#00538C"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#00538C",
+          "text": "#00538C",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 32.79,
+        "lon": -96.81
+      }
+    },
+    {
+      "team_id": 1610612743,
+      "abbr": "DEN",
+      "city": "Denver",
+      "name": "Nuggets",
+      "conference": "West",
+      "division": "Northwest",
+      "colors": {
+        "primary": "#0E2240",
+        "secondary": "#FEC524",
+        "tertiary": "#8B2131"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "NUGGETS",
+        "primary": {
+          "base": "#0E2240",
+          "trim": "#FEC524",
+          "text": "#FEC524",
+          "shorts": "#0E2240"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#0E2240",
+          "text": "#0E2240",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 39.749,
+        "lon": -105.008
+      }
+    },
+    {
+      "team_id": 1610612765,
+      "abbr": "DET",
+      "city": "Detroit",
+      "name": "Pistons",
+      "conference": "East",
+      "division": "Central",
+      "colors": {
+        "primary": "#C8102E",
+        "secondary": "#1D42BA",
+        "tertiary": "#BEC0C2"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "PISTONS",
+        "primary": {
+          "base": "#C8102E",
+          "trim": "#1D42BA",
+          "text": "#FFFFFF",
+          "shorts": "#C8102E"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#1D42BA",
+          "text": "#C8102E",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 42.341,
+        "lon": -83.055
+      }
+    },
+    {
+      "team_id": 1610612744,
+      "abbr": "GSW",
+      "city": "Golden State",
+      "name": "Warriors",
+      "conference": "West",
+      "division": "Pacific",
+      "colors": {
+        "primary": "#1D428A",
+        "secondary": "#FFC72C",
+        "tertiary": "#FFFFFF"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "WARRIORS",
+        "primary": {
+          "base": "#1D428A",
+          "trim": "#FFC72C",
+          "text": "#FFC72C",
+          "shorts": "#1D428A"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#1D428A",
+          "text": "#1D428A",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 37.768,
+        "lon": -122.388
+      }
+    },
+    {
+      "team_id": 1610612745,
+      "abbr": "HOU",
+      "city": "Houston",
+      "name": "Rockets",
+      "conference": "West",
+      "division": "Southwest",
+      "colors": {
+        "primary": "#CE1141",
+        "secondary": "#000000",
+        "tertiary": "#C4CED4"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "ROCKETS",
+        "primary": {
+          "base": "#CE1141",
+          "trim": "#000000",
+          "text": "#FFFFFF",
+          "shorts": "#CE1141"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#CE1141",
+          "text": "#CE1141",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 29.751,
+        "lon": -95.362
+      }
+    },
+    {
+      "team_id": 1610612754,
+      "abbr": "IND",
+      "city": "Indiana",
+      "name": "Pacers",
+      "conference": "East",
+      "division": "Central",
+      "colors": {
+        "primary": "#002D62",
+        "secondary": "#FDBB30",
+        "tertiary": "#BEC0C2"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "PACERS",
+        "primary": {
+          "base": "#002D62",
+          "trim": "#FDBB30",
+          "text": "#FDBB30",
+          "shorts": "#002D62"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#002D62",
+          "text": "#002D62",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 39.764,
+        "lon": -86.156
+      }
+    },
+    {
+      "team_id": 1610612746,
+      "abbr": "LAC",
+      "city": "Los Angeles",
+      "name": "Clippers",
+      "conference": "West",
+      "division": "Pacific",
+      "colors": {
+        "primary": "#C8102E",
+        "secondary": "#1D428A",
+        "tertiary": "#BEC0C2"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "CLIPPERS",
+        "primary": {
+          "base": "#1D428A",
+          "trim": "#C8102E",
+          "text": "#FFFFFF",
+          "shorts": "#1D428A"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#1D428A",
+          "text": "#C8102E",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 33.945,
+        "lon": -118.343
+      }
+    },
+    {
+      "team_id": 1610612747,
+      "abbr": "LAL",
+      "city": "Los Angeles",
+      "name": "Lakers",
+      "conference": "West",
+      "division": "Pacific",
+      "colors": {
+        "primary": "#552583",
+        "secondary": "#FDB927",
+        "tertiary": "#000000"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "LAKERS",
+        "primary": {
+          "base": "#FDB927",
+          "trim": "#552583",
+          "text": "#552583",
+          "shorts": "#FDB927"
+        },
+        "alt": {
+          "base": "#552583",
+          "trim": "#FDB927",
+          "text": "#FDB927",
+          "shorts": "#552583"
+        }
+      },
+      "arena_coords": {
+        "lat": 34.043,
+        "lon": -118.267
+      }
+    },
+    {
+      "team_id": 1610612763,
+      "abbr": "MEM",
+      "city": "Memphis",
+      "name": "Grizzlies",
+      "conference": "West",
+      "division": "Southwest",
+      "colors": {
+        "primary": "#5D76A9",
+        "secondary": "#12173F",
+        "tertiary": "#F5B112"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "GRIZZLIES",
+        "primary": {
+          "base": "#12173F",
+          "trim": "#5D76A9",
+          "text": "#FFFFFF",
+          "shorts": "#12173F"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#12173F",
+          "text": "#12173F",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 35.138,
+        "lon": -90.051
+      }
+    },
+    {
+      "team_id": 1610612748,
+      "abbr": "MIA",
+      "city": "Miami",
+      "name": "Heat",
+      "conference": "East",
+      "division": "Southeast",
+      "colors": {
+        "primary": "#98002E",
+        "secondary": "#F9A01B",
+        "tertiary": "#000000"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "HEAT",
+        "primary": {
+          "base": "#000000",
+          "trim": "#98002E",
+          "text": "#FFFFFF",
+          "shorts": "#000000"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#98002E",
+          "text": "#000000",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 25.781,
+        "lon": -80.188
+      }
+    },
+    {
+      "team_id": 1610612749,
+      "abbr": "MIL",
+      "city": "Milwaukee",
+      "name": "Bucks",
+      "conference": "East",
+      "division": "Central",
+      "colors": {
+        "primary": "#00471B",
+        "secondary": "#EEE1C6",
+        "tertiary": "#0077C0"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "BUCKS",
+        "primary": {
+          "base": "#00471B",
+          "trim": "#EEE1C6",
+          "text": "#EEE1C6",
+          "shorts": "#00471B"
+        },
+        "alt": {
+          "base": "#EEE1C6",
+          "trim": "#00471B",
+          "text": "#00471B",
+          "shorts": "#EEE1C6"
+        }
+      },
+      "arena_coords": {
+        "lat": 43.045,
+        "lon": -87.917
+      }
+    },
+    {
+      "team_id": 1610612750,
+      "abbr": "MIN",
+      "city": "Minnesota",
+      "name": "Timberwolves",
+      "conference": "West",
+      "division": "Northwest",
+      "colors": {
+        "primary": "#0C2340",
+        "secondary": "#236192",
+        "tertiary": "#78BE20"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "TIMBERWOLVES",
+        "primary": {
+          "base": "#0C2340",
+          "trim": "#78BE20",
+          "text": "#FFFFFF",
+          "shorts": "#0C2340"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#0C2340",
+          "text": "#236192",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 44.98,
+        "lon": -93.276
+      }
+    },
+    {
+      "team_id": 1610612740,
+      "abbr": "NOP",
+      "city": "New Orleans",
+      "name": "Pelicans",
+      "conference": "West",
+      "division": "Southwest",
+      "colors": {
+        "primary": "#0C2340",
+        "secondary": "#C8102E",
+        "tertiary": "#85714D"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "PELICANS",
+        "primary": {
+          "base": "#0C2340",
+          "trim": "#C8102E",
+          "text": "#FFFFFF",
+          "shorts": "#0C2340"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#0C2340",
+          "text": "#0C2340",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 29.949,
+        "lon": -90.082
+      }
+    },
+    {
+      "team_id": 1610612752,
+      "abbr": "NYK",
+      "city": "New York",
+      "name": "Knicks",
+      "conference": "East",
+      "division": "Atlantic",
+      "colors": {
+        "primary": "#006BB6",
+        "secondary": "#F58426",
+        "tertiary": "#BEC0C2"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "KNICKS",
+        "primary": {
+          "base": "#006BB6",
+          "trim": "#F58426",
+          "text": "#FFFFFF",
+          "shorts": "#006BB6"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#006BB6",
+          "text": "#006BB6",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 40.751,
+        "lon": -73.993
+      }
+    },
+    {
+      "team_id": 1610612760,
+      "abbr": "OKC",
+      "city": "Oklahoma City",
+      "name": "Thunder",
+      "conference": "West",
+      "division": "Northwest",
+      "colors": {
+        "primary": "#007AC1",
+        "secondary": "#EF3B24",
+        "tertiary": "#002D62"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "THUNDER",
+        "primary": {
+          "base": "#007AC1",
+          "trim": "#EF3B24",
+          "text": "#FFFFFF",
+          "shorts": "#007AC1"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#007AC1",
+          "text": "#002D62",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 35.463,
+        "lon": -97.515
+      }
+    },
+    {
+      "team_id": 1610612753,
+      "abbr": "ORL",
+      "city": "Orlando",
+      "name": "Magic",
+      "conference": "East",
+      "division": "Southeast",
+      "colors": {
+        "primary": "#0077C0",
+        "secondary": "#000000",
+        "tertiary": "#C4CED4"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "MAGIC",
+        "primary": {
+          "base": "#0077C0",
+          "trim": "#000000",
+          "text": "#FFFFFF",
+          "shorts": "#0077C0"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#0077C0",
+          "text": "#000000",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 28.539,
+        "lon": -81.384
+      }
+    },
+    {
+      "team_id": 1610612755,
+      "abbr": "PHI",
+      "city": "Philadelphia",
+      "name": "76ers",
+      "conference": "East",
+      "division": "Atlantic",
+      "colors": {
+        "primary": "#006BB6",
+        "secondary": "#ED174C",
+        "tertiary": "#002B5C"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "76ERS",
+        "primary": {
+          "base": "#006BB6",
+          "trim": "#ED174C",
+          "text": "#FFFFFF",
+          "shorts": "#006BB6"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#006BB6",
+          "text": "#006BB6",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 39.901,
+        "lon": -75.172
+      }
+    },
+    {
+      "team_id": 1610612756,
+      "abbr": "PHX",
+      "city": "Phoenix",
+      "name": "Suns",
+      "conference": "West",
+      "division": "Pacific",
+      "colors": {
+        "primary": "#1D1160",
+        "secondary": "#E56020",
+        "tertiary": "#000000"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "SUNS",
+        "primary": {
+          "base": "#1D1160",
+          "trim": "#E56020",
+          "text": "#FFFFFF",
+          "shorts": "#1D1160"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#E56020",
+          "text": "#1D1160",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 33.446,
+        "lon": -112.071
+      }
+    },
+    {
+      "team_id": 1610612757,
+      "abbr": "POR",
+      "city": "Portland",
+      "name": "Trail Blazers",
+      "conference": "West",
+      "division": "Northwest",
+      "colors": {
+        "primary": "#E03A3E",
+        "secondary": "#000000",
+        "tertiary": "#FFFFFF"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "TRAIL BLAZERS",
+        "primary": {
+          "base": "#000000",
+          "trim": "#E03A3E",
+          "text": "#FFFFFF",
+          "shorts": "#000000"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#E03A3E",
+          "text": "#000000",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 45.532,
+        "lon": -122.667
+      }
+    },
+    {
+      "team_id": 1610612758,
+      "abbr": "SAC",
+      "city": "Sacramento",
+      "name": "Kings",
+      "conference": "West",
+      "division": "Pacific",
+      "colors": {
+        "primary": "#5A2D81",
+        "secondary": "#63727A",
+        "tertiary": "#000000"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "KINGS",
+        "primary": {
+          "base": "#5A2D81",
+          "trim": "#63727A",
+          "text": "#FFFFFF",
+          "shorts": "#5A2D81"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#5A2D81",
+          "text": "#5A2D81",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 38.58,
+        "lon": -121.5
+      }
+    },
+    {
+      "team_id": 1610612759,
+      "abbr": "SAS",
+      "city": "San Antonio",
+      "name": "Spurs",
+      "conference": "West",
+      "division": "Southwest",
+      "colors": {
+        "primary": "#000000",
+        "secondary": "#C4CED4",
+        "tertiary": "#FFFFFF"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "SPURS",
+        "primary": {
+          "base": "#000000",
+          "trim": "#C4CED4",
+          "text": "#FFFFFF",
+          "shorts": "#000000"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#000000",
+          "text": "#000000",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 29.427,
+        "lon": -98.437
+      }
+    },
+    {
+      "team_id": 1610612761,
+      "abbr": "TOR",
+      "city": "Toronto",
+      "name": "Raptors",
+      "conference": "East",
+      "division": "Atlantic",
+      "colors": {
+        "primary": "#CE1141",
+        "secondary": "#000000",
+        "tertiary": "#A1A1A4"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "RAPTORS",
+        "primary": {
+          "base": "#CE1141",
+          "trim": "#000000",
+          "text": "#FFFFFF",
+          "shorts": "#CE1141"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#CE1141",
+          "text": "#000000",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 43.643,
+        "lon": -79.379
+      }
+    },
+    {
+      "team_id": 1610612762,
+      "abbr": "UTA",
+      "city": "Utah",
+      "name": "Jazz",
+      "conference": "West",
+      "division": "Northwest",
+      "colors": {
+        "primary": "#5B2B82",
+        "secondary": "#000000",
+        "tertiary": "#6CAEDF"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "JAZZ",
+        "primary": {
+          "base": "#5B2B82",
+          "trim": "#6CAEDF",
+          "text": "#FFFFFF",
+          "shorts": "#5B2B82"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#5B2B82",
+          "text": "#5B2B82",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 40.768,
+        "lon": -111.901
+      }
+    },
+    {
+      "team_id": 1610612764,
+      "abbr": "WAS",
+      "city": "Washington",
+      "name": "Wizards",
+      "conference": "East",
+      "division": "Southeast",
+      "colors": {
+        "primary": "#002B5C",
+        "secondary": "#E31837",
+        "tertiary": "#C4CED4"
+      },
+      "jersey": {
+        "number": "26",
+        "chest_text": "WIZARDS",
+        "primary": {
+          "base": "#E31837",
+          "trim": "#002B5C",
+          "text": "#FFFFFF",
+          "shorts": "#E31837"
+        },
+        "alt": {
+          "base": "#FFFFFF",
+          "trim": "#002B5C",
+          "text": "#E31837",
+          "shorts": "#FFFFFF"
+        }
+      },
+      "arena_coords": {
+        "lat": 38.898,
+        "lon": -77.021
+      }
+    }
+  ]
+}
