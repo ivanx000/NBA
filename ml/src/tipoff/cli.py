@@ -19,10 +19,6 @@ app = typer.Typer(
 )
 
 
-def _not_implemented(command: str, phase: str) -> None:
-    typer.echo(f"tipoff {command}: not implemented yet (see docs/ROADMAP.md {phase}).")
-
-
 def _version_callback(value: bool) -> None:
     if value:
         typer.echo(f"tipoff {__version__}")
@@ -185,23 +181,114 @@ def evaluate(
         typer.echo("factor importance (mean |pp|):\n" + fi.round(4).to_string())
 
 
+class DbTarget(StrEnum):
+    dev = "dev"
+    prod = "prod"
+
+
+TargetOpt = Annotated[DbTarget, typer.Option("--target", help="Neon branch to write to.")]
+DateOpt = Annotated[str, typer.Option("--date", help="ET schedule date (YYYY-MM-DD) or 'today'.")]
+
+
+def _day(value: str) -> date:
+    from tipoff.db import today_et
+
+    return today_et() if value == "today" else date.fromisoformat(value)
+
+
 @app.command()
-def predict(
-    date_: Annotated[str, typer.Option("--date", help="ET schedule date or 'today'.")] = "today",
+def sync(target: TargetOpt = DbTarget.dev) -> None:
+    """Upsert the current season's games from cdn.nba.com (safe in CI)."""
+    from tipoff.db import get_engine
+    from tipoff.publish.sync import sync_games
+
+    n = sync_games(get_engine(target.value))
+    typer.echo(f"sync: {n} games upserted ({target.value})")
+
+
+@app.command()
+def predict(date_: DateOpt = "today") -> None:
+    """Predict a date's scheduled games with the registered champion (writes data/predictions)."""
+    from tipoff.predict.run import predict_date
+
+    day = _day(date_)
+    preds = predict_date(day)
+    if preds.empty:
+        typer.echo(f"predict: no unplayed regular-season games on {day}")
+        return
+    for r in preds.itertuples(index=False):
+        typer.echo(f"{r.game_id}  P(home) {r.home_win_prob:.3f}  (Elo {r.elo_home_win_prob:.3f})")
+
+
+@app.command()
+def publish(date_: DateOpt = "today", target: TargetOpt = DbTarget.dev) -> None:
+    """Publish a date's predictions (from `tipoff predict`) with the pregame-only guard."""
+    import pandas as pd
+
+    from tipoff.config import PREDICTIONS_DIR
+    from tipoff.db import get_engine
+    from tipoff.publish.publish import publish as do_publish
+
+    day = _day(date_)
+    path = PREDICTIONS_DIR / "live" / f"{day.isoformat()}.parquet"
+    if not path.exists():
+        raise typer.BadParameter(f"{path.name} not found; run `tipoff predict --date {day}`.")
+    res = do_publish(get_engine(target.value), pd.read_parquet(path))
+    typer.echo(f"publish: {res.written} predictions written to {target.value}; "
+               f"skipped (already started): {res.skipped_started or 'none'}")  # fmt: skip
+
+
+@app.command()
+def backfill(
+    seasons: Annotated[str, typer.Option(help="Comma-separated seasons.")] = "2025-26,2026-27",
+    target: TargetOpt = DbTarget.dev,
 ) -> None:
-    """Generate predictions for one schedule date."""
-    target = date.today().isoformat() if date_ == "today" else date_
-    typer.echo(f"target date: {target}")
-    _not_implemented("predict", "Phase 4")
+    """Weekly walk-forward predictions for past games, published with source='backfill'."""
+    from tipoff.db import get_engine
+    from tipoff.predict.backfill import backfill_predictions, save
+    from tipoff.predict.run import champion_info
+    from tipoff.publish.publish import publish as do_publish
+
+    version = champion_info()["model_version"] + "-wf"
+    preds = backfill_predictions(seasons.split(","), version)
+    save(preds, "backfill")
+    res = do_publish(get_engine(target.value), preds)
+    typer.echo(f"backfill: {res.written} predictions ({version}) written to {target.value}")
+
+
+@app.command("freshness-check")
+def freshness_check(date_: DateOpt = "today", target: TargetOpt = DbTarget.dev) -> None:
+    """Exit 1 if any scheduled game on the date lacks a live pregame prediction."""
+    from tipoff.db import get_engine
+    from tipoff.publish.freshness import missing_predictions
+
+    day = _day(date_)
+    missing = missing_predictions(get_engine(target.value), day)
+    if missing:
+        typer.echo(f"freshness: {len(missing)} game(s) on {day} have no prediction: {missing}")
+        raise typer.Exit(1)
+    typer.echo(f"freshness: all games on {day} have predictions")
 
 
 @app.command()
-def publish() -> None:
-    """Write pregame predictions to Postgres."""
-    _not_implemented("publish", "Phase 4")
+def daily(
+    target: Annotated[DbTarget, typer.Option("--target")] = DbTarget.prod,
+    if_needed: Annotated[
+        bool, typer.Option(help="Do nothing if today's games already have predictions.")
+    ] = False,
+) -> None:
+    """The daily job: ingest -> stage -> sync -> features -> predict -> publish (today, ET)."""
+    from tipoff.db import get_engine, today_et
+    from tipoff.publish.freshness import missing_predictions
 
-
-@app.command()
-def daily() -> None:
-    """Run the daily job: ingest -> features -> predict -> publish."""
-    _not_implemented("daily", "Phase 4")
+    day = today_et()
+    engine = get_engine(target.value)
+    if if_needed and not missing_predictions(engine, day):
+        typer.echo(f"daily: {day} already published to {target.value}; nothing to do")
+        return
+    ingest(seasons=f"{CURRENT_SEASON}:{CURRENT_SEASON}", source=Source.all, force=False,
+           dry_run=False, stage=True, verbose=False)  # fmt: skip
+    sync(target=target)
+    predict(date_=day.isoformat())
+    publish(date_=day.isoformat(), target=target)
+    freshness_check(date_=day.isoformat(), target=target)

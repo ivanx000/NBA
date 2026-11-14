@@ -75,7 +75,7 @@ Notes:
 
 ## Phase 4: Publish pipeline + DB
 - [ ] Neon project (dev + prod branches), schema from ARCHITECTURE §4 (Drizzle migrations in `web/`, the single source of truth)
-- [ ] `tipoff predict --date` + `tipoff publish` (with the pregame-only guard)
+- [x] `tipoff predict --date` + `tipoff publish` (with the pregame-only guard)
 - [ ] Backfill: walk-forward pregame predictions for the 2025-26 season and 2026-27 to date, so `/performance` has history
 - [ ] `ml/scripts/daily.sh` + a local scheduler (launchd/cron/Task Scheduler) with instructions in README
 - [ ] GitHub Actions: `schedule-sync`, `results-sync`, `freshness-check`

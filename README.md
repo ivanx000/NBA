@@ -33,6 +33,23 @@ pre-push hook with `ln -sf ../../scripts/pre-push .git/hooks/pre-push`.
 
 See `CLAUDE.md` for all commands and `docs/ROADMAP.md` for build status.
 
+## Daily predictions
+
+Predictions are generated on the developer's machine (stats.nba.com blocks cloud IPs) and published
+to Postgres; GitHub Actions keep schedules and scores in sync and email if predictions are missing.
+
+**macOS (launchd)**: `ml/scripts/install_launchd.sh` installs an agent that runs `ml/scripts/daily.sh`
+at 09:30 local time, retries hourly until 18:30, and runs at login. Each run exits immediately once
+today's predictions are published. Logs: `~/Library/Logs/tipoff/daily.log`. Remove it with
+`ml/scripts/install_launchd.sh --uninstall`. To wake a sleeping Mac before the job:
+`sudo pmset repeat wake MTWRFSU 09:25:00`. If the Mac is off all day, that day has no predictions.
+
+**Linux (cron)**: `30 9-18 * * * TZ=America/New_York /path/to/NBA/ml/scripts/daily.sh >> ~/tipoff-daily.log 2>&1`
+(adjust the hours if the machine isn't on Eastern time).
+
+**Windows (Task Scheduler)**: create a daily task at 09:30 that repeats every hour for 9 hours and runs
+`uv run tipoff daily --target prod --if-needed` in the `ml` folder (for example via Git Bash running `daily.sh`).
+
 ## License
 
 MIT. See `LICENSE`.

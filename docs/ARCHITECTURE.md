@@ -34,13 +34,13 @@
 
 | Time | Where | Job | What it does |
 |---|---|---|---|
-| 06:00 | GitHub Actions | `schedule-sync` | Upserts today's and the next 7 days' games from cdn.nba.com into `games` |
-| 09:30 | Local (cron / Task Scheduler / launchd) | `daily.sh` | ingest yesterday's box scores → features → predict today → publish |
-| 10:30 | GitHub Actions | `freshness-check` | Fails (and emails) if today's games lack predictions |
-| hourly 19:00–02:00 | GitHub Actions | `results-sync` | Pulls final scores from cdn.nba.com and fills `games.home_score/away_score/status` |
+| ~06:07 | GitHub Actions | `schedule-sync` | `tipoff sync --target prod`: upserts the whole current season's games from the cdn schedule (which also carries final scores) |
+| 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`) | `tipoff daily --target prod --if-needed` | ingest → stage → sync → predict today → publish → freshness check. Exits immediately once today is published |
+| ~10:37 | GitHub Actions | `freshness-check` | syncs, then fails (GitHub emails) if any of today's games lacks a live prediction |
+| hourly ~18:17–02:17 | GitHub Actions | `results-sync` | same sync, plus live status/scores from today's scoreboard |
 | Mon 05:00 | Local | `retrain.sh` | Retrains on all data to date, logs to MLflow, promotes it only if it beats the current model on the latest validation window |
 
-If the laptop is off at 09:30, the job runs at next wake (launchd/anacron behaviour). The freshness check makes failures visible.
+GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for EST). launchd runs a missed calendar job when the Mac wakes from sleep, but not if the Mac was shut down; `RunAtLoad` plus the hourly retries cover that, so any time the Mac is awake before tip-off is enough. A day with the Mac off entirely gets no predictions ("Prediction pending" on the site, plus a freshness-check email). Moving the daily job to GitHub Actions using cdn.nba.com box scores is a planned follow-up.
 
 ## 3. Repo layout
 
@@ -124,9 +124,11 @@ create table teams (
   division     text not null
 );
 
+-- Source of truth: web/lib/db/schema.ts (Drizzle) -> web/drizzle/*.sql. This block summarizes it.
 create table games (
   game_id       text primary key,            -- NBA game id, e.g. 0022600123
   season        text not null,               -- 2026-27
+  season_type   text not null default 'regular', -- regular | playin | playoffs | cup_final
   game_date     date not null,               -- ET schedule date
   tipoff_utc    timestamptz,
   home_team_id  integer references teams,
@@ -134,6 +136,8 @@ create table games (
   status        text not null,               -- scheduled | live | final | postponed
   home_score    integer,
   away_score    integer,
+  is_neutral    boolean not null default false,
+  game_label    text,                        -- e.g. "Emirates NBA Cup"
   updated_at    timestamptz default now()
 );
 create index on games (game_date);
@@ -152,9 +156,11 @@ create table game_predictions (
   model_version  text references model_versions,
   generated_at   timestamptz not null,
   home_win_prob  real not null,
-  factors        jsonb not null,             -- [{feature, value, shap, team}]  top-k
+  factors        jsonb not null,             -- [{factor, label, favors, pp, logit}] top 5 (shared/factors.json)
   features_hash  text not null,
-  is_pregame     boolean not null default true,  -- generated before tipoff_utc
+  is_pregame     boolean not null default true,  -- data cutoff before tip-off
+  source         text not null default 'live',   -- live | backfill (walk-forward backtest)
+  elo_home_win_prob real,                    -- Elo's own pregame probability (challenger)
   primary key (game_id, model_version)
 );
 
@@ -171,16 +177,17 @@ create table player_projections (
   primary key (game_id, player_id, model_version)
 );
 
--- Convenience view the website uses: latest pregame prediction per game
+-- Convenience view the website uses: latest pregame prediction per game (live beats backfill)
 create view current_game_predictions as
 select distinct on (game_id) *
 from game_predictions
 where is_pregame
-order by game_id, generated_at desc;
+order by game_id, (source = 'live') desc, generated_at desc;
 ```
 
 **Integrity rules**
-- `publish` refuses to write a prediction for a game whose `tipoff_utc` has passed (`is_pregame` must be true). Past predictions are immutable.
+- `publish` refuses to write a live prediction for a game whose `tipoff_utc` has passed. The upsert also carries `WHERE games.tipoff_utc > now()`, so a started game's prediction can't be replaced even if the local clock is wrong. Past predictions are immutable.
+- Backfilled rows (`source = 'backfill'`, model version `game-vN-wf`) are weekly walk-forward predictions: each comes from a model trained only on games before its week. They're labelled so `/performance` can say which history is a backtest and which was published live. They never replace live rows.
 - `/performance` joins `current_game_predictions` with `games where status = 'final'`.
 
 ## 5. Web data flow
@@ -211,12 +218,13 @@ The GSAP timeline subscribes to `phase` and owns all camera and character timing
 
 | Var | Used by | Where set |
 |---|---|---|
-| `DATABASE_URL` | ml publish, web | local `.env`, Vercel env, GitHub secret |
+| `DATABASE_URL` | ml (dev runs), web | local `.env` (dev branch); Vercel Preview (dev); GitHub secret `DATABASE_URL` holds **prod** (mapped to `DATABASE_URL_PROD` in workflows) |
+| `DATABASE_URL_PROD` | ml daily job | local `.env` (prod branch); Vercel Production uses it as `DATABASE_URL` |
 | `MLFLOW_TRACKING_URI` | ml | local `.env` (default `sqlite:///<repo>/ml/mlflow.db`, artifacts in `ml/mlartifacts/`) |
 | `MESHY_API_KEY` | scripts/assets | local `.env` only |
 
-Use separate Neon branches for `dev` and `prod`. Vercel preview deployments use the dev branch.
+Use separate Neon branches for `dev` and `prod`. Vercel preview deployments use the dev branch. Local development and DB tests use Postgres 17 in Docker (`docker compose up -d db`, port 5433). Migrations: `pnpm db:generate` → commit `web/drizzle/*.sql` → `pnpm db:migrate` (dev, then `DATABASE_URL=$DATABASE_URL_PROD pnpm db:migrate`) → `pnpm db:seed`.
 
 ## 7. CI (GitHub Actions)
-- `ci.yml` (on PR): `ml` ruff + pytest (with tiny fixture data, no network), `web` lint + typecheck + test + build.
+- `ci.yml` (on PR and main): `ml` ruff + pytest (fixture data, no network, plus DB tests against a Postgres 17 service using the real Drizzle migrations), `web` lint + typecheck + test + build.
 - Scheduled workflows listed in §2. None of them call `stats.nba.com`.

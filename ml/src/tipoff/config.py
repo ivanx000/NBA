@@ -54,7 +54,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str | None = None
+    database_url: str | None = None  # dev branch (local runs, previews)
+    database_url_prod: str | None = None  # prod branch (the daily job publishes here)
     mlflow_tracking_uri: str = f"sqlite:///{ML_DIR / 'mlflow.db'}"
     mlflow_artifact_root: str = (ML_DIR / "mlartifacts").as_uri()
 

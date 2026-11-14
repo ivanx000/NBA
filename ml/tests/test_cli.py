@@ -4,21 +4,19 @@ from tipoff.cli import app
 from tipoff.ingest import nba_stats
 
 runner = CliRunner()
-STUBS = ("predict", "publish", "daily")
 
 
 def test_help_lists_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for command in ("ingest", "features", "train", *STUBS):
+    for command in ("ingest", "features", "train", "evaluate", "predict", "publish", "daily"):
         assert command in result.output
 
 
-def test_stub_commands_exit_cleanly():
-    for command in STUBS:
-        result = runner.invoke(app, [command])
+def test_all_commands_have_help():
+    for command in ("sync", "predict", "publish", "backfill", "freshness-check", "daily"):
+        result = runner.invoke(app, [command, "--help"])
         assert result.exit_code == 0, result.output
-        assert "not implemented yet" in result.output
 
 
 def test_ingest_dry_run_plans_without_fetching(monkeypatch, tmp_path):

@@ -70,6 +70,12 @@ uv run tipoff train --only baselines   # train + evaluate on 2024-25, log to MLf
 uv run tipoff train --only game        # Optuna + calibration + champion kind -> ml/config/game_model.json
 uv run tipoff evaluate                 # 2025-26 walk-forward + factor importance (add --test only for a new major version)
 uv run tipoff train --only champion    # fit on all games, register tipoff-game@champion
+uv run tipoff sync [--target prod]     # games from cdn.nba.com (safe in CI)
+uv run tipoff predict --date today     # champion predictions + factors -> data/predictions/live/
+uv run tipoff publish --date today [--target prod]   # pregame-only guard
+uv run tipoff backfill [--target prod] # weekly walk-forward history, source='backfill'
+uv run tipoff freshness-check [--target prod]
+uv run tipoff daily --target prod --if-needed        # what the launchd agent runs (scripts/daily.sh)
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish
@@ -84,9 +90,11 @@ pnpm dev                         # localhost:3000
 pnpm lint && pnpm typecheck     # typecheck runs `next typegen` first
 pnpm test                        # Vitest
 pnpm build
+pnpm db:generate                 # after editing lib/db/schema.ts (commit drizzle/*.sql)
+pnpm db:migrate && pnpm db:seed  # uses DATABASE_URL (root .env)
 ```
 
-Whole repo (from the root): `pipeline` runs `pipeline.yaml` (same checks as CI).
+Whole repo (from the root): `pipeline` runs `pipeline.yaml` (same checks as CI). `docker compose up -d db` starts local Postgres (port 5433) for development and the DB tests.
 
 Next.js 16 has breaking changes from older versions. Read `web/AGENTS.md` and the bundled guides in `web/node_modules/next/dist/docs/` before writing web code.
 
@@ -116,8 +124,12 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 - Use team **city and nickname text and colors** only. Do **not** add official NBA or team logos, wordmark artwork, or real player likenesses or headshots. Players are shown as name, number and initials.
 - The site footer must say it's an unofficial fan project, not affiliated with the NBA.
 
+**Database**
+- The schema lives only in `web/lib/db/schema.ts` (Drizzle). Python reflects tables; never define them twice.
+- Commands write to the dev branch by default. Only the daily job (and explicit `--target prod`) writes to prod.
+
 **Secrets**
-- Never commit `.env*` files except `.env.example`. Secrets: `DATABASE_URL`, `MESHY_API_KEY`.
+- Never commit `.env*` files except `.env.example`. Secrets: `DATABASE_URL`, `DATABASE_URL_PROD`, `MESHY_API_KEY`. Don't print them or ask the user to paste them into chat.
 
 ## Tech stack (decided)
 

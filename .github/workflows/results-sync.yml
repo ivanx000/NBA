@@ -1,0 +1,38 @@
+name: results-sync
+
+# Hourly during game time: refresh live status and final scores from cdn.nba.com.
+# Never calls stats.nba.com. GitHub cron is UTC and best-effort (can run late).
+on:
+  schedule:
+    - cron: "17 23,0-7 * * *" # hourly, ~18:17-02:17 ET (EST) / 19:17-03:17 ET (EDT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL_PROD: ${{ secrets.DATABASE_URL }}
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - uses: actions/checkout@v7
+      - name: Skip until the DATABASE_URL secret exists
+        id: gate
+        run: if [ -z "$DATABASE_URL_PROD" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; echo "::warning::DATABASE_URL secret not set; skipping"; fi
+      - uses: astral-sh/setup-uv@v10.3.3
+        if: steps.gate.outputs.skip != 'true'
+        with:
+          enable-cache: true
+          cache-dependency-glob: ml/uv.lock
+      - if: steps.gate.outputs.skip != 'true'
+        run: uv sync --locked
+      - if: steps.gate.outputs.skip != 'true'
+        run: uv run tipoff sync --target prod
