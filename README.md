@@ -2,6 +2,8 @@
 
 **Who wins tonight?** An NBA game outcome and player stat forecaster, with a 3D website where the winning team's player hits a shot when you hit *Predict*.
 
+**Live:** https://nba-alpha-olive.vercel.app (placeholder until the web phases land)
+
 > Unofficial fan project. Not affiliated with or endorsed by the NBA or any team.
 
 ## What's inside

@@ -12,7 +12,7 @@ The ML track (Phases 1–4) and web track (Phases 5–8) can be interleaved. The
 - [x] `web/`: Next.js (App Router, TS, Tailwind, ESLint), pnpm, shadcn/ui init, Inter + Oswald fonts, dark theme tokens from DESIGN §1
 - [x] Add `web/lib/teams.ts` with types for `shared/teams.json` (already present)
 - [x] GitHub repo + `ci.yml` (ml lint/test, web lint/typecheck/build)
-- [ ] Vercel project linked to `web/` (it deploys the placeholder page)
+- [x] Vercel project linked to `web/` (it deploys the placeholder page)
 
 Notes:
 - The home directory (`~`) is itself a git repo. `NBA/` got its own repo with `git init`, so it no longer shows up there. The home-directory repo was left alone.
@@ -22,6 +22,7 @@ Notes:
 - `web/` imports `../../shared/teams.json` directly. `turbopack.root` and `outputFileTracingRoot` are set to the repo root so this works in dev, build and on Vercel.
 - The site is dark only: brand tokens from DESIGN §1 live in `:root`, mapped onto shadcn's semantic tokens, and `<html>` carries `dark`.
 - CLI is `tipoff <cmd>` (typer), with `python -m tipoff` as an alias. CLAUDE.md commands now use 2015-16 as the first season, matching ML_PLAN.
+- Vercel project `nba`, Root Directory `web`. Production is https://nba-alpha-olive.vercel.app and it deployed on the first try with pnpm 12 (no Corepack setting needed). Deploys from GitHub post a `Vercel` commit status. CI pins `astral-sh/setup-uv@v10.3.3` because setup-uv has no moving `v10` tag.
 - Added `pipeline.yaml` and `scripts/pre-push` for the local `pipeline` runner. `pipeline` isn't installed on this machine yet, so the yaml hasn't been run; the hook skips with a warning until it is.
 
 ## Phase 1: Data ingestion (local)
