@@ -26,12 +26,19 @@ Notes:
 - Added `pipeline.yaml` and `scripts/pre-push` for the local `pipeline` runner. `pipeline` isn't installed on this machine yet, so the yaml hasn't been run; the hook skips with a warning until it is.
 
 ## Phase 1: Data ingestion (local)
-- [ ] `ingest/nba_stats.py`: team and player game logs for 2015-16 → current, with rate limit, retries and parquet cache
-- [ ] `ingest/nba_cdn.py`: schedule + scoreboard
-- [ ] pandera schemas for the raw tables, and a `tipoff ingest` CLI that's idempotent
-- [ ] EDA notebook: home win rate by season, score distributions, rest-day effects (keep the plots for the docs)
+- [x] `ingest/nba_stats.py`: team and player game logs for 2015-16 → current, with rate limit, retries and parquet cache
+- [x] `ingest/nba_cdn.py`: schedule + scoreboard
+- [x] pandera schemas for the raw tables, and a `tipoff ingest` CLI that's idempotent
+- [x] EDA notebook: home win rate by season, score distributions, rest-day effects (keep the plots for the docs)
 
 Notes:
+- Advanced team stats come from `TeamGameLogs` (MeasureType=Advanced), one call per season, instead of per-game `BoxScoreAdvancedV3`. The full backfill (2015-16 to 2026-27, regular season + play-in + playoffs) is 102 calls, took about 2 minutes, and is 12 MB of parquet.
+- Staged on 2026-11-14: 14,348 games, 28,696 team-games, 305,771 player-games, all passing validation.
+- Neutral-site games: 11 (Paris, Mexico City, London/Berlin, NBA Cup semifinals). Both log rows say "@", which the first staging run caught. They're flagged `is_neutral` with a designated home that never depends on the result.
+- NBA Cup final (game id prefix `006`) doesn't appear in the regular-season logs; staging would drop it if it did.
+- cdn.nba.com is behind Akamai: curl and UA-only requests get 403; nba_api's live header set works, locally and from GitHub Actions (`cdn-probe` run on 2026-11-14 passed).
+- cdn reports 0-0 for games that haven't started; those scores are stored as null. `postponedStatus` has only been seen as "N" so far; the postponed mapping is a guess until a real postponement appears.
+- EDA headline numbers: home teams won 58–59% before 2019 and 54–55% in most seasons since; back-to-back teams win 44.6% vs 51.2% rested; combined scoring rose from about 205 to 231 points a game.
 
 ## Phase 2: Features + baselines
 - [ ] Elo (tuned K and home advantage), rolling form, four factors, schedule/rest/travel, availability v1

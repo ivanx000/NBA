@@ -12,17 +12,22 @@ The bar for "good": beat simple baselines on a held-out season, with well-calibr
 
 | Data | Source | Endpoint (nba_api) | Granularity |
 |---|---|---|---|
-| Team game logs | stats.nba.com | `LeagueGameLog` (player_or_team='T') | team-game |
-| Player game logs | stats.nba.com | `LeagueGameLog` (player_or_team='P') | player-game |
-| Advanced box scores (pace, ratings) | stats.nba.com | `BoxScoreAdvancedV3` (per game; slow, so cache aggressively) | team-game, player-game |
-| Schedule (future games) | cdn.nba.com | static schedule JSON | game |
-| Live/final scores | cdn.nba.com | live scoreboard JSON | game |
+| Team game logs | stats.nba.com | `LeagueGameLog` (player_or_team='T'), one call per season and season type | team-game |
+| Player game logs | stats.nba.com | `LeagueGameLog` (player_or_team='P'), one call per season and season type | player-game |
+| Team advanced stats (ratings, pace, possessions, eFG%, OREB%, TOV%) | stats.nba.com | `TeamGameLogs` with `MeasureType=Advanced`, one call per season and season type | team-game |
+| Schedule (future games) | cdn.nba.com | `staticData/scheduleLeagueV2.json` | game |
+| Live/final scores | cdn.nba.com | `liveData/scoreboard/todaysScoreboard_00.json` | game |
 | Arena locations (for travel) | static | `arena_coords` in `shared/teams.json` | team |
 
 - **Seasons:** 2015-16 → current (2026-27). Earlier seasons played a different style, so test whether including them helps.
-- **Caching:** every raw response is saved as parquet under `ml/data/raw/{endpoint}/{season}/...`. Ingest is idempotent and resumable.
+- **Caching:** every raw response is saved as parquet under `ml/data/raw/stats/{endpoint}/{season}/{season_type}.parquet`, with a `_manifest.json`. Completed seasons are fetched once. The current season is refreshed incrementally from its last cached date, at most every 3 hours. cdn responses go to `ml/data/raw/cdn/` (gzipped JSON plus parquet).
+- **Staged tables:** `tipoff ingest` then writes validated `games`, `team_games` and `player_games` parquet files to `ml/data/staged/`. Features read only these.
+- **Why not per-game advanced box scores:** `TeamGameLogs` Advanced returns a whole season in one call (about 9 s), against about 14,000 slow `BoxScoreAdvancedV3` calls for the same team-level numbers. Player advanced stats (usage) can come from `PlayerGameLogs` Advanced the same way in Phase 9.
 - **Rate limit:** about 0.6s between requests, with retries and exponential backoff. Use a browser-like `User-Agent` (nba_api handles headers).
-- Exclude preseason, All-Star, and (for v1) Play-In and playoff games. Keep `season_type` as a column so playoffs can be added later.
+- Exclude preseason, All-Star, and (for v1) Play-In and playoff games. Keep `season_type` as a column so playoffs can be added later. Play-in and playoff games are ingested anyway (cheap) and filtered out at feature time.
+- **Game ID prefixes** decide season type: `001` preseason, `002` regular season, `003` All-Star, `004` playoffs, `005` play-in, `006` NBA Cup final. The Cup final doesn't count in the standings and is dropped. Cup group-stage and knockout games before the final are regular-season games.
+- **Neutral-site games** (international games, NBA Cup semifinals in Las Vegas; 11 so far) list both teams as away in the game logs. They're flagged `is_neutral`. Their designated home team comes from the cdn schedule when we have it (current season), and otherwise is the lower team id, a rule that never uses the result. Home-court features must be zero for them. For past seasons the official designated home team isn't recovered; that's a known limitation.
+- **Unusual seasons:** 2019-20 (suspension, then the bubble: 64–75 regular-season games per team) and 2020-21 (72 games, empty or limited arenas). The EDA shows the home win rate fell from 58–59% before 2019 to 54–55% in most seasons since (2022-23: 58.0%).
 - **Injuries (v1):** infer "who's out" as rotation players (≥ 20 mpg over the last 10 games) who aren't in today's projected lineup. Before tip-off we don't know who will play. Pragmatic v1: use a player's availability in the *previous* game plus the official injury report when available (manual or a scraped PDF in v2). Document this limitation honestly on `/docs`.
 
 ## 2. Leakage rules (read twice)

@@ -27,7 +27,7 @@
 ```
 
 **Why it's split this way**
-- `stats.nba.com` drops connections from cloud and CI IP ranges, so anything that needs it (historical game logs, box scores, advanced stats) runs locally on a schedule. `cdn.nba.com` (schedule, scoreboard) works from anywhere, so schedule and result syncing can run in GitHub Actions.
+- `stats.nba.com` drops connections from cloud and CI IP ranges, so anything that needs it (historical game logs, box scores, advanced stats) runs locally on a schedule. `cdn.nba.com` (schedule, scoreboard) works from anywhere, so schedule and result syncing can run in GitHub Actions. It sits behind Akamai, which returns 403 unless requests carry a full browser-like header set (nba_api's live headers); the manual `cdn-probe` workflow confirmed GitHub-hosted runners get through with those headers.
 - Predictions change at most once a day, so the website reads precomputed rows. No Python runs on Vercel. That keeps the site fast, cheap, and simple.
 
 ## 2. Daily schedule (all times ET)
@@ -51,9 +51,13 @@ If the laptop is off at 09:30, the job runs at next wake (launchd/anacron behavi
 │   ├── pyproject.toml            # uv; ruff; pytest config
 │   ├── src/tipoff/
 │   │   ├── config.py             # paths, seasons, constants (pydantic-settings)
+│   │   ├── seasons.py            # season strings, season types, game-id prefixes
 │   │   ├── ingest/
-│   │   │   ├── nba_stats.py      # nba_api wrappers with rate limit + disk cache
-│   │   │   └── nba_cdn.py        # schedule/scoreboard from cdn.nba.com
+│   │   │   ├── http.py           # shared rate limiter, retries, cdn headers
+│   │   │   ├── nba_stats.py      # nba_api wrappers with rate limit + disk cache + manifest
+│   │   │   ├── nba_cdn.py        # schedule/scoreboard from cdn.nba.com
+│   │   │   ├── stage.py          # raw -> validated games / team_games / player_games
+│   │   │   └── schemas.py        # pandera schemas
 │   │   ├── features/
 │   │   │   ├── team_form.py      # rolling team stats (shifted!)
 │   │   │   ├── elo.py
@@ -73,6 +77,8 @@ If the laptop is off at 09:30, the job runs at next wake (launchd/anacron behavi
 │   │   ├── test_features.py
 │   │   └── test_publish_schema.py
 │   ├── scripts/daily.sh, retrain.sh
+│   ├── data/                     # git-ignored: raw/stats, raw/cdn, staged, features
+│   ├── reports/figures/          # PNGs from notebooks, reused by the website docs
 │   └── notebooks/                # EDA only
 ├── web/
 │   ├── app/

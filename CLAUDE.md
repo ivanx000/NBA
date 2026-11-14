@@ -63,13 +63,15 @@ uv sync                          # install deps
 uv run pytest                    # tests
 uv run ruff check . && uv run ruff format .
 uv run tipoff --help             # typer CLI (also: uv run python -m tipoff ...)
-uv run tipoff ingest --seasons 2015-16:2026-27
+uv run tipoff ingest              # stats + cdn, then stage/validate (idempotent; --dry-run, --force)
+uv run tipoff ingest --source cdn # cdn.nba.com only (safe in CI)
 uv run tipoff features
 uv run tipoff train
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish
 uv run mlflow ui                 # experiment tracking UI at localhost:5000 (added in Phase 2)
+uv run --group notebook jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb
 ```
 
 Web (run from `web/`):
@@ -95,7 +97,8 @@ Next.js 16 has breaking changes from older versions. Read `web/AGENTS.md` and th
 - Always report against baselines (home team wins, Elo) next to any model metric.
 - Log every training run to MLflow with params, metrics, and the model artifact.
 - `stats.nba.com` blocks cloud and CI IP ranges. **Never call it from GitHub Actions or Vercel.** Historical and box-score ingestion runs on the developer's machine. The `cdn.nba.com` live and schedule JSON endpoints are fine to call from CI.
-- Be polite to NBA endpoints: rate-limit requests (about 0.6s between calls), cache raw responses to disk, and never re-fetch data you already have.
+- Be polite to NBA endpoints: rate-limit requests (about 0.6s between calls), cache raw responses to disk, and never re-fetch data you already have. All NBA HTTP goes through `tipoff.ingest.http` (shared limiter and retries).
+- `cdn.nba.com` returns 403 without a full browser-like header set. Use `tipoff.ingest.http.cdn_headers()` (nba_api's live headers), never a bare User-Agent.
 
 **Web**
 - The website **never** runs model inference. It only reads precomputed predictions from Postgres.
