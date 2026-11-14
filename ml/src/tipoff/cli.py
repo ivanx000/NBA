@@ -9,7 +9,7 @@ from typing import Annotated
 import typer
 
 from tipoff import __version__
-from tipoff.config import CURRENT_SEASON, FIRST_SEASON
+from tipoff.config import CURRENT_SEASON, WARMUP_SEASON
 
 app = typer.Typer(
     name="tipoff",
@@ -48,8 +48,8 @@ class Source(StrEnum):
 @app.command()
 def ingest(
     seasons: Annotated[
-        str, typer.Option(help="Season range, e.g. 2015-16:2026-27.")
-    ] = f"{FIRST_SEASON}:{CURRENT_SEASON}",
+        str, typer.Option(help="Season range, e.g. 2014-15:2026-27.")
+    ] = f"{WARMUP_SEASON}:{CURRENT_SEASON}",
     source: Annotated[
         Source, typer.Option(help="stats = stats.nba.com (local only); cdn = cdn.nba.com.")
     ] = Source.all,
@@ -97,15 +97,43 @@ def ingest(
 
 
 @app.command()
-def features() -> None:
-    """Build the leakage-safe game-level feature table."""
-    _not_implemented("features", "Phase 2")
+def features(
+    tune_elo: Annotated[
+        bool, typer.Option(help="Re-tune Elo parameters on the training seasons first.")
+    ] = False,
+) -> None:
+    """Build the leakage-safe game-level feature table (data/features/game_features.parquet)."""
+    import pandas as pd
+
+    from tipoff.config import ELO_PARAMS_PATH, STAGED_DIR
+    from tipoff.features import elo
+    from tipoff.features.build import build_and_save
+    from tipoff.features.timeline import prepare_games
+
+    if tune_elo or not ELO_PARAMS_PATH.exists():
+        games = prepare_games(pd.read_parquet(STAGED_DIR / "games.parquet"))
+        params, loss = elo.tune(games)
+        params.save(train_log_loss=round(loss, 5), tuned_on="2015-16..2023-24 regular season")
+        typer.echo(f"elo: tuned {params} (train log loss {loss:.4f}) -> {ELO_PARAMS_PATH.name}")
+    df, digest = build_and_save()
+    typer.echo(f"features: {len(df):,} games, hash {digest}")
+
+
+class ModelSet(StrEnum):
+    baselines = "baselines"
 
 
 @app.command()
-def train() -> None:
-    """Train models and log runs to MLflow."""
-    _not_implemented("train", "Phase 3")
+def train(
+    only: Annotated[ModelSet, typer.Option(help="Which models to train.")] = ModelSet.baselines,
+    mlflow_log: Annotated[bool, typer.Option("--mlflow/--no-mlflow")] = True,
+) -> None:
+    """Train models on 2015-16..2023-24, evaluate on 2024-25, and log runs to MLflow."""
+    from tipoff.evaluate.metrics import to_markdown
+    from tipoff.models.train_baselines import run_baselines
+
+    out = run_baselines(log_to_mlflow=mlflow_log)
+    typer.echo(to_markdown(out["table"]))
 
 
 @app.command()

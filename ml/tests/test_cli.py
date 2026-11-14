@@ -4,13 +4,13 @@ from tipoff.cli import app
 from tipoff.ingest import nba_stats
 
 runner = CliRunner()
-STUBS = ("features", "train", "predict", "publish", "daily")
+STUBS = ("predict", "publish", "daily")
 
 
 def test_help_lists_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for command in ("ingest", *STUBS):
+    for command in ("ingest", "features", "train", *STUBS):
         assert command in result.output
 
 

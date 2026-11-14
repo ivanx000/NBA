@@ -34,6 +34,8 @@ export interface Team {
     lat: number;
     lon: number;
   };
+  /** IANA time zone of the home arena, e.g. "America/New_York". */
+  timezone: string;
 }
 
 interface TeamsFile {

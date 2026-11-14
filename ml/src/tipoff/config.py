@@ -22,8 +22,19 @@ FEATURES_DIR = DATA_DIR / "features"
 REPORTS_DIR = ML_DIR / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
+# Ingest starts one season early: 2014-15 only warms up Elo and the season blends, and never
+# appears as a training row.
+WARMUP_SEASON = "2014-15"
 FIRST_SEASON = "2015-16"
 CURRENT_SEASON = "2026-27"
+
+# Time-based splits (ML_PLAN section 5). The test season is touched once per major version.
+TRAIN_SEASONS = tuple(f"{y}-{(y + 1) % 100:02d}" for y in range(2015, 2024))  # 2015-16..2023-24
+VALID_SEASON = "2024-25"
+TEST_SEASON = "2025-26"
+
+CONFIG_DIR = ML_DIR / "config"
+ELO_PARAMS_PATH = CONFIG_DIR / "elo_params.json"
 
 # Seconds between requests to NBA endpoints. Be polite (see CLAUDE.md).
 NBA_STATS_REQUEST_DELAY = 0.6
@@ -42,7 +53,8 @@ class Settings(BaseSettings):
     )
 
     database_url: str | None = None
-    mlflow_tracking_uri: str = f"file:{ML_DIR / 'mlruns'}"
+    mlflow_tracking_uri: str = f"sqlite:///{ML_DIR / 'mlflow.db'}"
+    mlflow_artifact_root: str = (ML_DIR / "mlartifacts").as_uri()
 
 
 @lru_cache

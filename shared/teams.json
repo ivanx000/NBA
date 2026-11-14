@@ -3,7 +3,8 @@
     "description": "Single source of truth for the 30 NBA teams. ids match nba_api / stats.nba.com team ids.",
     "colors_note": "Hex values are approximations of each team's public brand colors (UTA reflects the 2025-26 'Mountain Basketball' palette as sampled by third parties; no official hex published). Verify against each team's current brand before launch. Jersey colorways are generic designs in team colors, not official uniforms.",
     "arena_coords_note": "Approximate city/arena coordinates, used only for travel-distance features.",
-    "jersey_number_note": "Every generic player wears #26 (for the 2026-27 season). Change freely."
+    "jersey_number_note": "Every generic player wears #26 (for the 2026-27 season). Change freely.",
+    "timezone_note": "IANA time zone of the team's home arena, used for time-zones-crossed travel features."
   },
   "teams": [
     {
@@ -37,7 +38,8 @@
       "arena_coords": {
         "lat": 33.757,
         "lon": -84.396
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612738,
@@ -70,7 +72,8 @@
       "arena_coords": {
         "lat": 42.366,
         "lon": -71.062
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612751,
@@ -103,7 +106,8 @@
       "arena_coords": {
         "lat": 40.683,
         "lon": -73.976
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612766,
@@ -136,7 +140,8 @@
       "arena_coords": {
         "lat": 35.225,
         "lon": -80.839
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612741,
@@ -169,7 +174,8 @@
       "arena_coords": {
         "lat": 41.881,
         "lon": -87.674
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612739,
@@ -202,7 +208,8 @@
       "arena_coords": {
         "lat": 41.497,
         "lon": -81.688
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612742,
@@ -235,7 +242,8 @@
       "arena_coords": {
         "lat": 32.79,
         "lon": -96.81
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612743,
@@ -268,7 +276,8 @@
       "arena_coords": {
         "lat": 39.749,
         "lon": -105.008
-      }
+      },
+      "timezone": "America/Denver"
     },
     {
       "team_id": 1610612765,
@@ -301,7 +310,8 @@
       "arena_coords": {
         "lat": 42.341,
         "lon": -83.055
-      }
+      },
+      "timezone": "America/Detroit"
     },
     {
       "team_id": 1610612744,
@@ -334,7 +344,8 @@
       "arena_coords": {
         "lat": 37.768,
         "lon": -122.388
-      }
+      },
+      "timezone": "America/Los_Angeles"
     },
     {
       "team_id": 1610612745,
@@ -367,7 +378,8 @@
       "arena_coords": {
         "lat": 29.751,
         "lon": -95.362
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612754,
@@ -400,7 +412,8 @@
       "arena_coords": {
         "lat": 39.764,
         "lon": -86.156
-      }
+      },
+      "timezone": "America/Indiana/Indianapolis"
     },
     {
       "team_id": 1610612746,
@@ -433,7 +446,8 @@
       "arena_coords": {
         "lat": 33.945,
         "lon": -118.343
-      }
+      },
+      "timezone": "America/Los_Angeles"
     },
     {
       "team_id": 1610612747,
@@ -466,7 +480,8 @@
       "arena_coords": {
         "lat": 34.043,
         "lon": -118.267
-      }
+      },
+      "timezone": "America/Los_Angeles"
     },
     {
       "team_id": 1610612763,
@@ -499,7 +514,8 @@
       "arena_coords": {
         "lat": 35.138,
         "lon": -90.051
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612748,
@@ -532,7 +548,8 @@
       "arena_coords": {
         "lat": 25.781,
         "lon": -80.188
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612749,
@@ -565,7 +582,8 @@
       "arena_coords": {
         "lat": 43.045,
         "lon": -87.917
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612750,
@@ -598,7 +616,8 @@
       "arena_coords": {
         "lat": 44.98,
         "lon": -93.276
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612740,
@@ -631,7 +650,8 @@
       "arena_coords": {
         "lat": 29.949,
         "lon": -90.082
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612752,
@@ -664,7 +684,8 @@
       "arena_coords": {
         "lat": 40.751,
         "lon": -73.993
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612760,
@@ -697,7 +718,8 @@
       "arena_coords": {
         "lat": 35.463,
         "lon": -97.515
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612753,
@@ -730,7 +752,8 @@
       "arena_coords": {
         "lat": 28.539,
         "lon": -81.384
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612755,
@@ -763,7 +786,8 @@
       "arena_coords": {
         "lat": 39.901,
         "lon": -75.172
-      }
+      },
+      "timezone": "America/New_York"
     },
     {
       "team_id": 1610612756,
@@ -796,7 +820,8 @@
       "arena_coords": {
         "lat": 33.446,
         "lon": -112.071
-      }
+      },
+      "timezone": "America/Phoenix"
     },
     {
       "team_id": 1610612757,
@@ -829,7 +854,8 @@
       "arena_coords": {
         "lat": 45.532,
         "lon": -122.667
-      }
+      },
+      "timezone": "America/Los_Angeles"
     },
     {
       "team_id": 1610612758,
@@ -862,7 +888,8 @@
       "arena_coords": {
         "lat": 38.58,
         "lon": -121.5
-      }
+      },
+      "timezone": "America/Los_Angeles"
     },
     {
       "team_id": 1610612759,
@@ -895,7 +922,8 @@
       "arena_coords": {
         "lat": 29.427,
         "lon": -98.437
-      }
+      },
+      "timezone": "America/Chicago"
     },
     {
       "team_id": 1610612761,
@@ -928,7 +956,8 @@
       "arena_coords": {
         "lat": 43.643,
         "lon": -79.379
-      }
+      },
+      "timezone": "America/Toronto"
     },
     {
       "team_id": 1610612762,
@@ -961,7 +990,8 @@
       "arena_coords": {
         "lat": 40.768,
         "lon": -111.901
-      }
+      },
+      "timezone": "America/Denver"
     },
     {
       "team_id": 1610612764,
@@ -994,7 +1024,8 @@
       "arena_coords": {
         "lat": 38.898,
         "lon": -77.021
-      }
+      },
+      "timezone": "America/New_York"
     }
   ]
 }

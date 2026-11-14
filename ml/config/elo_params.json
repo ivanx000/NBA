@@ -1,0 +1,9 @@
+{
+  "carryover": 0.6,
+  "hfa_mode": "rolling",
+  "home_adv": 0.0,
+  "k": 15.0,
+  "mov": true,
+  "train_log_loss": 0.62223,
+  "tuned_on": "2015-16..2023-24 regular season"
+}

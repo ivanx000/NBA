@@ -38,3 +38,6 @@ web/next-env.d.ts
 
 # local tooling
 .pipeline/
+
+# mlflow (sqlite backend)
+ml/mlflow.db

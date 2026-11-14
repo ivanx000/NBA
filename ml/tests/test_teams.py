@@ -19,3 +19,10 @@ def test_required_fields_and_hex_colors():
 
 def test_team_by_abbr():
     assert team_by_abbr("bos")["city"] == "Boston"
+
+
+def test_timezones_are_valid():
+    from zoneinfo import ZoneInfo
+
+    for team in load_teams():
+        ZoneInfo(team["timezone"])
