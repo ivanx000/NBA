@@ -73,9 +73,14 @@ Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g.
 - **Calibration:** isotonic or Platt via `CalibratedClassifierCV(cv="prefit")` on a separate calibration slice. Check reliability diagrams. A 60% pick should win about 60% of the time.
 - Optional: average LR and GBM probabilities if that improves validation log loss.
 
+**As built (Phase 3):** LightGBM tuned with Optuna (100 trials, TPE, seed 26) settled on very shallow trees (5 leaves, 350 trees, learning rate 0.024) and still trailed LogReg on validation (0.6001 vs 0.5955). The log-odds ensemble's best weight was 0.9 LogReg and added nothing (0.5956). **Champion: LogReg (C = 0.1) with Platt calibration.** Calibration was chosen out of time: each calibrator is fit on one season's predictions from a model trained only on earlier seasons. Platt won for every candidate, and isotonic was worst every time. The fitted Platt map is close to identity (a ≈ 1.01), so LogReg was already nearly calibrated. Settings: `ml/config/game_model.json`.
+
 ### Explanations
-- `shap.TreeExplainer` on the GBM. For each game, store the top 5 features by |SHAP| with sign and team attribution in `game_predictions.factors`.
-- Convert SHAP log-odds to approximate probability-point contributions for display (document the approximation).
+- Every model variant is additive in log-odds, so explanations are exact. LogReg uses `coef × standardized value`. LightGBM uses its built-in TreeSHAP (`pred_contrib=True`), the same algorithm as `shap.TreeExplainer`, without the extra dependency. The ensemble mixes both with its weight. Platt scaling multiplies them by `a`. Tests check that contributions plus base equal the predicted log-odds.
+- Features are summed into 11 human factors defined in `shared/factors.json`, which `web/lib/factor-copy.ts` uses for copy. Each game stores its top 5 factors (≥ 0.5 points) in `game_predictions.factors` as `{factor, label, favors, pp, logit}`.
+- **Probability points are an approximation:** `pp = contribution × (p − p_base) / (logit p − logit p_base)`, where p_base is the model's prediction for an average game. Signs are always kept, and the factors add up to `p − p_base`.
+- Average effect over 2025-26 (model trained through 2024-25): Team rating 10.6 pts, Recent form 4.1, Shooting 3.3, Rest and schedule 2.6, Turnovers and rebounding 2.1, Home court 2.1, Missing players 1.8, Season-long strength 1.7, Travel 0.6, Point in the season 0.5, Pace 0.3 (`ml/reports/figures/factor_importance.png`).
+- **Known quirk:** `elo_diff` includes the home-court edge, so part of home advantage shows up as "Team rating". Correlated groups (Elo, season strength, form) also share credit in ways that look arbitrary to a stats-savvy reader. Splitting `elo_diff` into a pure rating gap plus the home edge would make this cleaner (Phase 8, with the copy).
 
 ## 5. Evaluation protocol
 
@@ -96,7 +101,23 @@ Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g.
 | Home team | 0.6905 | 0.2487 | 54.4% | 0.5000 | 0.0241 |
 | Elo | 0.6083 | 0.2107 | 66.4% | 0.7233 | 0.0207 |
 | LogReg (C = 0.1) | 0.5960 | 0.2051 | 68.4% | 0.7408 | 0.0209 |
-| LightGBM (calibrated) | | | | | |
+| LogReg + Platt (champion) | 0.5955 | 0.2049 | 68.1% | 0.7408 | 0.0221 |
+| LightGBM (Optuna, Platt) | 0.6001 | 0.2065 | 67.9% | 0.7369 | 0.0264 |
+| Ensemble (0.9 LogReg, Platt) | 0.5956 | 0.2049 | 68.0% | 0.7409 | 0.0257 |
+
+**Test season 2025-26, run once** (all models refit on 2015-16..2024-25, 11,979 games; 1,230 test games). Source: `ml/reports/test_2025-26.md`.
+
+| Model | Log loss ↓ | Brier ↓ | Accuracy ↑ | AUC ↑ | ECE ↓ |
+|---|---|---|---|---|---|
+| Home team | 0.6874 | 0.2472 | 55.5% | 0.5000 | 0.0110 |
+| Elo | 0.5978 | 0.2054 | 69.2% | 0.7379 | 0.0446 |
+| LogReg + Platt (champion) | 0.6022 | 0.2073 | 67.1% | 0.7330 | 0.0331 |
+| LightGBM (Platt) | 0.6020 | 0.2071 | 68.1% | 0.7350 | 0.0299 |
+| Ensemble (Platt) | 0.6018 | 0.2072 | 67.1% | 0.7337 | 0.0354 |
+
+**Walk-forward 2025-26** (monthly refits on every earlier game): Home team 0.6875 / 55.5%, Elo 0.5979 / 69.0%, LogReg 0.6018 / 67.2%. Source: `ml/reports/backtest_2025-26.md`.
+
+**Honest reading:** every model clearly beats the home-team baseline (the PRD bar). **On the test season, plain Elo edged out the champion.** The per-game log-loss gap (LogReg − Elo) is +0.0039 with a paired-bootstrap 95% CI of [−0.0036, +0.0113], so it isn't statistically meaningful. The two models' predictions correlate at 0.956, and LogReg led on validation by 0.013. The champion stays LogReg as selected; swapping it now would turn the test season into a tuning set. Elo is the challenger, compared on live 2026-27 games, which nobody has seen, by the Phase 10 champion/challenger job. The site's `/performance` page should show Elo next to the model.
 
 LogReg's C was picked on validation (the strongest regularization within 0.0001 of the best log loss; the curve is flat from C = 0.1 up), so its validation numbers are slightly optimistic. The test season (2025-26) hasn't been touched; it's reported once, in Phase 3.
 
@@ -114,7 +135,7 @@ LogReg's C was picked on validation (the strongest regularization within 0.0001 
 ## 7. MLOps
 
 - **MLflow:** SQLite tracking store at `ml/mlflow.db`, artifacts in `ml/mlartifacts/` (both git-ignored); run `uv run mlflow ui --backend-store-uri sqlite:///mlflow.db` from `ml/`. Experiments `tipoff-game` and `tipoff-player`. Log params, metrics (val and test), the feature list, the data window, the calibration plot and SHAP summary plot as artifacts, and the model via `mlflow.sklearn` / `mlflow.lightgbm`.
-- **Registry:** register `tipoff-game` with the alias `champion`. `retrain.sh` trains a challenger, compares on the latest 60-day window, and only moves `champion` if log loss improves.
+- **Registry:** register `tipoff-game` with the alias `champion`. As built: an MLflow pyfunc bundling the fitted `GameModel` (model, calibrator, feature list), trained on every completed game since 2015-16 (13,392 through 2026-11-13), with the calibrator fit out of time on 2025-26. v1 = LogReg. Phase 4 loads it with `tipoff.models.final.load_champion()`, which exposes `predict_proba` and `contributions`. `retrain.sh` trains a challenger, compares on the latest 60-day window, and only moves `champion` if log loss improves.
 - **Reproducibility:** `uv.lock`, fixed seeds, and a `features_hash` (hash of feature table schema + window) stored with every prediction.
 - **Data validation:** pandera schemas on raw and feature tables (no nulls in key columns, sane ranges, unique keys).
 - **Monitoring:** `/performance` *is* the monitor. Also log the daily rolling 50-game log loss and alert (GitHub issue via Action) if it degrades past the Elo baseline for 2 weeks.

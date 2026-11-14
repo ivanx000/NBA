@@ -1,0 +1,141 @@
+{
+  "_meta": {
+    "description": "Groups of model features shown to users as one factor each. Used by ml (to sum contributions per group) and web (copy). Every feature in ml/src/tipoff/features/columns.py must be in exactly one group.",
+    "template_note": "{team} = the team this factor favors, {opponent} = the other team. Never show raw feature names to users."
+  },
+  "groups": [
+    {
+      "id": "elo",
+      "label": "Team rating",
+      "template": "{team} rated higher overall (Elo)",
+      "features": [
+        "elo_diff",
+        "elo_prob_home"
+      ]
+    },
+    {
+      "id": "home_court",
+      "label": "Home court",
+      "template": "Home court and home/road records favor {team}",
+      "features": [
+        "elo_hfa",
+        "is_neutral_f",
+        "home_venue_win_pct",
+        "away_venue_win_pct"
+      ]
+    },
+    {
+      "id": "season_strength",
+      "label": "Season-long strength",
+      "template": "{team} stronger over the season",
+      "features": [
+        "diff_net_rating_std",
+        "diff_off_rating_std",
+        "diff_def_rating_std",
+        "diff_margin_std",
+        "diff_win_std"
+      ]
+    },
+    {
+      "id": "recent_form",
+      "label": "Recent form",
+      "template": "{team} in better recent form",
+      "features": [
+        "diff_net_rating_l10",
+        "diff_off_rating_l10",
+        "diff_def_rating_l10",
+        "diff_margin_l10",
+        "diff_win_l10",
+        "diff_net_rating_l5",
+        "diff_margin_l5",
+        "diff_net_rating_ewm"
+      ]
+    },
+    {
+      "id": "shooting",
+      "label": "Shooting",
+      "template": "{team} have the shooting edge",
+      "features": [
+        "diff_efg_std",
+        "diff_efg_l10",
+        "diff_opp_efg_std",
+        "diff_opp_efg_l10",
+        "diff_ft_rate_std",
+        "diff_ft_rate_l10",
+        "diff_opp_ft_rate_std",
+        "diff_opp_ft_rate_l10"
+      ]
+    },
+    {
+      "id": "possessions",
+      "label": "Turnovers and rebounding",
+      "template": "{team} win the turnover and rebounding battle",
+      "features": [
+        "diff_tov_pct_std",
+        "diff_tov_pct_l10",
+        "diff_opp_tov_pct_std",
+        "diff_opp_tov_pct_l10",
+        "diff_oreb_pct_std",
+        "diff_oreb_pct_l10",
+        "diff_dreb_pct_std",
+        "diff_dreb_pct_l10"
+      ]
+    },
+    {
+      "id": "pace",
+      "label": "Pace",
+      "template": "The expected tempo suits {team}",
+      "features": [
+        "diff_pace_std",
+        "diff_pace_l10"
+      ]
+    },
+    {
+      "id": "rest",
+      "label": "Rest and schedule",
+      "template": "{team} better rested",
+      "features": [
+        "diff_rest_days",
+        "diff_games_last7",
+        "home_rest_days",
+        "away_rest_days",
+        "home_b2b",
+        "away_b2b",
+        "home_three_in_four",
+        "away_three_in_four"
+      ]
+    },
+    {
+      "id": "travel",
+      "label": "Travel",
+      "template": "{opponent} on a tougher trip",
+      "features": [
+        "diff_travel_km",
+        "home_travel_km",
+        "away_travel_km",
+        "home_tz_crossed",
+        "away_tz_crossed"
+      ]
+    },
+    {
+      "id": "availability",
+      "label": "Missing players",
+      "template": "{opponent} missing key players",
+      "features": [
+        "diff_out_min_share",
+        "home_out_min_share",
+        "away_out_min_share",
+        "home_star_out",
+        "away_star_out"
+      ]
+    },
+    {
+      "id": "season_phase",
+      "label": "Point in the season",
+      "template": "The point in the season favors {team}",
+      "features": [
+        "season_progress"
+      ]
+    }
+  ]
+}

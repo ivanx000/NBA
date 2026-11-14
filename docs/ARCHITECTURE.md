@@ -46,7 +46,7 @@ If the laptop is off at 09:30, the job runs at next wake (launchd/anacron behavi
 
 ```
 .
-├── shared/teams.json
+├── shared/teams.json, shared/factors.json   # factors: feature groups + copy for explanations
 ├── ml/
 │   ├── pyproject.toml            # uv; ruff; pytest config
 │   ├── src/tipoff/
@@ -70,10 +70,12 @@ If the laptop is off at 09:30, the job runs at next wake (launchd/anacron behavi
 │   │   │   ├── data.py           # load features, time-based splits (test season unreachable)
 │   │   │   ├── baselines.py      # home team, Elo-logistic, LogReg
 │   │   │   ├── train_baselines.py
-│   │   │   ├── game_outcome.py   # train/eval/calibrate classifier (Phase 3)
+│   │   │   ├── game_outcome.py   # GameModel: LogReg / LightGBM / log-odds ensemble + calibrator
+│   │   │   ├── train_game.py     # Optuna, out-of-time calibration, champion kind (validation only)
+│   │   │   ├── final.py          # one-time test, walk-forward, champion registration
 │   │   │   └── player_stats.py   # pts/reb/ast regressors (Phase 9)
 │   │   ├── evaluate/             # backtest, metrics, calibration, plots
-│   │   ├── predict/              # inference + SHAP factor extraction
+│   │   ├── predict/              # inference; explain.py turns contributions into top factors
 │   │   ├── publish/              # writes to Postgres (SQLAlchemy)
 │   │   └── cli.py                # typer CLI: tipoff ingest|features|train|predict|publish|daily
 │   ├── tests/

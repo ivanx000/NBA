@@ -13,7 +13,7 @@
 
 ## Getting started
 
-Requirements: Python 3.12 with [uv](https://docs.astral.sh/uv/), Node 26, and pnpm 12 (`npm i -g pnpm@12`).
+Requirements: Python 3.12 with [uv](https://docs.astral.sh/uv/), Node 26, pnpm 12 (`npm i -g pnpm@12`), and on macOS `brew install libomp` (for LightGBM).
 
 ```bash
 # ML pipeline

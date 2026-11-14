@@ -67,6 +67,9 @@ uv run tipoff ingest              # stats + cdn, then stage/validate (idempotent
 uv run tipoff ingest --source cdn # cdn.nba.com only (safe in CI)
 uv run tipoff features           # build data/features/game_features.parquet (--tune-elo to re-tune Elo)
 uv run tipoff train --only baselines   # train + evaluate on 2024-25, log to MLflow
+uv run tipoff train --only game        # Optuna + calibration + champion kind -> ml/config/game_model.json
+uv run tipoff evaluate                 # 2025-26 walk-forward + factor importance (add --test only for a new major version)
+uv run tipoff train --only champion    # fit on all games, register tipoff-game@champion
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish
@@ -89,11 +92,13 @@ Next.js 16 has breaking changes from older versions. Read `web/AGENTS.md` and th
 
 (Keep this section updated as commands change.)
 
+LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it).
+
 ## Hard rules
 
 **Data and ML**
 - **No data leakage.** Every feature for a game must be computable using only information available *before tip-off*. Rolling stats use `.shift(1)` or an equivalent. There's a test for this. Keep it passing.
-- **Time-based splits only.** Never random-split games for train/test. Train 2015-16..2023-24, validate 2024-25, test 2025-26 (`tipoff.config`). Only Phase 3's final evaluation may touch the test season; `models/data.train_valid` can't return it.
+- **Time-based splits only.** Never random-split games for train/test. Train 2015-16..2023-24, validate 2024-25, test 2025-26 (`tipoff.config`). Only Phase 3's final evaluation may touch the test season; `models/data.train_valid` can't return it. The one-time test already ran (`ml/reports/test_2025-26.json`); `tipoff evaluate --test` refuses to run again without `--force-retest`, which is for a new major model version only. Never pick or tune a model based on test numbers.
 - Always report against baselines (home team wins, Elo) next to any model metric.
 - Log every training run to MLflow with params, metrics, and the model artifact.
 - `stats.nba.com` blocks cloud and CI IP ranges. **Never call it from GitHub Actions or Vercel.** Historical and box-score ingestion runs on the developer's machine. The `cdn.nba.com` live and schedule JSON endpoints are fine to call from CI.

@@ -35,6 +35,8 @@ TEST_SEASON = "2025-26"
 
 CONFIG_DIR = ML_DIR / "config"
 ELO_PARAMS_PATH = CONFIG_DIR / "elo_params.json"
+GAME_MODEL_CONFIG_PATH = CONFIG_DIR / "game_model.json"
+PREDICTIONS_DIR = DATA_DIR / "predictions"
 
 # Seconds between requests to NBA endpoints. Be polite (see CLAUDE.md).
 NBA_STATS_REQUEST_DELAY = 0.6

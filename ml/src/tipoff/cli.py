@@ -121,19 +121,68 @@ def features(
 
 class ModelSet(StrEnum):
     baselines = "baselines"
+    game = "game"
+    champion = "champion"
 
 
 @app.command()
 def train(
     only: Annotated[ModelSet, typer.Option(help="Which models to train.")] = ModelSet.baselines,
     mlflow_log: Annotated[bool, typer.Option("--mlflow/--no-mlflow")] = True,
+    trials: Annotated[int, typer.Option(help="Optuna trials for LightGBM (game only).")] = 100,
 ) -> None:
-    """Train models on 2015-16..2023-24, evaluate on 2024-25, and log runs to MLflow."""
-    from tipoff.evaluate.metrics import to_markdown
-    from tipoff.models.train_baselines import run_baselines
+    """Train on 2015-16..2023-24, evaluate on 2024-25, log runs to MLflow.
 
-    out = run_baselines(log_to_mlflow=mlflow_log)
+    `--only game` tunes LightGBM, picks calibration and the champion kind, and writes
+    ml/config/game_model.json. It never touches the test season.
+    """
+    from tipoff.evaluate.metrics import to_markdown
+
+    if only is ModelSet.champion:
+        from tipoff.models.final import train_champion
+
+        info = train_champion()
+        typer.echo(
+            f"registered tipoff-game v{info['version']} @champion: {info['kind']}, "
+            f"{info['n_train']:,} games through {info['through']}"
+        )
+        return
+    if only is ModelSet.baselines:
+        from tipoff.models.train_baselines import run_baselines
+
+        out = run_baselines(log_to_mlflow=mlflow_log)
+    else:
+        from tipoff.models.train_game import select
+
+        out = select(n_trials=trials, log_to_mlflow=mlflow_log)
+        cfg = out["config"]
+        typer.echo(f"champion kind: {cfg['kind']} ({cfg['calibration']} calibration)")
     typer.echo(to_markdown(out["table"]))
+
+
+@app.command()
+def evaluate(
+    test: Annotated[bool, typer.Option("--test", help="Run the one-time 2025-26 test.")] = False,
+    force_retest: Annotated[bool, typer.Option(help="Allow re-running the test.")] = False,
+    backtest: Annotated[bool, typer.Option(help="Also run the 2025-26 walk-forward.")] = True,
+) -> None:
+    """Final evaluation on the test season (once) and the monthly walk-forward backtest."""
+    from tipoff.evaluate.metrics import to_markdown
+    from tipoff.models.final import TestAlreadyRunError, final_test, walk_forward
+
+    if test:
+        try:
+            out = final_test(force=force_retest)
+        except TestAlreadyRunError as e:
+            raise typer.BadParameter(str(e), param_hint="--test") from e
+        typer.echo("final test:\n" + to_markdown(out["table"]))
+    if backtest:
+        from tipoff.models.final import factor_importance
+
+        wf = walk_forward()
+        typer.echo("walk-forward:\n" + to_markdown(wf["table"]))
+        fi = factor_importance()
+        typer.echo("factor importance (mean |pp|):\n" + fi.round(4).to_string())
 
 
 @app.command()

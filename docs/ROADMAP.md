@@ -58,13 +58,20 @@ Notes:
 - Feature build on all data takes about 3 s; 13,392 regular-season games from 2015-16; features hash `a2aab4e98d28b7b5`.
 
 ## Phase 3: Main game model
-- [ ] LightGBM + Optuna tuning on the 2024-25 validation season
-- [ ] Calibration, then a final test on 2025-26 (once) and a walk-forward backtest
-- [ ] SHAP top factors per game, plus the feature → human copy mapping
-- [ ] Register `tipoff-game` with the `champion` alias in MLflow
-- [ ] Fill in the metrics table in `docs/ML_PLAN.md §5`
+- [x] LightGBM + Optuna tuning on the 2024-25 validation season
+- [x] Calibration, then a final test on 2025-26 (once) and a walk-forward backtest
+- [x] SHAP top factors per game, plus the feature → human copy mapping
+- [x] Register `tipoff-game` with the `champion` alias in MLflow
+- [x] Fill in the metrics table in `docs/ML_PLAN.md §5`
 
 Notes:
+- `brew install libomp` was needed for LightGBM on macOS.
+- Tuned LightGBM (100 Optuna trials) didn't beat LogReg on validation (0.6001 vs 0.5955); Optuna chose 5-leaf trees, which suggests the signal is mostly linear. The ensemble's best weight was 0.9 LogReg. **Champion = LogReg + Platt**, as the plan allowed.
+- **Test 2025-26 (run once): Elo 0.5978 / 69.2% edged out LogReg 0.6022 / 67.1%.** The gap isn't significant (bootstrap 95% CI for LogReg − Elo per-game log loss: [−0.0036, +0.0113]). The champion wasn't changed, because that would use the test as a tuning set. Elo becomes the challenger on live 2026-27 games (Phase 10), and `/performance` should show Elo beside the model.
+- Explanations use exact additive contributions (LogReg terms or LightGBM's built-in TreeSHAP); no `shap` package. 11 factor groups live in `shared/factors.json`, shared by ml and web (`web/lib/factor-copy.ts`).
+- Known explanation quirk: `elo_diff` includes the home edge, so some home advantage shows as "Team rating". Fix with the copy work in Phase 8 (split the feature).
+- MLflow 3.18 registered the pyfunc via its logged-model id and printed a "no artifacts at path 'model'" warning; registration and loading by `models:/tipoff-game@champion` both work.
+- Walk-forward predictions for 2025-26 are in `ml/data/predictions/backtest_2025-26.parquet` (git-ignored) for the Phase 4 backfill.
 
 ## Phase 4: Publish pipeline + DB
 - [ ] Neon project (dev + prod branches), schema from ARCHITECTURE §4 (Drizzle migrations in `web/`, the single source of truth)

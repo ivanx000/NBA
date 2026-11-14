@@ -22,13 +22,16 @@ TRADED_PLAYER = 1_000_000 + 1610612738 % 1000 * 10 + 0  # BOS's first player
 TRADE_TO = 1610612747  # LAL
 
 
-def make_league(seed: int = 7, dates_per_season: int = 45) -> dict[str, pd.DataFrame]:
+def make_league(
+    seed: int = 7, dates_per_season: int = 45, seasons: dict[str, str] | None = None
+) -> dict[str, pd.DataFrame]:
+    seasons = seasons or SEASONS
     rng = np.random.default_rng(seed)
     games, team_rows, player_rows = [], [], []
     roster = {t: [1_000_000 + t % 1000 * 10 + j for j in range(9)] for t in TEAMS}
     strength = {t: rng.normal(0, 4) for t in TEAMS}
     n = 0
-    for s_idx, (season, start) in enumerate(SEASONS.items()):
+    for s_idx, (season, start) in enumerate(seasons.items()):
         day = pd.Timestamp(start)
         for d in range(dates_per_season):
             day += pd.Timedelta(days=int(rng.choice([1, 1, 2, 2, 3])))
