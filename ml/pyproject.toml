@@ -1,0 +1,38 @@
+[project]
+name = "tipoff"
+version = "0.1.0"
+description = "Tip-Off: NBA game outcome and player stat forecaster (ML pipeline)."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "ivanxie" }]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=3.1.1",
+    "pydantic-settings>=2.16.3",
+    "typer>=0.29.1",
+]
+
+[project.scripts]
+tipoff = "tipoff.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "RUF", "PD", "NPY"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
