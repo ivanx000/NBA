@@ -7,14 +7,22 @@ The ML track (Phases 1–4) and web track (Phases 5–8) can be interleaved. The
 ---
 
 ## Phase 0: Repo setup
-- [ ] `git init`, `.gitignore`, `.env.example`, MIT license, `README.md` (files from planning are already here)
-- [ ] `ml/`: uv project (Python 3.12), ruff, pytest, `src/tipoff/` package skeleton, typer CLI with stub commands
-- [ ] `web/`: Next.js (App Router, TS, Tailwind, ESLint), pnpm, shadcn/ui init, Inter + Oswald fonts, dark theme tokens from DESIGN §1
-- [ ] Add `web/lib/teams.ts` with types for `shared/teams.json` (already present)
-- [ ] GitHub repo + `ci.yml` (ml lint/test, web lint/typecheck/build)
+- [x] `git init`, `.gitignore`, `.env.example`, MIT license, `README.md` (files from planning are already here)
+- [x] `ml/`: uv project (Python 3.12), ruff, pytest, `src/tipoff/` package skeleton, typer CLI with stub commands
+- [x] `web/`: Next.js (App Router, TS, Tailwind, ESLint), pnpm, shadcn/ui init, Inter + Oswald fonts, dark theme tokens from DESIGN §1
+- [x] Add `web/lib/teams.ts` with types for `shared/teams.json` (already present)
+- [x] GitHub repo + `ci.yml` (ml lint/test, web lint/typecheck/build)
 - [ ] Vercel project linked to `web/` (it deploys the placeholder page)
 
 Notes:
+- The home directory (`~`) is itself a git repo. `NBA/` got its own repo with `git init`, so it no longer shows up there. The home-directory repo was left alone.
+- GitHub: `ivanx000/NBA` (public). pnpm wasn't installed: added globally (`npm i -g pnpm@12`) and pinned via `packageManager`.
+- Next.js is 16.4 (Turbopack, Tailwind v4 through the `@tailwindcss/turbopack` loader, no PostCSS; `cacheComponents` on). ESLint uses the flat config (`next lint` is gone). `pnpm typecheck` runs `next typegen` first so the global `LayoutProps`/`PageProps` types exist.
+- shadcn 4.23 (`radix-nova` preset) replaces `clsx` + `tailwind-merge` with its own `cn` package.
+- `web/` imports `../../shared/teams.json` directly. `turbopack.root` and `outputFileTracingRoot` are set to the repo root so this works in dev, build and on Vercel.
+- The site is dark only: brand tokens from DESIGN §1 live in `:root`, mapped onto shadcn's semantic tokens, and `<html>` carries `dark`.
+- CLI is `tipoff <cmd>` (typer), with `python -m tipoff` as an alias. CLAUDE.md commands now use 2015-16 as the first season, matching ML_PLAN.
+- Added `pipeline.yaml` and `scripts/pre-push` for the local `pipeline` runner. `pipeline` isn't installed on this machine yet, so the yaml hasn't been run; the hook skips with a warning until it is.
 
 ## Phase 1: Data ingestion (local)
 - [ ] `ingest/nba_stats.py`: team and player game logs for 2015-16 → current, with rate limit, retries and parquet cache

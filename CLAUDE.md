@@ -50,6 +50,8 @@ The full specs live in `docs/`:
 │   ├── lib/
 │   └── public/models, public/textures
 ├── assets-src/            # raw generated assets (ChatGPT images, Meshy exports). Large files git-ignored.
+├── scripts/pre-push       # git hook: runs pipeline.yaml locally (skips if `pipeline` isn't installed)
+├── pipeline.yaml          # local CI for the `pipeline` runner; mirrors ci.yml
 └── .github/workflows/
 ```
 
@@ -60,23 +62,30 @@ ML (run from `ml/`):
 uv sync                          # install deps
 uv run pytest                    # tests
 uv run ruff check . && uv run ruff format .
-uv run python -m tipoff.ingest --seasons 2018-19:2026-27
-uv run python -m tipoff.train
-uv run python -m tipoff.predict --date today
-uv run python -m tipoff.publish  # writes predictions to Postgres
-uv run mlflow ui                 # experiment tracking UI at localhost:5000
+uv run tipoff --help             # typer CLI (also: uv run python -m tipoff ...)
+uv run tipoff ingest --seasons 2015-16:2026-27
+uv run tipoff features
+uv run tipoff train
+uv run tipoff predict --date today
+uv run tipoff publish            # writes predictions to Postgres
+uv run tipoff daily              # ingest -> features -> predict -> publish
+uv run mlflow ui                 # experiment tracking UI at localhost:5000 (added in Phase 2)
 ```
 
 Web (run from `web/`):
 ```bash
 pnpm install
 pnpm dev                         # localhost:3000
-pnpm lint && pnpm typecheck
-pnpm test
+pnpm lint && pnpm typecheck     # typecheck runs `next typegen` first
+pnpm test                        # Vitest
 pnpm build
 ```
 
-(Exact module names may change as the code is written. Keep this section updated.)
+Whole repo (from the root): `pipeline` runs `pipeline.yaml` (same checks as CI).
+
+Next.js 16 has breaking changes from older versions. Read `web/AGENTS.md` and the bundled guides in `web/node_modules/next/dist/docs/` before writing web code.
+
+(Keep this section updated as commands change.)
 
 ## Hard rules
 

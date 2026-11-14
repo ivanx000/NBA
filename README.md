@@ -11,7 +11,29 @@
 
 ## Getting started
 
-See `CLAUDE.md` for commands, and `docs/ROADMAP.md` for build status.
+Requirements: Python 3.12 with [uv](https://docs.astral.sh/uv/), Node 26, and pnpm 12 (`npm i -g pnpm@12`).
+
+```bash
+# ML pipeline
+cd ml
+uv sync
+uv run tipoff --help
+uv run pytest
+
+# Website
+cd web
+pnpm install
+pnpm dev        # http://localhost:3000
+```
+
+Copy `.env.example` to `.env` and fill in the values when a phase needs them. Optional: install the
+pre-push hook with `ln -sf ../../scripts/pre-push .git/hooks/pre-push`.
+
+See `CLAUDE.md` for all commands and `docs/ROADMAP.md` for build status.
+
+## License
+
+MIT. See `LICENSE`.
 
 ## Docs
 
