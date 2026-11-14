@@ -10,7 +10,7 @@
  │  tipoff.features ─► ml/data/features/*.parquet                                           │
  │        │                                                                                 │
  │        ▼                                                                                 │
- │  tipoff.train ─► MLflow (ml/mlruns or remote) ─► registered model "tipoff-game" v{N}     │
+ │  tipoff.train ─► MLflow (ml/mlflow.db or remote) ─► registered model "tipoff-game" v{N}   │
  │        │                                                                                 │
  │        ▼                                                                                 │
  │  tipoff.predict ─► predictions + SHAP factors + player projections                       │
@@ -59,15 +59,19 @@ If the laptop is off at 09:30, the job runs at next wake (launchd/anacron behavi
 │   │   │   ├── stage.py          # raw -> validated games / team_games / player_games
 │   │   │   └── schemas.py        # pandera schemas
 │   │   ├── features/
-│   │   │   ├── team_form.py      # rolling team stats (shifted!)
-│   │   │   ├── elo.py
-│   │   │   ├── schedule.py       # rest days, back-to-backs, travel
-│   │   │   ├── availability.py   # who's out (from previous-game minutes / injury report)
-│   │   │   └── build.py          # assembles the game-level feature table
+│   │   │   ├── timeline.py       # played + scheduled games, one row per team-game
+│   │   │   ├── team_form.py      # rolling team stats (shifted!) blended with priors
+│   │   │   ├── elo.py            # Elo + grid-search tuning (params in ml/config/elo_params.json)
+│   │   │   ├── schedule.py       # rest days, back-to-backs, travel, time zones
+│   │   │   ├── availability.py   # who's out (missed the previous game; injury report later)
+│   │   │   ├── columns.py, schemas.py
+│   │   │   └── build.py          # assembles the game-level feature table + features_hash
 │   │   ├── models/
-│   │   │   ├── game_outcome.py   # train/eval/calibrate classifier
-│   │   │   ├── player_stats.py   # pts/reb/ast regressors
-│   │   │   └── baselines.py
+│   │   │   ├── data.py           # load features, time-based splits (test season unreachable)
+│   │   │   ├── baselines.py      # home team, Elo-logistic, LogReg
+│   │   │   ├── train_baselines.py
+│   │   │   ├── game_outcome.py   # train/eval/calibrate classifier (Phase 3)
+│   │   │   └── player_stats.py   # pts/reb/ast regressors (Phase 9)
 │   │   ├── evaluate/             # backtest, metrics, calibration, plots
 │   │   ├── predict/              # inference + SHAP factor extraction
 │   │   ├── publish/              # writes to Postgres (SQLAlchemy)
@@ -206,7 +210,7 @@ The GSAP timeline subscribes to `phase` and owns all camera and character timing
 | Var | Used by | Where set |
 |---|---|---|
 | `DATABASE_URL` | ml publish, web | local `.env`, Vercel env, GitHub secret |
-| `MLFLOW_TRACKING_URI` | ml | local `.env` (default `file:./mlruns`) |
+| `MLFLOW_TRACKING_URI` | ml | local `.env` (default `sqlite:///<repo>/ml/mlflow.db`, artifacts in `ml/mlartifacts/`) |
 | `MESHY_API_KEY` | scripts/assets | local `.env` only |
 
 Use separate Neon branches for `dev` and `prod`. Vercel preview deployments use the dev branch.

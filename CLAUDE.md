@@ -65,12 +65,12 @@ uv run ruff check . && uv run ruff format .
 uv run tipoff --help             # typer CLI (also: uv run python -m tipoff ...)
 uv run tipoff ingest              # stats + cdn, then stage/validate (idempotent; --dry-run, --force)
 uv run tipoff ingest --source cdn # cdn.nba.com only (safe in CI)
-uv run tipoff features
-uv run tipoff train
+uv run tipoff features           # build data/features/game_features.parquet (--tune-elo to re-tune Elo)
+uv run tipoff train --only baselines   # train + evaluate on 2024-25, log to MLflow
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish
-uv run mlflow ui                 # experiment tracking UI at localhost:5000 (added in Phase 2)
+uv run mlflow ui --backend-store-uri sqlite:///mlflow.db   # MLflow UI at localhost:5000
 uv run --group notebook jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb
 ```
 
@@ -93,7 +93,7 @@ Next.js 16 has breaking changes from older versions. Read `web/AGENTS.md` and th
 
 **Data and ML**
 - **No data leakage.** Every feature for a game must be computable using only information available *before tip-off*. Rolling stats use `.shift(1)` or an equivalent. There's a test for this. Keep it passing.
-- **Time-based splits only.** Never random-split games for train/test.
+- **Time-based splits only.** Never random-split games for train/test. Train 2015-16..2023-24, validate 2024-25, test 2025-26 (`tipoff.config`). Only Phase 3's final evaluation may touch the test season; `models/data.train_valid` can't return it.
 - Always report against baselines (home team wins, Elo) next to any model metric.
 - Log every training run to MLflow with params, metrics, and the model artifact.
 - `stats.nba.com` blocks cloud and CI IP ranges. **Never call it from GitHub Actions or Vercel.** Historical and box-score ingestion runs on the developer's machine. The `cdn.nba.com` live and schedule JSON endpoints are fine to call from CI.

@@ -34,7 +34,7 @@ The bar for "good": beat simple baselines on a held-out season, with well-calibr
 
 1. A feature row for game *G* on date *D* may only use games with `game_date < D`. (Same-day games are excluded too, since they're simultaneous.)
 2. All rolling and expanding statistics are computed on a per-team sorted series and then `.shift(1)`.
-3. Season-to-date stats reset at season boundaries. Early-season rows (fewer than 5 games) fall back to a blend with the previous season's final values, shrunk toward the league mean.
+3. Season-to-date stats reset at season boundaries. Every season-to-date and windowed stat is blended with a prior: `(n · current + k · prior) / (n + k)`, where `n` is games played so far and the prior is the team's previous regular-season average regressed one third of the way to that season's league average (k = 10 season-to-date, 3 last-10, 2 last-5, 5 EWM). Early-season rows lean on the prior, late-season rows on the current season. 2014-15 is ingested only to provide the priors and Elo warm-up for 2015-16.
 4. Elo is updated **after** each game and read **before** it.
 5. Scaling/encoding is fit inside the training fold only (use sklearn `Pipeline`).
 6. **Test:** `tests/test_no_leakage.py` builds features, then randomly perturbs each game's own final score and confirms that game's feature row doesn't change. Also assert that `max(source_game_date) < game_date` for every row.
@@ -49,8 +49,14 @@ Each row is one game, with features as **home − away differences** (plus a few
 | Form | last-5 / last-10 net rating diff, last-10 win% diff, exponentially-weighted net rating (halflife ≈ 7 games) |
 | Style/efficiency | off rating, def rating, pace, eFG%, TOV%, OREB%, FT rate (the "four factors"): season-to-date and last-10 diffs |
 | Schedule | rest days (home, away), back-to-back flags, games in last 7 days, 3-in-4 flags, travel km since last game, time zones crossed |
-| Availability | sum of season minutes share of rotation players out (home, away), star-out flag (top-2 by usage) |
-| Context | season phase (game number / 82), home team's home record, away team's road record |
+| Availability | sum of season minutes share of rotation players out (home, away), star-out flag (top-2 by season-to-date points per game, since usage isn't ingested yet) |
+| Context | season phase (game number / 82), home team's home record, away team's road record, neutral-site flag |
+
+**As built (Phase 2):** 56 features in `ml/src/tipoff/features/columns.py`, built by `features/build.py`.
+- Four factors are computed from the base box score: eFG% = (FGM + 0.5·3PM)/FGA, TOV% = TOV/(FGA + 0.44·FTA + TOV), OREB% = OREB/(OREB + opp DREB), FT rate = FTM/FGA. Each team gets offensive (own) and defensive (opponents') versions.
+- "Out" = rotation players (≥ 20 mpg over the team's last 10 games) who didn't appear in the team's previous game, excluding players whose most recent appearance was for another team (traded). This is exactly what's known at 10 AM on game day. No injury report yet.
+- Travel is measured between arenas. For neutral-site games the designated home team's arena stands in for the real venue (a known limitation). Time zones crossed compares both arenas' UTC offsets on the same date, so a DST change isn't counted as travel.
+- Scheduled (unplayed) games go through the same code path, so training and prediction features can't drift.
 
 Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g. `rest_days_diff` → "{team} more rested ({n} days vs {m})").
 
@@ -59,6 +65,7 @@ Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g.
 ### Baselines (always reported)
 1. **Home team wins**: historically wins roughly 55 to 60% of games. Compute the exact rate from your data.
 2. **Elo-only logistic**: P(home) from the Elo diff.
+   - Tuned on the training seasons only (grid over K, home advantage, carry-over, margin-of-victory; 300 combinations, by Elo's own log loss). Result in `ml/config/elo_params.json`: **K = 15, carry-over 0.6, margin-of-victory multiplier on, home advantage from the previous two seasons' league home win rate** (about 47 Elo points on average; 0 at neutral sites). The rolling home edge beat every fixed value, matching the EDA finding that home advantage shrank after 2019.
 3. **Logistic regression** on all features (standardized). A strong, interpretable baseline.
 
 ### Main model
@@ -82,14 +89,18 @@ Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g.
 
 **Metrics:** log loss (primary), Brier score, accuracy, ROC-AUC, calibration (ECE plus a reliability plot). Always shown as a table that includes the baselines.
 
-| Model | Log loss ↓ | Brier ↓ | Accuracy ↑ | AUC ↑ |
-|---|---|---|---|---|
-| Home team | | | | |
-| Elo | | | | |
-| LogReg | | | | |
-| LightGBM (calibrated) | | | | |
+**Validation season 2024-25** (1,230 regular-season games; trained on 2015-16..2023-24, 10,749 games). Source: `ml/reports/baselines_validation.md`, MLflow experiment `tipoff-game`.
 
-(Fill in. Good NBA game models typically land in the mid-to-high 60s for accuracy. Don't promise more on the site.)
+| Model | Log loss ↓ | Brier ↓ | Accuracy ↑ | AUC ↑ | ECE ↓ |
+|---|---|---|---|---|---|
+| Home team | 0.6905 | 0.2487 | 54.4% | 0.5000 | 0.0241 |
+| Elo | 0.6083 | 0.2107 | 66.4% | 0.7233 | 0.0207 |
+| LogReg (C = 0.1) | 0.5960 | 0.2051 | 68.4% | 0.7408 | 0.0209 |
+| LightGBM (calibrated) | | | | | |
+
+LogReg's C was picked on validation (the strongest regularization within 0.0001 of the best log loss; the curve is flat from C = 0.1 up), so its validation numbers are slightly optimistic. The test season (2025-26) hasn't been touched; it's reported once, in Phase 3.
+
+(Good NBA game models typically land in the mid-to-high 60s for accuracy. Don't promise more on the site.)
 
 ## 6. Player stat projections
 
@@ -102,7 +113,7 @@ Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g.
 
 ## 7. MLOps
 
-- **MLflow:** experiment `tipoff-game` and `tipoff-player`. Log params, metrics (val and test), the feature list, the data window, the calibration plot and SHAP summary plot as artifacts, and the model via `mlflow.sklearn` / `mlflow.lightgbm`.
+- **MLflow:** SQLite tracking store at `ml/mlflow.db`, artifacts in `ml/mlartifacts/` (both git-ignored); run `uv run mlflow ui --backend-store-uri sqlite:///mlflow.db` from `ml/`. Experiments `tipoff-game` and `tipoff-player`. Log params, metrics (val and test), the feature list, the data window, the calibration plot and SHAP summary plot as artifacts, and the model via `mlflow.sklearn` / `mlflow.lightgbm`.
 - **Registry:** register `tipoff-game` with the alias `champion`. `retrain.sh` trains a challenger, compares on the latest 60-day window, and only moves `champion` if log loss improves.
 - **Reproducibility:** `uv.lock`, fixed seeds, and a `features_hash` (hash of feature table schema + window) stored with every prediction.
 - **Data validation:** pandera schemas on raw and feature tables (no nulls in key columns, sane ranges, unique keys).

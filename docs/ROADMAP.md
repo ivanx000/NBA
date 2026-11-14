@@ -41,13 +41,21 @@ Notes:
 - EDA headline numbers: home teams won 58–59% before 2019 and 54–55% in most seasons since; back-to-back teams win 44.6% vs 51.2% rested; combined scoring rose from about 205 to 231 points a game.
 
 ## Phase 2: Features + baselines
-- [ ] Elo (tuned K and home advantage), rolling form, four factors, schedule/rest/travel, availability v1
-- [ ] `features/build.py` produces one row per game
-- [ ] **`test_no_leakage.py` passes**
-- [ ] Baselines: home team, Elo-logistic, logistic regression, all logged to MLflow
-- [ ] Evaluation module: metrics table + calibration plot
+- [x] Elo (tuned K and home advantage), rolling form, four factors, schedule/rest/travel, availability v1
+- [x] `features/build.py` produces one row per game
+- [x] **`test_no_leakage.py` passes**
+- [x] Baselines: home team, Elo-logistic, logistic regression, all logged to MLflow
+- [x] Evaluation module: metrics table + calibration plot
 
 Notes:
+- 2014-15 is now ingested as a warm-up season (Elo and season priors for 2015-16); it never appears as a training row. Its play-in/playoff files came along (9 calls, not 3).
+- Elo tuning (300 combinations, training seasons only) picked K = 15, carry-over 0.6, margin-of-victory on, and a **rolling** home edge from the previous two seasons; every fixed home edge did worse. The first grid's best sat on its edges, so it was widened until the optimum was interior. Train log loss 0.6222.
+- Leakage tests run on a synthetic league in CI (perturbation + truncation + provenance) and on real data locally (truncation on 2024-12-25 and 2025-03-14). Two deliberately planted leaks (season-to-date sums including the current game; availability using the current game's box score) were each caught by both main tests.
+- Four factors are computed from the base box score: the advanced endpoint's `oreb_pct` is missing for 799 team-games.
+- First trial build showed `tz_crossed` up to 4 hours: comparing each arena's UTC offset on its own game date counted DST changes as travel. Fixed by comparing both on the current date.
+- Validation (2024-25): Home team 54.4% / 0.6905 log loss, Elo 66.4% / 0.6083, LogReg 68.4% / 0.5960 (C = 0.1). The LogReg C curve is flat from 0.1 up, so the rule picks the strongest regularization within 0.0001 of the best.
+- MLflow uses a SQLite store (`ml/mlflow.db`). MLflow 3.18 serializes sklearn models with skops, which needs `skops_trusted_types=["numpy.dtype"]` for our own models.
+- Feature build on all data takes about 3 s; 13,392 regular-season games from 2015-16; features hash `a2aab4e98d28b7b5`.
 
 ## Phase 3: Main game model
 - [ ] LightGBM + Optuna tuning on the 2024-25 validation season
