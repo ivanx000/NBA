@@ -1,3 +1,4 @@
 allowBuilds:
+  esbuild: false # ships its binary as a platform package; the install script is not needed
   sharp: false
   unrs-resolver: false
