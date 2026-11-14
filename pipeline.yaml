@@ -1,0 +1,26 @@
+# Local CI for the `pipeline` runner (mirrors .github/workflows/ci.yml).
+project: "Tip-Off"
+max_parallel: 2
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+stages:
+  - name: "ml: ruff"
+    run: "uv run ruff check . && uv run ruff format --check ."
+    workdir: "ml"
+    parallel: true
+  - name: "web: lint + typecheck"
+    run: "pnpm lint && pnpm typecheck"
+    workdir: "web"
+    parallel: true
+  - name: "ml: pytest"
+    run: "uv run pytest -q"
+    workdir: "ml"
+    parallel: true
+  - name: "web: test"
+    run: "pnpm test"
+    workdir: "web"
+    parallel: true
+  - name: "web: build"
+    run: "pnpm build"
+    workdir: "web"
+    timeout: "5m"

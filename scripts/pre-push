@@ -1,0 +1,8 @@
+#!/bin/sh
+# Install with: ln -sf ../../scripts/pre-push .git/hooks/pre-push
+# Runs the local CI (pipeline.yaml) before every push. Skips if `pipeline` isn't installed.
+if command -v pipeline >/dev/null 2>&1; then
+  exec pipeline --quiet
+fi
+echo "pre-push: 'pipeline' not found on PATH; skipping local CI." >&2
+exit 0
