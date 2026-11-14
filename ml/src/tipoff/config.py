@@ -15,13 +15,23 @@ TEAMS_JSON = SHARED_DIR / "teams.json"
 
 DATA_DIR = ML_DIR / "data"
 RAW_DIR = DATA_DIR / "raw"
+RAW_STATS_DIR = RAW_DIR / "stats"
+RAW_CDN_DIR = RAW_DIR / "cdn"
+STAGED_DIR = DATA_DIR / "staged"
 FEATURES_DIR = DATA_DIR / "features"
+REPORTS_DIR = ML_DIR / "reports"
+FIGURES_DIR = REPORTS_DIR / "figures"
 
 FIRST_SEASON = "2015-16"
 CURRENT_SEASON = "2026-27"
 
-# Seconds between stats.nba.com requests. Be polite (see CLAUDE.md).
+# Seconds between requests to NBA endpoints. Be polite (see CLAUDE.md).
 NBA_STATS_REQUEST_DELAY = 0.6
+HTTP_TIMEOUT_SECONDS = 60
+HTTP_MAX_ATTEMPTS = 5
+
+# Don't re-fetch the in-progress season more often than this (hours).
+CURRENT_SEASON_REFRESH_HOURS = 3
 
 
 class Settings(BaseSettings):

@@ -1,6 +1,9 @@
 """`tipoff` command-line interface. Every command is a stub until its roadmap phase."""
 
+import logging
+from collections import Counter
 from datetime import date
+from enum import StrEnum
 from typing import Annotated
 
 import typer
@@ -36,14 +39,61 @@ def main(
     """Tip-Off ML pipeline."""
 
 
+class Source(StrEnum):
+    stats = "stats"
+    cdn = "cdn"
+    all = "all"
+
+
 @app.command()
 def ingest(
     seasons: Annotated[
         str, typer.Option(help="Season range, e.g. 2015-16:2026-27.")
     ] = f"{FIRST_SEASON}:{CURRENT_SEASON}",
+    source: Annotated[
+        Source, typer.Option(help="stats = stats.nba.com (local only); cdn = cdn.nba.com.")
+    ] = Source.all,
+    force: Annotated[bool, typer.Option(help="Re-fetch even if cached.")] = False,
+    dry_run: Annotated[bool, typer.Option(help="Show what would be fetched.")] = False,
+    stage: Annotated[bool, typer.Option(help="Stage and validate tables afterwards.")] = True,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
-    """Fetch and cache raw NBA data (runs locally only; never from CI)."""
-    _not_implemented("ingest", "Phase 1")
+    """Fetch and cache raw NBA data, then stage and validate it. Idempotent.
+
+    stats.nba.com blocks cloud IPs: only run `--source stats` on a local machine.
+    """
+    from tipoff.ingest import nba_cdn, nba_stats
+    from tipoff.seasons import parse_season_range
+
+    logging.basicConfig(
+        level=logging.INFO if verbose else logging.WARNING,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    try:
+        season_list = parse_season_range(seasons)
+    except ValueError as e:
+        raise typer.BadParameter(str(e), param_hint="--seasons") from e
+
+    if source in (Source.stats, Source.all):
+        tasks = nba_stats.plan_tasks(season_list)
+        results = nba_stats.ingest_stats(tasks, force=force, dry_run=dry_run)
+        for r in results:
+            if r.action != "skipped" or verbose:
+                detail = f" ({r.reason})" if r.reason else ""
+                typer.echo(f"{r.action:>9}  {r.task.key}  rows={r.rows}{detail}")
+        counts = Counter(r.action for r in results)
+        typer.echo("stats: " + ", ".join(f"{n} {a}" for a, n in sorted(counts.items())))
+
+    if source in (Source.cdn, Source.all) and not dry_run:
+        schedule = nba_cdn.ingest_schedule()
+        board = nba_cdn.ingest_scoreboard()
+        typer.echo(f"cdn: schedule {len(schedule)} games, scoreboard {len(board)} games")
+
+    if stage and not dry_run and source in (Source.stats, Source.all):
+        from tipoff.ingest.stage import stage_all
+
+        for name, n in stage_all().items():
+            typer.echo(f"staged: {name} rows={n}")
 
 
 @app.command()

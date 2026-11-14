@@ -1,0 +1,25 @@
+name: cdn-probe
+
+# Manual check that cdn.nba.com (Akamai) answers GitHub-hosted runners. Phase 4's scheduled
+# jobs depend on it. This must never call stats.nba.com.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: ml/uv.lock
+      - run: uv sync --locked
+      - name: Fetch schedule and scoreboard from cdn.nba.com
+        run: uv run tipoff ingest --source cdn --no-stage -v
