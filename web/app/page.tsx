@@ -2,9 +2,9 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { HomeExperience } from "@/components/home/home-experience";
-import { parseDay, todayET } from "@/lib/dates";
-import { getSlate } from "@/lib/db/queries";
-import { pickGame } from "@/lib/slate";
+import { todayET } from "@/lib/dates";
+import { getWheel } from "@/lib/db/queries";
+import { defaultGame } from "@/lib/slate";
 
 function HomeShell() {
   return (
@@ -16,19 +16,17 @@ function HomeShell() {
 }
 
 async function Home({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
-  // "Today" and the random default game are per request, never part of a prerender.
+  // "Today" is per request, never part of a prerender.
   await connection();
   const params = await searchParams;
   const today = todayET();
-  const date = parseDay(params.date) ?? today;
-  const slate = await getSlate(date, today);
+  const wheel = await getWheel(today);
   const requested = typeof params.game === "string" ? params.game : null;
-  // A random game when none is requested (PRD 3.1); the client then writes it into the URL.
-  const featured = pickGame(slate, requested);
+  // Today's next game unless one is requested; the client then writes it into the URL.
+  const featured = defaultGame(wheel, requested);
   return (
     <HomeExperience
-      key={date}
-      slate={slate}
+      wheel={wheel}
       initialGameId={featured?.gameId ?? null}
       syncUrl={featured !== null && featured.gameId !== requested}
     />

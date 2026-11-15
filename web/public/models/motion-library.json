@@ -1,0 +1,443 @@
+[
+  {
+    "name": "AdjustJersey",
+    "seconds": 2.97,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Agree_Gesture",
+    "seconds": 13,
+    "driftM": 0.26,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "ArmsCrossed",
+    "seconds": 4.97,
+    "driftM": 0.21,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "ArmSwings",
+    "seconds": 3.97,
+    "driftM": 0.07,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "BounceLoose",
+    "seconds": 3.97,
+    "driftM": 0.07,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Catching_Breath",
+    "seconds": 7,
+    "driftM": 5.16,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Cheer_with_Both_Hands",
+    "seconds": 2.93,
+    "driftM": 0.07,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "ChestPass",
+    "seconds": 2.97,
+    "driftM": 0.61,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "ChestTap",
+    "seconds": 2.97,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Clap",
+    "seconds": 2.97,
+    "driftM": 0.04,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Confused_Scratch",
+    "seconds": 11.5,
+    "driftM": 0.2,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "DefenseStance",
+    "seconds": 3.97,
+    "driftM": 0.39,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Depressed_Full_Turn_Left",
+    "seconds": 8.8,
+    "driftM": 0.43,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Disappointed",
+    "seconds": 4.97,
+    "driftM": 0.16,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Dribble",
+    "seconds": 3.97,
+    "driftM": 0.04,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "FistPumpSmall",
+    "seconds": 2.97,
+    "driftM": 0.04,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "FocusBreath",
+    "seconds": 4.97,
+    "driftM": 0.06,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "FormShooting",
+    "seconds": 4.97,
+    "driftM": 0.11,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "FreeThrow",
+    "seconds": 4.97,
+    "driftM": 0.25,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Frustrated_Turn_Right",
+    "seconds": 1.2,
+    "driftM": 0.11,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Hand_on_Hip_Gesture",
+    "seconds": 5,
+    "driftM": 0.14,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Handshake",
+    "seconds": 2.97,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "HandsOnHips",
+    "seconds": 4.97,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Happy_Sway_Standing",
+    "seconds": 10,
+    "driftM": 0.21,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Headache_Relief",
+    "seconds": 4.83,
+    "driftM": 0.07,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "HeadShake",
+    "seconds": 2.97,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Idle_10",
+    "seconds": 3.67,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_11",
+    "seconds": 1.87,
+    "driftM": 0.01,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_12",
+    "seconds": 6,
+    "driftM": 0.01,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_13",
+    "seconds": 11.37,
+    "driftM": 0.13,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_14",
+    "seconds": 7.5,
+    "driftM": 0.31,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_15",
+    "seconds": 7,
+    "driftM": 0.15,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_4",
+    "seconds": 13.97,
+    "driftM": 0.11,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_5",
+    "seconds": 1.83,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_6",
+    "seconds": 7.37,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_7",
+    "seconds": 8.73,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_8",
+    "seconds": 8,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_9",
+    "seconds": 2,
+    "driftM": 0.06,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_Step_Turn_Left",
+    "seconds": 1,
+    "driftM": 0.16,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_Turn_Left",
+    "seconds": 0.93,
+    "driftM": 0.15,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Idle_Turn_Right",
+    "seconds": 1.1,
+    "driftM": 0.07,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "IdleWeightShift",
+    "seconds": 5.97,
+    "driftM": 0.24,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "JumpShot2",
+    "seconds": 2.97,
+    "driftM": 0.14,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Listening_Gesture",
+    "seconds": 9.33,
+    "driftM": 0.16,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Long_Breathe_and_Look_Around",
+    "seconds": 11.27,
+    "driftM": 0.07,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "LookUpScoreboard",
+    "seconds": 3.97,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Motivational_Cheer",
+    "seconds": 9,
+    "driftM": 0.26,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "NeckRoll",
+    "seconds": 3.97,
+    "driftM": 0.04,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Nod",
+    "seconds": 2.97,
+    "driftM": 0.01,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "PointTeammate",
+    "seconds": 2.97,
+    "driftM": 0.09,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "PointUp",
+    "seconds": 2.97,
+    "driftM": 0.08,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "ShoulderStretch",
+    "seconds": 4.97,
+    "driftM": 0.08,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "Shrug",
+    "seconds": 2,
+    "driftM": 0.01,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Stand_and_Chat",
+    "seconds": 5.17,
+    "driftM": 0.21,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Talk_with_Hands_Open",
+    "seconds": 3.97,
+    "driftM": 0.08,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Talk_with_Right_Hand_Open",
+    "seconds": 3.73,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "ThumbsUp",
+    "seconds": 2.97,
+    "driftM": 0.04,
+    "inPlace": true,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "TurnAround",
+    "seconds": 2.97,
+    "driftM": 0.27,
+    "inPlace": false,
+    "source": "text-to-motion"
+  },
+  {
+    "name": "victory",
+    "seconds": 8.53,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Victory_Cheer",
+    "seconds": 9.33,
+    "driftM": 0.23,
+    "inPlace": false,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Victory_Fist_Pump",
+    "seconds": 1.5,
+    "driftM": 0.08,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "Wave_One_Hand",
+    "seconds": 4.1,
+    "driftM": 0.02,
+    "inPlace": true,
+    "source": "meshy-library"
+  },
+  {
+    "name": "WipeBrow",
+    "seconds": 2.97,
+    "driftM": 0.05,
+    "inPlace": true,
+    "source": "text-to-motion"
+  }
+]

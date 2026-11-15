@@ -1,8 +1,8 @@
 import { dayLabel, tipoffET } from "@/lib/dates";
-import type { Slate, SlateGame } from "@/lib/slate";
+import type { SlateGame } from "@/lib/slate";
 
 /** "BOS @ NYK · Tonight 7:30 PM ET" (DESIGN.md section 2). */
-export function MatchupHeader({ game, slate }: { game: SlateGame; slate: Slate }) {
+export function MatchupHeader({ game, today }: { game: SlateGame; today: string }) {
   const when =
     game.status === "final"
       ? `Final ${game.awayScore}–${game.homeScore}`
@@ -10,7 +10,7 @@ export function MatchupHeader({ game, slate }: { game: SlateGame; slate: Slate }
         ? `Live ${game.awayScore}–${game.homeScore}`
         : game.status === "postponed"
           ? "Postponed"
-          : `${dayLabel(game.gameDate, slate.today)} ${tipoffET(game.tipoffUtc) ?? ""}`.trim();
+          : `${dayLabel(game.gameDate, today)} ${tipoffET(game.tipoffUtc) ?? ""}`.trim();
   return (
     <p className="text-center text-sm text-muted-foreground tabular sm:text-base">
       <span className="text-foreground">

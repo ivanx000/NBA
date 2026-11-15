@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pickGame, predictBlocker, predictedWinner, type Slate, type SlateGame } from "@/lib/slate";
+import { defaultGame, predictBlocker, predictedWinner, type SlateGame, type Wheel } from "@/lib/slate";
 
 const team = (abbr: string) => ({ teamId: 1, abbr, city: abbr, name: abbr, wins: 0, losses: 0 });
 
@@ -15,26 +15,27 @@ function game(id: string, over: Partial<SlateGame> = {}): SlateGame {
   };
 }
 
-const slate = (over: Partial<Slate> = {}): Slate => ({
-  date: "2026-11-14", today: "2026-11-14", games: [], upcoming: [], recent: [], ...over,
-});
+const wheel = (games: SlateGame[]): Wheel => ({ today: "2026-11-14", games });
 
-describe("pickGame", () => {
-  it("honours a requested game on the page", () => {
-    const s = slate({ games: [game("a"), game("b")] });
-    expect(pickGame(s, "b")?.gameId).toBe("b");
+describe("defaultGame", () => {
+  const yesterday = game("y", { gameDate: "2026-11-13", status: "final", homeScore: 100, awayScore: 90 });
+  const started = game("s", { status: "live" });
+  const next = game("n");
+  const later = game("l");
+
+  it("honours a requested game on the wheel", () => {
+    expect(defaultGame(wheel([yesterday, started, next]), "y")?.gameId).toBe("y");
   });
 
-  it("picks a random game from the day when none is requested", () => {
-    const s = slate({ games: [game("a"), game("b"), game("c")] });
-    expect(pickGame(s, null, () => 0.99)?.gameId).toBe("c");
-    expect(pickGame(s, "missing", () => 0)?.gameId).toBe("a");
+  it("picks today's next game that hasn't started", () => {
+    expect(defaultGame(wheel([yesterday, started, next, later]), null)?.gameId).toBe("n");
+    expect(defaultGame(wheel([yesterday, started, next]), "missing")?.gameId).toBe("n");
   });
 
-  it("falls back to the next game, then the latest one, on days without games", () => {
-    expect(pickGame(slate({ upcoming: [game("n")], recent: [game("r")] }), null)?.gameId).toBe("n");
-    expect(pickGame(slate({ recent: [game("r")] }), null)?.gameId).toBe("r");
-    expect(pickGame(slate(), null)).toBeNull();
+  it("falls back to today's last game, then the most recent game", () => {
+    expect(defaultGame(wheel([yesterday, started]), null)?.gameId).toBe("s");
+    expect(defaultGame(wheel([yesterday]), null)?.gameId).toBe("y");
+    expect(defaultGame(wheel([]), null)).toBeNull();
   });
 });
 

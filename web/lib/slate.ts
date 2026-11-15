@@ -36,35 +36,23 @@ export interface SlateGame {
   prediction: SlatePrediction | null;
 }
 
-export interface Slate {
-  /** The selected ET schedule day. */
-  date: string;
-  /** Today in ET when the slate was built. */
+/** The games on the home page's wheel: today and the two days before, oldest first. */
+export interface Wheel {
+  /** Today in ET when the wheel was built. */
   today: string;
   games: SlateGame[];
-  /** Filled only on days without games: the next 7 days and the previous 7. */
-  upcoming: SlateGame[];
-  recent: SlateGame[];
-}
-
-/** Every game the page can show, in rail order. */
-export function allGames(slate: Slate): SlateGame[] {
-  return slate.games.length ? slate.games : [...slate.upcoming, ...slate.recent];
 }
 
 /**
- * The game to feature: the requested one if it's on this page, otherwise a random game from the
- * day's slate, otherwise the next scheduled game, otherwise the most recent one.
+ * The game to put at the front of the wheel: the requested one if it's on the wheel, otherwise
+ * today's next game that hasn't started, otherwise today's last game, otherwise the most recent.
  */
-export function pickGame(
-  slate: Slate,
-  requested: string | null,
-  random: () => number = Math.random,
-): SlateGame | null {
-  const requestedGame = requested ? allGames(slate).find((g) => g.gameId === requested) : undefined;
+export function defaultGame(wheel: Wheel, requested: string | null): SlateGame | null {
+  const { games, today } = wheel;
+  const requestedGame = requested ? games.find((g) => g.gameId === requested) : undefined;
   if (requestedGame) return requestedGame;
-  if (slate.games.length) return slate.games[Math.floor(random() * slate.games.length)];
-  return slate.upcoming[0] ?? slate.recent[0] ?? null;
+  const todays = games.filter((g) => g.gameDate === today);
+  return todays.find((g) => g.status === "scheduled") ?? todays.at(-1) ?? games.at(-1) ?? null;
 }
 
 export type Side = "home" | "away";

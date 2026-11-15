@@ -33,9 +33,14 @@ function NavBar({ pathname }: { pathname: string | null }) {
         aria-label="Main"
         className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-4 sm:px-6"
       >
-        <Link href="/" className="font-display text-xl font-bold tracking-wide uppercase">
-          Tip-Off
-        </Link>
+        {/* No wordmark on the home page (or while the path streams in): the room is the brand. */}
+        {pathname !== null && pathname !== "/" ? (
+          <Link href="/" className="font-display text-xl font-bold tracking-wide uppercase">
+            Tip-Off
+          </Link>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground md:hidden"

@@ -125,13 +125,28 @@ Notes:
 - Dev server: the 3D chunk takes ~10 s to compile on a fresh navigation in `next dev`; production builds don't have this.
 
 ## Phase 6: Real 3D assets (follow ASSET_PIPELINE.md)
-- [ ] Base character images → Meshy model → rig + clips → `player.glb` optimized
-- [ ] Jersey spike: BOS + LAL with approach A. Decide between A and B, and record the decision here.
-- [ ] `scripts/assets/composite_jersey.py` (+ `meshy_pipeline.py` if automating)
-- [ ] All 30 jerseys (+ alternates), clash rule implemented
-- [ ] Idle variety, offset loops, cursor look-at, jersey swap on card click with preload
+- [x] Base character images → Meshy model → rig + clips → `player.glb` optimized (`pnpm assets:player`, about 2 MB)
+- [x] Jersey spike: BOS + LAL with approaches A and B. **Decision: B (shader tint)**, see ASSET_PIPELINE section 5.
+- [x] Uniform mask baked automatically (`pnpm assets:mask`), `Player` component with tint material, `/dev/jerseys` lab
+- [x] Celebration: Meshy library preset "Cheer with Both Hands Up"
+- [x] Players' look: **holograms** in the jersey color (DESIGN.md section 1)
+- [ ] All 30 jerseys (+ alternates) checked in the lab, clash rule implemented
+- [x] Hologram players in the home scene: idle variety, offset loops, loser dims, reduced motion pauses, colors swap on card click
+- [x] Home redesign: hologram chamber room (glossy floor, grid walls, bloom, pointer parallax), reference-style holograms (contour lines, sparkles, outline, solid lettering, front surface only), arcade game wheel on the left (today + 2 days back), big hero players, no wordmark/footer on home
+- [x] Motion library: 63 extra clips (28 Text to Motion, 35 presets) in `motion-library.glb` for later (`pnpm assets:motions`); `Idle_03` trimmed to its shoulder stretch
+- [ ] Cursor look-at
+- [ ] Poly Haven floor + HDRI, `web/public/CREDITS.md`, CI size budget for `player.glb`
 
 Notes:
+- No Blender needed. gltf-transform scripts rename clips, check drift and optimize; the uniform mask is generated from the base texture and mesh.
+- Text to Motion clips export under their task id; map new ones in `prepare-player.mts`.
+- three's GLTFLoader strips `:` from bone names: the hand bone is `mixamorigRightHand` at runtime.
+- Meshy's web Retexture keeps the original UVs (verified), so approach A stays possible if we ever want photographic jerseys for a few teams.
+- A Text to Motion celebration didn't look human; `Celebrate` is the library preset "Cheer with Both Hands Up". One-shot clips blend back into the idle when they end.
+- The AI-generated model reads as slightly "off" when shaded realistically. A hologram variant of the player shader (team-colored, unlit, scanlines, rim glow) and a pixelated render (low `dpr` + `image-rendering: pixelated`) are prototyped in the lab as stylized alternatives. About 95 Meshy credits spent in Phase 6 before the motion library, then 290 more for it (balance 855). Library clips are free.
+- The motion library's index marks 20 clips as not in place (hips drift > 0.15 m); see ASSET_PIPELINE section 4.
+- Turbopack's dev server sometimes keeps serving a stale `app/globals.css`; component styles live in their own CSS files (`components/home/game-wheel.css`), which reload reliably.
+- `player.glb` is about 2 MB; ~390 KB of it is glTF JSON for ~2,400 animation accessors. Trim static channels in Phase 10 if the payload needs it.
 
 ## Phase 7: The prediction cinematic
 - [ ] GSAP master timeline per DESIGN §4 (camera rig, winner turn, loser dim)

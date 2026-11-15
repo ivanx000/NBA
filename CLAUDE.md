@@ -121,13 +121,13 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 - Server Components fetch data. 3D runs in Client Components loaded with `dynamic(..., { ssr: false })`.
 - Cache Components are on: cache data with `'use cache'` + `cacheLife(...)`, never `export const revalidate`. Anything per request (`searchParams`, "today", `Math.random`) goes inside `<Suspense>` after `await connection()`. Client hooks that read the URL (`usePathname`) in the layout need a `<Suspense>` boundary.
 - `?webgl=0` forces the 2D fallback for testing.
-- Respect `prefers-reduced-motion`: skip the cinematic and go straight to results.
+- Respect `prefers-reduced-motion`: skip the cinematic and go straight to results; holograms, the wheel and the camera hold still.
 - The site must stay usable on mobile and when WebGL fails (provide a 2D fallback).
 - Keep the initial JS and 3D payload small. Compress models (meshopt or Draco) and use compressed textures. See `docs/ASSET_PIPELINE.md`.
 
 **Brand and IP**
 - Use team **city and nickname text and colors** only. Do **not** add official NBA or team logos, wordmark artwork, or real player likenesses or headshots. Players are shown as name, number and initials.
-- The site footer must say it's an unofficial fan project, not affiliated with the NBA.
+- The site must say it's an unofficial fan project, not affiliated with the NBA: in the footer on every page, and as a small line in a corner of the home page (which has no footer bar).
 
 **Database**
 - The schema lives only in `web/lib/db/schema.ts` (Drizzle). Python reflects tables; never define them twice.

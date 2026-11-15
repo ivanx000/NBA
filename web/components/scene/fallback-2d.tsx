@@ -26,7 +26,7 @@ export function Fallback2D({ game, winner }: { game: SlateGame; winner: Side | n
     );
   };
   return (
-    <div className="flex h-full bg-background lg:pr-[330px]" aria-hidden>
+    <div className="flex h-full bg-background pb-[22rem] lg:pb-0 lg:pl-[380px]" aria-hidden>
       {panel("away")}
       {panel("home")}
     </div>

@@ -25,7 +25,7 @@ A website that makes an ML model fun to use. A visitor lands on a dark arena sce
 
 ```
 Land on home
-  └─ Scene loads with a featured game (random game from today's slate)
+  └─ Scene loads with a featured game (today's next game that hasn't started)
        ├─ Side cards list all games for the selected day
        │    └─ Click a card -> players swap jerseys -> scene resets to idle
        └─ Click "Predict who wins"
@@ -47,17 +47,12 @@ Land on home
 - A prominent **Predict who wins** button, horizontally centered between the players and visually anchored at the lower-middle of the viewport.
 - Keyboard accessible (Enter/Space), with a visible focus state.
 
-**Game cards (side rail)**
-- Right-side vertical rail on desktop. Horizontal scroll strip at the bottom on mobile.
-- One card per game in the selected day: both team abbreviations in team colors, tip-off time (user's local timezone), status (Upcoming / Live / Final).
-- The selected card is highlighted.
-- A **date switcher** above the cards (← Yesterday · Today · Tomorrow →, plus a date picker).
-- **Default selection:** a random game from today's slate. The URL updates to `/?game=<id>` so it's shareable and refresh-stable.
-
-**No games today** (off day, All-Star break, off-season)
-- The scene shows the **next scheduled game** by default.
-- The rail header reads "No games today" and shows two sections: **Upcoming** (next 7 days) and **Recent** (last 7 days).
-- Off-season: the rail shows the final games of the last season and opening night of the next one if the schedule is known.
+**Game wheel** (DESIGN.md section 2)
+- An arcade-style prize wheel on the left (desktop) or at the bottom (mobile), facing the user. No box around it.
+- One card per game: both team abbreviations on the two teams' colors, tip-off time (user's local timezone), live or final score, and the day for past games.
+- The front card is the selected game. Scrolling down turns the wheel to older games, scrolling up to newer ones; arrow keys, clicking a visible card and dragging on touch work too. It ends at today's last game.
+- Shows **today and the 2 days before**. If that window has no games (off day, All-Star break, off-season), it shows the most recent earlier day with games.
+- **Default selection:** today's next game that hasn't started (otherwise today's last game, otherwise the most recent). The URL updates to `/?game=<id>` so it's shareable and refresh-stable.
 
 ### 3.2 Prediction cinematic
 
@@ -90,7 +85,7 @@ Top nav: **Predict** (home) · **How it works** · **Model performance** · **Do
 | `/teams/[abbr]` | (v1.1, optional) | A team's predicted vs actual results this season, and how the model rates them over time. |
 
 ### 3.5 Footer
-"Unofficial fan project. Not affiliated with the NBA." · data source credit · GitHub link · "Built with …" tech list.
+On every page except home: "Unofficial fan project. Not affiliated with the NBA." · data source credit · GitHub link. The home page is a full-screen 3D room with no footer bar; it shows the disclaimer as one small line in a corner.
 
 ## 4. Functional requirements
 
