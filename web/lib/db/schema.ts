@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -128,6 +129,23 @@ export const currentGamePredictions = pgView("current_game_predictions", {
 }).as(
   sql`select distinct on (game_id) * from game_predictions where is_pregame order by game_id, (source = 'live') desc, generated_at desc`,
 );
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
+
+/**
+ * Pipeline state for the cloud daily job (not read by the website): the compressed staged game
+ * history ("staged") and the champion model bundle ("champion"), written by `tipoff state push`.
+ */
+export const pipelineState = pgTable("pipeline_state", {
+  key: text("key").primaryKey(),
+  data: bytea("data").notNull(),
+  sha256: text("sha256").notNull(),
+  bytes: integer("bytes").notNull(),
+  meta: jsonb("meta"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export type Game = typeof games.$inferSelect;
 export type GamePrediction = typeof gamePredictions.$inferSelect;

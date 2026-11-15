@@ -49,7 +49,18 @@ def scheduled_games(day: date) -> pd.DataFrame:
     return sched
 
 
-def predict_date(day: date) -> pd.DataFrame:
+def load_model(model_source: str = "mlflow", engine=None):
+    """The champion GameModel and its provenance, from MLflow (local) or pipeline_state (cloud)."""
+    if model_source == "db":
+        from tipoff.state import pull_champion
+
+        model, info = pull_champion(engine)
+        info["trained_at"] = pd.Timestamp(info["trained_at"]).to_pydatetime()
+        return model, info
+    return load_champion(), champion_info()
+
+
+def predict_date(day: date, model_source: str = "mlflow", engine=None) -> pd.DataFrame:
     """Predictions for the regular-season games scheduled on ``day`` that haven't been played."""
     sched = scheduled_games(day)
     if sched.empty:
@@ -68,7 +79,7 @@ def predict_date(day: date) -> pd.DataFrame:
     if rows.empty:
         return pd.DataFrame()
 
-    model, info = load_champion(), champion_info()
+    model, info = load_model(model_source, engine)
     X = rows[FEATURE_COLUMNS]
     contrib, base = model.contributions(X)
     meta = sched.set_index("game_id").loc[rows.index]

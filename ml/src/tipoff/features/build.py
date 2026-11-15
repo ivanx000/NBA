@@ -89,10 +89,16 @@ def build_features(
     )
 
 
+# Bump whenever a feature's definition changes (the hash must change with it).
+# v1: stats.nba.com advanced ratings. v2: box-score possession formula for pace and ratings.
+FEATURES_VERSION = 2
+
+
 def features_hash(df: pd.DataFrame, elo_params: EloParams) -> str:
     """Hash of the feature schema, Elo parameters and data window (stored with predictions)."""
     played = df[df["played"]]
     payload = {
+        "version": FEATURES_VERSION,
         "columns": [[c, str(df[c].dtype)] for c in df.columns],
         "elo": elo_params.__dict__,
         "window": [str(played["game_date"].min().date()), str(played["game_date"].max().date())],

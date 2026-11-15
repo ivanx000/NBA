@@ -47,10 +47,9 @@ def test_stage_fixture_tables(raw, tmp_path):
 
 def test_cdn_schedule_sets_neutral_home(raw):
     team_logs = load_raw(Endpoint.TEAM_LOGS, raw)
-    adv = load_raw(Endpoint.TEAM_ADV_LOGS, raw)
     ids = team_logs.loc[team_logs["GAME_ID"] == NEUTRAL_GAME, "TEAM_ID"]
     chosen = int(ids.max())  # the higher id, to prove the cdn value wins over the fallback
-    tg = build_team_games(team_logs, adv, cdn_homes={NEUTRAL_GAME: chosen})
+    tg = build_team_games(team_logs, cdn_homes={NEUTRAL_GAME: chosen})
     home = tg[(tg["game_id"] == NEUTRAL_GAME) & tg["is_home"]]
     assert home["team_id"].tolist() == [chosen]
 
@@ -72,7 +71,7 @@ def test_game_id_contradicting_season_type_fails(raw, tmp_path):
 
 
 def test_schema_rejects_inconsistent_scores(raw):
-    tg = build_team_games(load_raw(Endpoint.TEAM_LOGS, raw), load_raw(Endpoint.TEAM_ADV_LOGS, raw))
+    tg = build_team_games(load_raw(Endpoint.TEAM_LOGS, raw))
     TeamGames.validate(tg)
     broken = tg.copy()
     broken.loc[0, "win"] = not broken.loc[0, "win"]

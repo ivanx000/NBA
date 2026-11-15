@@ -206,13 +206,26 @@ def sync(target: TargetOpt = DbTarget.dev) -> None:
     typer.echo(f"sync: {n} games upserted ({target.value})")
 
 
+class ModelSource(StrEnum):
+    mlflow = "mlflow"
+    db = "db"
+
+
 @app.command()
-def predict(date_: DateOpt = "today") -> None:
-    """Predict a date's scheduled games with the registered champion (writes data/predictions)."""
+def predict(
+    date_: DateOpt = "today",
+    model_source: Annotated[
+        ModelSource, typer.Option(help="mlflow = local registry; db = pipeline_state (cloud).")
+    ] = ModelSource.mlflow,
+    target: TargetOpt = DbTarget.dev,
+) -> None:
+    """Predict a date's scheduled games with the champion (writes data/predictions)."""
+    from tipoff.db import get_engine
     from tipoff.predict.run import predict_date
 
     day = _day(date_)
-    preds = predict_date(day)
+    engine = get_engine(target.value) if model_source is ModelSource.db else None
+    preds = predict_date(day, model_source=model_source.value, engine=engine)
     if preds.empty:
         typer.echo(f"predict: no unplayed regular-season games on {day}")
         return
@@ -271,7 +284,8 @@ def freshness_check(
     if missing:
         typer.echo(f"freshness: {len(missing)} game(s) on {day} have no prediction: {missing}")
         raise typer.Exit(1)
-    typer.echo(f"freshness: all games on {day} have predictions")
+    scope = "all upcoming games" if upcoming_only else "all games"
+    typer.echo(f"freshness: {scope} on {day} have predictions")
 
 
 @app.command()
@@ -280,8 +294,15 @@ def daily(
     if_needed: Annotated[
         bool, typer.Option(help="Do nothing if today's games already have predictions.")
     ] = False,
+    cloud: Annotated[
+        bool,
+        typer.Option(
+            help="GitHub Actions mode: cdn.nba.com box scores + state from Postgres. "
+            "Never calls stats.nba.com."
+        ),
+    ] = False,
 ) -> None:
-    """The daily job: ingest -> stage -> sync -> features -> predict -> publish (today, ET)."""
+    """The daily job: new results -> stage -> sync -> predict today (ET) -> publish."""
     from tipoff.db import get_engine, today_et
     from tipoff.publish.freshness import missing_predictions
 
@@ -290,9 +311,79 @@ def daily(
     if if_needed and not missing_predictions(engine, day, upcoming_only=True):
         typer.echo(f"daily: nothing left to publish for {day} on {target.value}")
         return
-    ingest(seasons=f"{CURRENT_SEASON}:{CURRENT_SEASON}", source=Source.all, force=False,
-           dry_run=False, stage=True, verbose=False)  # fmt: skip
+    if cloud:
+        _cloud_update(engine)
+    else:
+        ingest(seasons=f"{CURRENT_SEASON}:{CURRENT_SEASON}", source=Source.all, force=False,
+               dry_run=False, stage=True, verbose=False)  # fmt: skip
     sync(target=target)
-    predict(date_=day.isoformat())
+    source = ModelSource.db if cloud else ModelSource.mlflow
+    predict(date_=day.isoformat(), model_source=source, target=target)
     publish(date_=day.isoformat(), target=target)
     freshness_check(date_=day.isoformat(), target=target, upcoming_only=True)
+
+
+def _cloud_update(engine) -> None:
+    """Pull staged history, add newly finished games from cdn box scores, push it back."""
+    import pandas as pd
+
+    from tipoff.config import STAGED_DIR
+    from tipoff.ingest import nba_cdn
+    from tipoff.ingest.cdn_box import ingest_boxscores, missing_final_games
+    from tipoff.ingest.stage import stage_incremental
+    from tipoff.state import pull_staged, push_staged
+
+    meta = pull_staged(engine)
+    typer.echo(f"state: pulled staged history through {meta.get('through')}")
+    schedule = nba_cdn.ingest_schedule()
+    nba_cdn.ingest_scoreboard()
+    todo = missing_final_games(schedule, pd.read_parquet(STAGED_DIR / "games.parquet"))
+    if todo.empty:
+        typer.echo("cdn box scores: no new finished games")
+        return
+    teams, players = ingest_boxscores(todo)
+    counts = stage_incremental(teams, players)
+    push_staged(engine)
+    typer.echo(f"cdn box scores: {len(todo)} new games staged {counts}; state pushed")
+
+
+state_app = typer.Typer(help="Pipeline state in Postgres for the cloud daily job.")
+app.add_typer(state_app, name="state")
+
+
+class StateWhat(StrEnum):
+    staged = "staged"
+    champion = "champion"
+    all = "all"
+
+
+@state_app.command("push")
+def state_push(
+    what: Annotated[StateWhat, typer.Option("--what")] = StateWhat.all,
+    target: TargetOpt = DbTarget.dev,
+) -> None:
+    """Upload local staged history and/or the MLflow champion to pipeline_state."""
+    from tipoff.db import get_engine
+    from tipoff.state import push_champion, push_staged
+
+    engine = get_engine(target.value)
+    if what in (StateWhat.staged, StateWhat.all):
+        typer.echo(f"state: staged pushed ({push_staged(engine)[:12]}) to {target.value}")
+    if what in (StateWhat.champion, StateWhat.all):
+        from tipoff.models.final import load_champion
+        from tipoff.predict.run import champion_info
+
+        info = champion_info()
+        digest = push_champion(engine, load_champion(), info)
+        typer.echo(f"state: champion {info['model_version']} pushed ({digest[:12]}) "
+                   f"to {target.value}")  # fmt: skip
+
+
+@state_app.command("pull")
+def state_pull(target: TargetOpt = DbTarget.dev) -> None:
+    """Download staged history from pipeline_state into data/staged."""
+    from tipoff.db import get_engine
+    from tipoff.state import pull_staged
+
+    meta = pull_staged(get_engine(target.value))
+    typer.echo(f"state: staged pulled ({meta})")

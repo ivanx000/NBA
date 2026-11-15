@@ -51,16 +51,11 @@ class TeamGames(pa.DataFrameModel):
     tov: Series[int] = pa.Field(ge=0)
     pf: Series[int] = pa.Field(ge=0)
     plus_minus: Series[int]
-    off_rating: Series[float] = pa.Field(ge=50, le=200, nullable=True)
-    def_rating: Series[float] = pa.Field(ge=50, le=200, nullable=True)
-    net_rating: Series[float] = pa.Field(ge=-100, le=100, nullable=True)
-    pace: Series[float] = pa.Field(ge=60, le=140, nullable=True)
-    poss: Series[float] = pa.Field(ge=60, le=160, nullable=True)
-    efg_pct: Series[float] = pa.Field(ge=0, le=1, nullable=True)
-    ts_pct: Series[float] = pa.Field(ge=0, le=1, nullable=True)
-    oreb_pct: Series[float] = pa.Field(ge=0, le=1, nullable=True)
-    dreb_pct: Series[float] = pa.Field(ge=0, le=1, nullable=True)
-    tm_tov_pct: Series[float] = pa.Field(ge=0, le=100, nullable=True)
+    poss: Series[float] = pa.Field(ge=60, le=160)
+    pace: Series[float] = pa.Field(ge=60, le=140)
+    off_rating: Series[float] = pa.Field(ge=40, le=200)
+    def_rating: Series[float] = pa.Field(ge=40, le=200)
+    net_rating: Series[float] = pa.Field(ge=-100, le=100)
 
     class Config:
         strict = False

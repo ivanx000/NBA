@@ -75,7 +75,9 @@ uv run tipoff predict --date today     # champion predictions + factors -> data/
 uv run tipoff publish --date today [--target prod]   # pregame-only guard
 uv run tipoff backfill [--target prod] # weekly walk-forward history, source='backfill'
 uv run tipoff freshness-check [--target prod]
-uv run tipoff daily --target prod --if-needed        # what the launchd agent runs (scripts/daily.sh)
+uv run tipoff daily --target prod --if-needed        # local fallback (launchd, scripts/daily.sh)
+uv run tipoff daily --cloud --target prod            # what .github/workflows/daily.yml runs (cdn only)
+uv run tipoff state push --what all --target prod    # staged history + champion for the cloud job
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish
@@ -108,8 +110,9 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 - **No data leakage.** Every feature for a game must be computable using only information available *before tip-off*. Rolling stats use `.shift(1)` or an equivalent. There's a test for this. Keep it passing.
 - **Time-based splits only.** Never random-split games for train/test. Train 2015-16..2023-24, validate 2024-25, test 2025-26 (`tipoff.config`). Only Phase 3's final evaluation may touch the test season; `models/data.train_valid` can't return it. The one-time test already ran (`ml/reports/test_2025-26.json`); `tipoff evaluate --test` refuses to run again without `--force-retest`, which is for a new major model version only. Never pick or tune a model based on test numbers.
 - Always report against baselines (home team wins, Elo) next to any model metric.
-- Log every training run to MLflow with params, metrics, and the model artifact.
-- `stats.nba.com` blocks cloud and CI IP ranges. **Never call it from GitHub Actions or Vercel.** Historical and box-score ingestion runs on the developer's machine. The `cdn.nba.com` live and schedule JSON endpoints are fine to call from CI.
+- Log every training run to MLflow with params, metrics, and the model artifact. After registering a new champion, push it for the cloud job: `tipoff state push --what champion --target prod`.
+- If a feature's definition changes, bump `FEATURES_VERSION` in `features/build.py` so `features_hash` changes.
+- `stats.nba.com` blocks cloud and CI IP ranges. **Never call it from GitHub Actions or Vercel.** The cloud daily job (`daily --cloud`) uses cdn.nba.com box scores only; a test enforces this. Historical and box-score ingestion runs on the developer's machine. The `cdn.nba.com` live and schedule JSON endpoints are fine to call from CI.
 - Be polite to NBA endpoints: rate-limit requests (about 0.6s between calls), cache raw responses to disk, and never re-fetch data you already have. All NBA HTTP goes through `tipoff.ingest.http` (shared limiter and retries).
 - `cdn.nba.com` returns 403 without a full browser-like header set. Use `tipoff.ingest.http.cdn_headers()` (nba_api's live headers), never a bare User-Agent.
 

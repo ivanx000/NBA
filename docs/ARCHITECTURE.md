@@ -35,12 +35,15 @@
 | Time | Where | Job | What it does |
 |---|---|---|---|
 | ~06:07 | GitHub Actions | `schedule-sync` | `tipoff sync --target prod`: upserts the whole current season's games from the cdn schedule (which also carries final scores) |
-| 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`) | `tipoff daily --target prod --if-needed` | ingest → stage → sync → predict today → publish → freshness check. Exits immediately once today is published |
+| hourly ~09:07–18:07 | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --if-needed` | pull staged history + champion from `pipeline_state` → cdn.nba.com box scores for newly finished games → incremental stage → push history back → sync → predict today → publish → freshness check. Exits immediately once today is published |
+| 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`), **fallback** | `tipoff daily --target prod --if-needed` | same job using stats.nba.com; only acts if the cloud run hasn't published. To be removed after a week of clean cloud runs |
 | ~10:37 | GitHub Actions | `freshness-check` | syncs, then fails (GitHub emails) if any of today's games lacks a live prediction |
 | hourly ~18:17–02:17 | GitHub Actions | `results-sync` | same sync, plus live status/scores from today's scoreboard |
 | Mon 05:00 | Local | `retrain.sh` | Retrains on all data to date, logs to MLflow, promotes it only if it beats the current model on the latest validation window |
 
-GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for EST). launchd runs a missed calendar job when the Mac wakes from sleep, but not if the Mac was shut down; `RunAtLoad` plus the hourly retries cover that, so any time the Mac is awake before tip-off is enough. A day with the Mac off entirely gets no predictions ("Prediction pending" on the site, plus a freshness-check email). Moving the daily job to GitHub Actions using cdn.nba.com box scores is a planned follow-up.
+GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for EST) and can start late. The daily job no longer needs the Mac: cdn.nba.com box scores carry every counting stat the features use (verified field by field against stats.nba.com), and pace and ratings come from the box-score possession formula for every season, so history and new games match. stats.nba.com is still used locally for historical ingest and rebuilds.
+
+**Pipeline state** (`pipeline_state` table, written by `tipoff state push`): `staged` = the three staged parquet tables (tar.gz, ~5 MB), `champion` = the champion `GameModel` (joblib) with its provenance. The cloud job reads both and pushes `staged` back after adding games. Pulls verify a SHA-256 and only unpack the three expected files. After registering a new champion locally, run `tipoff state push --what champion --target prod`.
 
 ## 3. Repo layout
 

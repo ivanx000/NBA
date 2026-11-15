@@ -176,3 +176,43 @@ def test_upcoming_only_ignores_started_games(engine):
     ], ["game_id"])  # fmt: skip
     assert missing_predictions(engine, day) == ["0022600921", "0022600922"]
     assert missing_predictions(engine, day, upcoming_only=True) == ["0022600922"]
+
+
+def test_state_roundtrip_and_safety(engine, tmp_path):
+    import io
+    import tarfile
+
+    from tipoff import state
+
+    src = tmp_path / "staged"
+    src.mkdir()
+    pd.DataFrame({"game_id": ["1"], "game_date": [pd.Timestamp("2026-11-13")]}).to_parquet(
+        src / "games.parquet"
+    )
+    for name in ("team_games", "player_games"):
+        pd.DataFrame({"x": [1, 2]}).to_parquet(src / f"{name}.parquet")
+    state.push_staged(engine, src)
+    dest = tmp_path / "pulled"
+    meta = state.pull_staged(engine, dest)
+    assert meta == {"rows": 1, "through": "2026-11-13"}
+    for name in state.STAGED_FILES:
+        assert (dest / name).read_bytes() == (src / name).read_bytes()
+
+    state.push_champion(engine, {"weights": [1, 2]}, {"model_version": "game-v9",
+                                                       "trained_at": NOW})  # fmt: skip
+    model, info = state.pull_champion(engine)
+    assert model == {"weights": [1, 2]} and info["model_version"] == "game-v9"
+
+    with engine.begin() as conn:  # corrupt the stored bytes
+        conn.execute(text("update pipeline_state set data = 'x'::bytea where key = 'staged'"))
+    with pytest.raises(state.StateError, match="Checksum"):
+        state.pull_staged(engine, dest)
+
+    evil = io.BytesIO()
+    with tarfile.open(fileobj=evil, mode="w:gz") as tar:
+        info_ = tarfile.TarInfo("../escape.parquet")
+        info_.size = 1
+        tar.addfile(info_, io.BytesIO(b"x"))
+    with pytest.raises(state.StateError, match="Unexpected"):
+        state.unpack_staged(evil.getvalue(), dest)
+    assert not (tmp_path / "escape.parquet").exists()

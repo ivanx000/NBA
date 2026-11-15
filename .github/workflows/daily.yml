@@ -1,0 +1,52 @@
+name: daily
+
+# The daily prediction job, in the cloud: pull staged history + champion from Postgres, add newly
+# finished games from cdn.nba.com box scores, predict today's games (ET), publish to prod, push the
+# history back. Never calls stats.nba.com. Each scheduled run exits early once today is published.
+on:
+  schedule:
+    - cron: "7 14-23 * * *" # hourly ~09:07-18:07 ET (EST) / 10:07-19:07 ET (EDT)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run every step even if today's games are already published"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL_PROD: ${{ secrets.DATABASE_URL }}
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - uses: actions/checkout@v7
+      - name: Skip until the DATABASE_URL secret exists
+        id: gate
+        run: if [ -z "$DATABASE_URL_PROD" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; echo "::warning::DATABASE_URL secret not set; skipping"; fi
+      - uses: astral-sh/setup-uv@v10.3.3
+        if: steps.gate.outputs.skip != 'true'
+        with:
+          enable-cache: true
+          cache-dependency-glob: ml/uv.lock
+      - if: steps.gate.outputs.skip != 'true'
+        run: uv sync --locked
+      - name: Daily job (cloud mode)
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            uv run tipoff daily --cloud --target prod
+          else
+            uv run tipoff daily --cloud --target prod --if-needed
+          fi

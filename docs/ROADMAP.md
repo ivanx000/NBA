@@ -91,6 +91,21 @@ Notes:
 - pnpm 12 fails CI on unreviewed install scripts: `esbuild` is explicitly denied in `web/pnpm-workspace.yaml` (it doesn't need its script).
 - node-postgres warns that `sslmode=require` will mean something weaker in pg v9; today it's treated as `verify-full`. Revisit when upgrading `pg`.
 
+## Phase 4b: Daily job in the cloud
+- [x] Spike: box-score possession formula vs stats.nba.com (net rating r = 0.997) and cdn box scores vs stats.nba.com counting stats (identical with `turnoversTotal` and player-only rebounds; minutes rounded half up)
+- [x] Formula-based pace/ratings for every season; `FEATURES_VERSION` in the features hash
+- [x] cdn box-score ingest + incremental staging (`stage_incremental`), proven equal to a full rebuild
+- [x] `pipeline_state` table (Drizzle) + `tipoff state push/pull`; champion v2 and staged history pushed to dev and prod
+- [x] Re-selection on validation (champion v2 = ensemble + Platt), v2 walk-forward backfill (`game-v2-wf`)
+- [x] `.github/workflows/daily.yml` (hourly 09:07–18:07 ET, `--if-needed`; manual `force` input)
+- [ ] After a week of clean cloud runs, uninstall the launchd fallback (`ml/scripts/install_launchd.sh --uninstall`)
+
+Notes:
+- The first features rebuild kept the same `features_hash` because the hash didn't cover feature definitions; added `FEATURES_VERSION` (now v2) before retraining.
+- `tipoff.db.tables()` reflected a fixed list that missed `pipeline_state`; the state round-trip test caught it.
+- cdn's `turnovers` excludes team turnovers and `reboundsTotal` includes team rebounds; using `turnoversTotal` and offensive + defensive player rebounds matches stats.nba.com exactly. Player minutes needed half-up rounding (Python's `round` is half-to-even) to match.
+- Rehearsed `daily --cloud` against the dev branch before enabling it on prod.
+
 ## Phase 5: Web skeleton with placeholder 3D
 - [ ] Layout, nav, footer (with the unofficial disclaimer), routes for all pages
 - [ ] Drizzle queries + `Slate` type. Use fixture JSON if the DB isn't ready yet.
