@@ -162,3 +162,17 @@ def test_freshness_flags_missing_but_not_postponed(engine):
     ], ["game_id"])  # fmt: skip
     publish(engine, pd.DataFrame([_pred("0022600911", NOW + timedelta(days=1))]), now=NOW)
     assert missing_predictions(engine, day) == ["0022600913"]
+
+
+def test_upcoming_only_ignores_started_games(engine):
+    from tipoff.db import upsert
+
+    day = NOW.date()
+    base = {"season": "2026-27", "season_type": "regular", "game_date": day, "status": "scheduled",
+            "home_team_id": BOS, "away_team_id": NYK, "is_neutral": False}  # fmt: skip
+    upsert(engine, tables(engine)["games"], [
+        {**base, "game_id": "0022600921", "tipoff_utc": NOW - timedelta(hours=1)},
+        {**base, "game_id": "0022600922", "tipoff_utc": NOW + timedelta(hours=3)},
+    ], ["game_id"])  # fmt: skip
+    assert missing_predictions(engine, day) == ["0022600921", "0022600922"]
+    assert missing_predictions(engine, day, upcoming_only=True) == ["0022600922"]

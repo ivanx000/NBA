@@ -74,13 +74,22 @@ Notes:
 - Walk-forward predictions for 2025-26 are in `ml/data/predictions/backtest_2025-26.parquet` (git-ignored) for the Phase 4 backfill.
 
 ## Phase 4: Publish pipeline + DB
-- [ ] Neon project (dev + prod branches), schema from ARCHITECTURE §4 (Drizzle migrations in `web/`, the single source of truth)
+- [x] Neon project (dev + prod branches), schema from ARCHITECTURE §4 (Drizzle migrations in `web/`, the single source of truth). `dev` branch still to create (needed for local web dev in Phase 5).
 - [x] `tipoff predict --date` + `tipoff publish` (with the pregame-only guard)
-- [ ] Backfill: walk-forward pregame predictions for the 2025-26 season and 2026-27 to date, so `/performance` has history
-- [ ] `ml/scripts/daily.sh` + a local scheduler (launchd/cron/Task Scheduler) with instructions in README
-- [ ] GitHub Actions: `schedule-sync`, `results-sync`, `freshness-check`
+- [x] Backfill: walk-forward pregame predictions for the 2025-26 season and 2026-27 to date, so `/performance` has history
+- [x] `ml/scripts/daily.sh` + a local scheduler (launchd/cron/Task Scheduler) with instructions in README
+- [x] GitHub Actions: `schedule-sync`, `results-sync`, `freshness-check`
 
 Notes:
+- Built and tested against Postgres in Docker first, then went live on Neon (created via the Vercel integration; main branch = prod, Postgres 18). Local Docker and CI moved from Postgres 17 to 18 to match.
+- With the Vercel integration, its `DATABASE_URL` is the **prod** (main branch) URL. Locally it lives in `DATABASE_URL_PROD` with the direct (non-`-pooler`) host; `DATABASE_URL` points at the dev database. The GitHub secret was set from `.env` without the value passing through chat.
+- Prod on 2026-11-14: 1,200 games synced, 1,413 backfilled predictions (`game-v1-wf`: 2025-26 log loss 0.6014 vs Elo 0.5995; 2026-27 to date 0.5839 vs 0.5948 on 183 games). Live predictions start 2026-11-15; that night's games had already tipped when it went live.
+- Pregame guard is enforced twice: Python skips started games, and the upsert has `WHERE games.tipoff_utc > now()`. A test proves a caller with a wrong clock can't overwrite a started game.
+- Backfill first stored 2025-26 games as `scheduled` with no scores; fixed (backfilled games are written as final with their results).
+- `daily --if-needed` only counts games that haven't tipped off, so evening runs don't fail on games that can no longer be predicted. The 10:37 GitHub freshness check still counts every game.
+- launchd agent installed (09:30, hourly retries to 18:30, run at login); first run exited 0. If the Mac is off all day, that day gets no predictions. Moving the daily job to GitHub Actions with cdn.nba.com box scores is the planned follow-up.
+- pnpm 12 fails CI on unreviewed install scripts: `esbuild` is explicitly denied in `web/pnpm-workspace.yaml` (it doesn't need its script).
+- node-postgres warns that `sslmode=require` will mean something weaker in pg v9; today it's treated as `verify-full`. Revisit when upgrading `pg`.
 
 ## Phase 5: Web skeleton with placeholder 3D
 - [ ] Layout, nav, footer (with the unofficial disclaimer), routes for all pages

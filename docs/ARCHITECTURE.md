@@ -218,12 +218,12 @@ The GSAP timeline subscribes to `phase` and owns all camera and character timing
 
 | Var | Used by | Where set |
 |---|---|---|
-| `DATABASE_URL` | ml (dev runs), web | local `.env` (dev branch); Vercel Preview (dev); GitHub secret `DATABASE_URL` holds **prod** (mapped to `DATABASE_URL_PROD` in workflows) |
-| `DATABASE_URL_PROD` | ml daily job | local `.env` (prod branch); Vercel Production uses it as `DATABASE_URL` |
+| `DATABASE_URL` | ml (dev runs), web | local `.env`: dev database (local Docker now; the Neon `dev` branch once it exists, needed for local web dev). Vercel: set by the Neon integration (main branch) |
+| `DATABASE_URL_PROD` | ml daily job | local `.env`: Neon main branch, **direct** (non-`-pooler`) host. GitHub secret `DATABASE_URL` holds the same value (mapped to `DATABASE_URL_PROD` in workflows) |
 | `MLFLOW_TRACKING_URI` | ml | local `.env` (default `sqlite:///<repo>/ml/mlflow.db`, artifacts in `ml/mlartifacts/`) |
 | `MESHY_API_KEY` | scripts/assets | local `.env` only |
 
-Use separate Neon branches for `dev` and `prod`. Vercel preview deployments use the dev branch. Local development and DB tests use Postgres 17 in Docker (`docker compose up -d db`, port 5433). Migrations: `pnpm db:generate` → commit `web/drizzle/*.sql` → `pnpm db:migrate` (dev, then `DATABASE_URL=$DATABASE_URL_PROD pnpm db:migrate`) → `pnpm db:seed`.
+The Neon project was created through the Vercel integration; its main branch is prod (Postgres 18). The site only reads, so Vercel previews reading prod is harmless and needs no separate setting. A Neon `dev` branch is for local web development (the Neon HTTP driver can't talk to plain Postgres). The pipeline's dev runs and the DB tests use Postgres 18 in Docker (`docker compose up -d db`, port 5433). Migrations: `pnpm db:generate` → commit `web/drizzle/*.sql` → `pnpm db:migrate` (dev, then `DATABASE_URL=$DATABASE_URL_PROD pnpm db:migrate`) → `pnpm db:seed`.
 
 ## 7. CI (GitHub Actions)
 - `ci.yml` (on PR and main): `ml` ruff + pytest (fixture data, no network, plus DB tests against a Postgres 17 service using the real Drizzle migrations), `web` lint + typecheck + test + build.

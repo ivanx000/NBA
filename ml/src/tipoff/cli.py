@@ -257,13 +257,17 @@ def backfill(
 
 
 @app.command("freshness-check")
-def freshness_check(date_: DateOpt = "today", target: TargetOpt = DbTarget.dev) -> None:
+def freshness_check(
+    date_: DateOpt = "today",
+    target: TargetOpt = DbTarget.dev,
+    upcoming_only: Annotated[bool, typer.Option(help="Ignore games already started.")] = False,
+) -> None:
     """Exit 1 if any scheduled game on the date lacks a live pregame prediction."""
     from tipoff.db import get_engine
     from tipoff.publish.freshness import missing_predictions
 
     day = _day(date_)
-    missing = missing_predictions(get_engine(target.value), day)
+    missing = missing_predictions(get_engine(target.value), day, upcoming_only=upcoming_only)
     if missing:
         typer.echo(f"freshness: {len(missing)} game(s) on {day} have no prediction: {missing}")
         raise typer.Exit(1)
@@ -283,12 +287,12 @@ def daily(
 
     day = today_et()
     engine = get_engine(target.value)
-    if if_needed and not missing_predictions(engine, day):
-        typer.echo(f"daily: {day} already published to {target.value}; nothing to do")
+    if if_needed and not missing_predictions(engine, day, upcoming_only=True):
+        typer.echo(f"daily: nothing left to publish for {day} on {target.value}")
         return
     ingest(seasons=f"{CURRENT_SEASON}:{CURRENT_SEASON}", source=Source.all, force=False,
            dry_run=False, stage=True, verbose=False)  # fmt: skip
     sync(target=target)
     predict(date_=day.isoformat())
     publish(date_=day.isoformat(), target=target)
-    freshness_check(date_=day.isoformat(), target=target)
+    freshness_check(date_=day.isoformat(), target=target, upcoming_only=True)
