@@ -47,6 +47,19 @@ jobs:
   web:
     name: web (lint, typecheck, test, build)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: tipoff
+          POSTGRES_PASSWORD: tipoff
+          POSTGRES_DB: tipoff_web_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tipoff" --health-interval 2s --health-retries 30
+    env:
+      TEST_WEB_DATABASE_URL: postgresql://tipoff:tipoff@localhost:5432/tipoff_web_test
     defaults:
       run:
         working-directory: web

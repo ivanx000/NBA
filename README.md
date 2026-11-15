@@ -28,7 +28,7 @@ pnpm install
 pnpm dev        # http://localhost:3000
 ```
 
-Copy `.env.example` to `.env` and fill in the values when a phase needs them. Optional: install the
+Copy `.env.example` to `.env` and fill in the values when a phase needs them. The web app reads the same root `.env`; for local web development point `DATABASE_URL` at the Neon `dev` branch (the Neon HTTP driver is used for `*.neon.tech` URLs) or at local Docker Postgres (`docker compose up -d db`). Optional: install the
 pre-push hook with `ln -sf ../../scripts/pre-push .git/hooks/pre-push`.
 
 See `CLAUDE.md` for all commands and `docs/ROADMAP.md` for build status.

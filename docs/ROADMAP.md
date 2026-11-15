@@ -107,14 +107,22 @@ Notes:
 - Rehearsed `daily --cloud` against the dev branch before enabling it on prod.
 
 ## Phase 5: Web skeleton with placeholder 3D
-- [ ] Layout, nav, footer (with the unofficial disclaimer), routes for all pages
-- [ ] Drizzle queries + `Slate` type. Use fixture JSON if the DB isn't ready yet.
-- [ ] Home: GameRail, GameCard, DateSwitcher, the no-games-today states, `?game=` and `?date=` URL state, random default game
-- [ ] `<Scene>` with placeholder players (capsules or a simple stand-in rigged model, e.g. three.js's example `Xbot.glb`, **for dev only**), floor, spotlights in team colors
-- [ ] zustand scene state machine (ARCHITECTURE §5)
-- [ ] 2D fallback when WebGL is unavailable
+- [x] Layout, nav, footer (with the unofficial disclaimer), routes for all pages
+- [x] Drizzle queries + `Slate` type. Use fixture JSON if the DB isn't ready yet.
+- [x] Home: GameRail, GameCard, DateSwitcher, the no-games-today states, `?game=` and `?date=` URL state, random default game
+- [x] `<Scene>` with placeholder players (capsules or a simple stand-in rigged model, e.g. three.js's example `Xbot.glb`, **for dev only**), floor, spotlights in team colors
+- [x] zustand scene state machine (ARCHITECTURE §5)
+- [x] 2D fallback when WebGL is unavailable
 
 Notes:
+- Placeholder players are built from primitives (no downloaded model, nothing to license); jersey number and chest text are drawn on a canvas texture in Oswald. Spotlights use each team's brightest brand color; the clash rule (away wears its alternate when primaries are within RGB distance 90) applies to jerseys, the 2D fallback and the result bar.
+- Predict currently advances the state machine on short timers (reveal 0.7 s, shot 0.9 s) and shows a minimal result panel (winner, probability split, final-game check, live vs backtest note). Phases 7 and 8 replace both.
+- Next 16 details that bit: `new Date()`/`Math.random` in a page need `await connection()`; `usePathname()` in the layout broke the build for `/game/[id]` until the nav got a `<Suspense>` boundary; `@next/env` needed `forceReload` to read the repo-root `.env`.
+- Phones: players move closer and the camera distance is computed from the aspect ratio so both stay in frame; the game strip needed 13.5rem of room below the Predict button.
+- Schedule labels carry sponsor names ("Emirates NBA Cup"); the UI shows the event name only.
+- Live/final games with no pregame prediction say so instead of "Prediction pending".
+- Client JS (gz): the three.js/scene chunk is 241 KB and loads after first paint; all other client chunks across every route total 190 KB. Measure the home page's initial JS properly in Phase 10 (budget: 150 KB excluding the 3D chunk).
+- Dev server: the 3D chunk takes ~10 s to compile on a fresh navigation in `next dev`; production builds don't have this.
 
 ## Phase 6: Real 3D assets (follow ASSET_PIPELINE.md)
 - [ ] Base character images → Meshy model → rig + clips → `player.glb` optimized
