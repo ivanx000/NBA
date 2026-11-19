@@ -106,3 +106,40 @@ export function headToHead(past: readonly PastGame[], homeId: number, awayId: nu
   }
   return { home, away };
 }
+
+export interface RecentGame {
+  gameDate: string;
+  opponentId: number;
+  atHome: boolean;
+  pointsFor: number;
+  pointsAgainst: number;
+  won: boolean;
+}
+
+/** ``teamId``'s last ``n`` finished games before ``day``, most recent first. */
+export function recentGames(past: readonly PastGame[], teamId: number, day: string, n = 10): RecentGame[] {
+  return past
+    .filter((g) => (g.homeTeamId === teamId || g.awayTeamId === teamId) && g.gameDate < day)
+    .sort((a, b) => b.gameDate.localeCompare(a.gameDate))
+    .slice(0, n)
+    .map((g) => {
+      const atHome = g.homeTeamId === teamId;
+      const pointsFor = atHome ? g.homeScore : g.awayScore;
+      const pointsAgainst = atHome ? g.awayScore : g.homeScore;
+      return {
+        gameDate: g.gameDate,
+        opponentId: atHome ? g.awayTeamId : g.homeTeamId,
+        atHome,
+        pointsFor,
+        pointsAgainst,
+        won: pointsFor > pointsAgainst,
+      };
+    });
+}
+
+/** The two teams' earlier meetings this season, oldest first. */
+export function seriesGames(past: readonly PastGame[], a: number, b: number, day: string): PastGame[] {
+  return past
+    .filter((g) => g.gameDate < day && new Set([g.homeTeamId, g.awayTeamId]).has(a) && new Set([g.homeTeamId, g.awayTeamId]).has(b))
+    .sort((x, y) => x.gameDate.localeCompare(y.gameDate));
+}

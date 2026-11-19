@@ -149,6 +149,7 @@ Notes:
 - The motion library's index marks 20 clips as not in place (hips drift > 0.15 m); see ASSET_PIPELINE section 4.
 - Turbopack's dev server sometimes keeps serving a stale `app/globals.css`, even after a restart: stop the server and delete `web/.next`. Component styles live in their own CSS files (`components/home/game-drawer.css`, `home.css`), which reload reliably.
 - Redesign 2 replaced the arcade wheel and the line-art holograms; the old look is in git history (commit b7e7033).
+- The Neon `dev` branch had disappeared (Vercel-linked branches auto-delete; the create dialog defaults to 1 day), so local dev pointed at a dead endpoint. Recreated 2026-11-19 from main with auto-delete Never (see ARCHITECTURE section 6).
 - Redesign 3 decisions (with the user): the picked player shoots and misses when the pick is wrong; "right" means the model's pick before the game and the final score after; team stats come from data already in Postgres (no pipeline change); the background is an arena drawn in light.
 - Moving vertices in the hologram shader (for a glitch) speckled the surface: even an unused branch changed how the GPU computed positions, so the hologram no longer matched its depth pre-pass. Glitches are done per fragment instead.
 - `player.glb` is about 2 MB; ~390 KB of it is glTF JSON for ~2,400 animation accessors. Trim static channels in Phase 10 if the payload needs it.
@@ -170,13 +171,16 @@ Notes:
 - Checked in Chrome with sample games in local Postgres: back iron (58%), swish (70%), rattle (51%), Skip/Esc, and Back. Reduced motion skips straight to results (no timeline), as before.
 
 ## Phase 8: Results + content pages
-- [ ] Results overlay: win prob bar, factor bars, Final-game ✓/✗ (player lines placeholder until Phase 9)
-- [ ] `/game/[id]` + OG image
+- [x] Results overlay: win prob bar, factor bars, Final-game ✓/✗ (player lines placeholder until Phase 9)
+- [x] `/game/[id]` + OG image
 - [ ] `/performance`: tiles, rolling accuracy, calibration, recent table
 - [ ] `/docs` MDX setup with sidebar + TOC. Write the pages listed in ML_PLAN §8 and an architecture page.
 - [ ] `/how-it-works` scroll story
 
 Notes:
+- Part 1 done: the results screen's reasons are bars in the favored team's color, finished games get a "Final · … · ✓ Model correct" badge, and "Full breakdown" links to `/game/[id]`. That page works for any game (past ones too, for `/performance`): win chance with the Elo baseline and where the prediction came from (live or walk-forward backtest), the reasons, both teams' numbers and last-10 strips, the season series game by game, and a placeholder for player lines. Its link preview (`opengraph-image.tsx`) shows the matchup and both win chances in the teams' glow colors.
+- Win bars use the teams' glow colors (`hologramMatchup`), not jersey colors: a black jersey (Heat) disappears on the dark background.
+- Inner pages scroll under the fixed nav, so it now has a dark glass backing there (not on home).
 
 ## Phase 9: Player stat projections
 - [ ] Minutes model + per-minute rate models + quantile intervals, compared against the last-10 baseline

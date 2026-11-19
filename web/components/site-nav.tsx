@@ -28,7 +28,10 @@ function NavBar({ pathname }: { pathname: string | null }) {
     pathname !== null && (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40">
+    // Other pages scroll under the nav, so it gets a dark glass backing there; the home page doesn't scroll.
+    <header
+      className={`fixed inset-x-0 top-0 z-40 ${pathname !== null && pathname !== "/" ? "bg-background/75 backdrop-blur-md" : ""}`}
+    >
       <nav
         aria-label="Main"
         className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-4 sm:px-6"

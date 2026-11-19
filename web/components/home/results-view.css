@@ -118,29 +118,11 @@
   border-color: rgba(91, 140, 255, 0.7);
 }
 
-.results__stats {
-  margin: 0.9rem 0 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+.results__team .team-numbers {
+  margin-top: 0.9rem;
 }
-.results__stat {
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.025);
-}
-.results__stat dt {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.results__stat dd {
-  margin: 0.15rem 0 0;
-  font-size: 0.98rem;
-  font-weight: 650;
+.results__badge:has(.final-badge) {
+  margin-top: 0.7rem;
 }
 
 .results__game {
@@ -168,20 +150,25 @@
   color: var(--text-muted);
 }
 .results__factors {
-  list-style: none;
-  margin: 0.9rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.85rem;
+  margin-top: 1rem;
 }
-.results__factors li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+.results__more {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue-hi);
 }
-.results__factors li span:last-child {
-  color: var(--text-muted);
+.results__more:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.results__more:focus-visible {
+  outline: 2px solid var(--blue-hi);
+  outline-offset: 3px;
 }
 .results__muted {
   color: var(--text-muted);

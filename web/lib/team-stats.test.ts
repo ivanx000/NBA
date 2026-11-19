@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { headToHead, type PastGame, teamStats } from "@/lib/team-stats";
+import { headToHead, type PastGame, recentGames, seriesGames, teamStats } from "@/lib/team-stats";
 
 const BOS = 1;
 const NYK = 2;
@@ -54,5 +54,25 @@ describe("headToHead", () => {
     expect(headToHead(past, BOS, NYK, "2026-11-07")).toEqual({ home: 2, away: 0 });
     expect(headToHead(past, LAL, BOS, "2026-11-07")).toEqual({ home: 1, away: 1 });
     expect(headToHead(past, BOS, LAL, "2026-11-30")).toEqual({ home: 2, away: 1 });
+  });
+});
+
+describe("recentGames and seriesGames", () => {
+  it("lists a team's latest results first, from its side", () => {
+    const r = recentGames(past, BOS, "2026-11-07", 3);
+    expect(r.map((x) => [x.gameDate, x.opponentId, x.atHome, x.pointsFor, x.won])).toEqual([
+      ["2026-11-06", LAL, true, 105, true],
+      ["2026-11-05", NYK, false, 101, true],
+      ["2026-11-03", LAL, false, 100, false],
+    ]);
+  });
+
+  it("lists earlier meetings of the two teams, oldest first", () => {
+    expect(seriesGames(past, LAL, BOS, "2026-11-30").map((x) => x.gameDate)).toEqual([
+      "2026-11-03",
+      "2026-11-06",
+      "2026-11-20",
+    ]);
+    expect(seriesGames(past, LAL, BOS, "2026-11-05").map((x) => x.gameDate)).toEqual(["2026-11-03"]);
   });
 });

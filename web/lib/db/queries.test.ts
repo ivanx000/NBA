@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { teams } from "@/lib/teams";
 
-import { fetchSlate } from "./queries";
+import { fetchGameDetail, fetchSlate } from "./queries";
 import * as schema from "./schema";
 
 const URL =
@@ -94,5 +94,19 @@ describe("fetchSlate", () => {
     expect(slate.next?.games.map((g) => g.gameId)).toEqual(["0022600005"]);
     const after = await fetchSlate(db, "2026-11-21");
     expect([after.games, after.next]).toEqual([[], null]);
+  });
+});
+
+describe("fetchGameDetail", () => {
+  it("returns one game with each team's recent form and the season series", async () => {
+    if (!available) return;
+    const db = drizzle(pool, { schema });
+    const detail = await fetchGameDetail(db, "0022600003");
+    expect(detail?.game.gameId).toBe("0022600003");
+    expect(detail?.game.prediction?.source).toBe("live");
+    // BOS beat NYK on 11-10 (home) and 11-12 (away) before this 11-14 game.
+    expect(detail?.series.map((g) => g.gameDate)).toEqual(["2026-11-10", "2026-11-12"]);
+    expect(detail?.form.away.map((g) => g.won)).toEqual([true, true]);
+    expect(await fetchGameDetail(db, "nope")).toBeNull();
   });
 });

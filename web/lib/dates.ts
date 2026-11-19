@@ -51,3 +51,13 @@ export function tipoffET(isoUtc: string | null): string | null {
   }).format(new Date(isoUtc));
   return `${t} ET`;
 }
+
+/** "Wed, Nov 19" for a YYYY-MM-DD day (no "Tonight": safe to cache and prerender). */
+export function shortDate(day: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${day}T12:00:00Z`));
+}

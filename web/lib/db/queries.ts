@@ -4,7 +4,7 @@ import { cacheLife } from "next/cache";
 import { seasonFor } from "@/lib/dates";
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
-import { headToHead, type PastGame, teamStats } from "@/lib/team-stats";
+import { headToHead, type PastGame, type RecentGame, recentGames, seriesGames, teamStats } from "@/lib/team-stats";
 import { requireTeam } from "@/lib/teams";
 
 import type { Db } from "./client";
@@ -31,7 +31,7 @@ async function pastGames(db: Db, day: string): Promise<PastGame[]> {
   }));
 }
 
-async function gamesBetween(db: Db, from: string, to: string) {
+function selectGames(db: Db) {
   return db
     .select({
       gameId: games.gameId,
@@ -53,7 +53,11 @@ async function gamesBetween(db: Db, from: string, to: string) {
       generatedAt: currentGamePredictions.generatedAt,
     })
     .from(games)
-    .leftJoin(currentGamePredictions, eq(games.gameId, currentGamePredictions.gameId))
+    .leftJoin(currentGamePredictions, eq(games.gameId, currentGamePredictions.gameId));
+}
+
+function gamesBetween(db: Db, from: string, to: string) {
+  return selectGames(db)
     .where(and(gte(games.gameDate, from), lte(games.gameDate, to)))
     .orderBy(asc(games.gameDate), asc(games.tipoffUtc), asc(games.gameId));
 }
@@ -121,4 +125,36 @@ export async function getSlate(today: string): Promise<Slate> {
   cacheLife("minutes");
   const { getDb } = await import("./client");
   return fetchSlate(getDb(), today);
+}
+
+/** One game in full for its breakdown page: the game, each team's last 10, the season series. */
+export interface GameDetail {
+  game: SlateGame;
+  form: { home: RecentGame[]; away: RecentGame[] };
+  series: PastGame[];
+}
+
+/** ``gameId``'s breakdown, or null if there's no such game. Any day (past games included). Uncached. */
+export async function fetchGameDetail(db: Db, gameId: string): Promise<GameDetail | null> {
+  const [row] = await selectGames(db).where(eq(games.gameId, gameId)).limit(1);
+  if (!row) return null;
+  const day = String(row.gameDate);
+  const past = await pastGames(db, day);
+  const game = toSlateGame(row, past, day);
+  return {
+    game,
+    form: {
+      home: recentGames(past, game.home.teamId, day),
+      away: recentGames(past, game.away.teamId, day),
+    },
+    series: seriesGames(past, game.home.teamId, game.away.teamId, day),
+  };
+}
+
+/** Cached breakdown (scores and predictions change at most every few minutes). */
+export async function getGameDetail(gameId: string): Promise<GameDetail | null> {
+  "use cache";
+  cacheLife("minutes");
+  const { getDb } = await import("./client");
+  return fetchGameDetail(getDb(), gameId);
 }

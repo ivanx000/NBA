@@ -140,6 +140,7 @@ If it's wrong (`pickShot` in `lib/shot-path.ts`):
                                             └─────────────────────────────────┘
 ```
 - The panel sits on the side away from the viewed player (`components/home/results-view.tsx`); on phones it's a sheet at the bottom. The verdict is red when wrong, white with a blue glow when right; the team name is underlined in its color.
+- The reasons are bars (`components/game/factor-bars.tsx`): each in the color of the team it favors, its length the effect's size; finished games show the Final badge (`final-badge.tsx`); "Full breakdown" links to `/game/[id]`.
 - Factor copy comes from `web/lib/factor-copy.ts`. Never show raw feature names.
 - The verdict is announced in an `aria-live` region and focus moves to it.
 
@@ -148,7 +149,7 @@ If it's wrong (`pickShot` in `lib/shot-path.ts`):
 - **How it works:** a vertical scroll story with 5 chapters (Data → Features → Model → Prediction → Animation). Each chapter has a big number or mini visual that animates on scroll (GSAP ScrollTrigger or framer-motion `whileInView`). Reuse the 3D player in chapter 5 as a small canvas.
 - **Performance:** a grid of stat tiles (Accuracy, Log loss, Brier, Games predicted) with a "vs. home-team baseline" delta, a rolling 50-game accuracy line chart, a calibration chart (predicted bucket vs actual win rate, with the diagonal), and a recent predictions table with ✓/✗ and filters.
 - **Docs:** classic docs layout with a left sidebar, content, and a right "On this page" TOC. Code blocks have syntax highlighting (Shiki). Diagrams use Mermaid.
-- **Game breakdown:** a static version of the overlay plus full tables. OG image is generated with `next/og` in team colors.
+- **Game breakdown** (`/game/[id]`, `components/game/game-breakdown.tsx`): the date and status as a mono label, the matchup in huge wide type, the Final badge, then glass panels: win chance (split bar in the teams' glow colors, the Elo baseline, live or backtest), the reasons as bars, the two teams side by side (numbers tiles and a last-10 strip of W/L chips with opponent and score, green and red edges), the season series, and a placeholder for player lines. The link preview (`next/og`, 1200×630) shows the matchup and both win chances in the teams' glow colors on the blue-glow backdrop.
 
 ## 7. Motion and performance budgets
 - Home JS (excluding three.js chunk) under 150KB gzip. The three.js and scene chunk loads after first paint.
