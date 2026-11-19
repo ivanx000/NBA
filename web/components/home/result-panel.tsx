@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { shotOutcome } from "@/lib/shot-path";
 import { actualWinner, predictedWinner, winProb, type SlateGame } from "@/lib/slate";
 import { matchupJerseys, readableTeamColor } from "@/lib/team-colors";
 import { requireTeam } from "@/lib/teams";
@@ -47,6 +48,9 @@ export function ResultPanel({ game, onBack }: { game: SlateGame; onBack: () => v
         <span>{game.away.abbr} {100 - homePct}%</span>
         <span>{game.home.abbr} {homePct}%</span>
       </p>
+      {shotOutcome(p) === "rattle" && (
+        <p className="mt-3 text-sm text-muted-foreground">Coin flip. The model barely leans this way.</p>
+      )}
       {actual && (
         <p className={`mt-4 text-sm ${actual === side ? "text-good" : "text-bad"}`}>
           Final {game.away.abbr} {game.awayScore}–{game.homeScore} {game.home.abbr}.{" "}

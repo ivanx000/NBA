@@ -218,7 +218,7 @@ interface SceneState {
   selectGame(id: string): void; // only allowed in idle/results
 }
 ```
-The GSAP timeline subscribes to `phase` and owns all camera and character timing. React components only render current state.
+As built: `lib/scene-store.ts` holds `phase`, `gameId` and `instantResults`, with a pure `transition(state, event)` (events: predict, revealDone, shotDone, skip, back, returned, select) and a `cinematic` flag. `components/scene/matchup.tsx` watches `phase` and owns one GSAP timeline per prediction: it moves the camera (through `camera-override.ts`, which the camera rig blends toward), turns the winner, switches his clips, flies the ball on `lib/shot-path.ts`, and sends `revealDone`/`shotDone`/`returned` itself. Skip seeks the timeline to its `results` label. When the 3D scene isn't mounted (2D fallback), `cinematic` is false and the home page advances the phases on short timers.
 
 ## 6. Environments and secrets
 

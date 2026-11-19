@@ -151,7 +151,8 @@ export function Player({
     let current = actions[clip];
     if (!current) return;
     current.reset().fadeIn(0.3).play();
-    current.time = timeOffset % current.getClip().duration;
+    // Idles start partway in so two players don't move in lockstep; one-shots start at the top.
+    if (idle) current.time = timeOffset % current.getClip().duration;
     current.setEffectiveTimeScale(paused ? 0 : idle ? 1 : speed);
     if (!idle) {
       current.setLoop(THREE.LoopOnce, 1);

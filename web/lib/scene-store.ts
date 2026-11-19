@@ -1,8 +1,9 @@
 import { create } from "zustand";
 
 /**
- * Scene state machine (docs/ARCHITECTURE.md section 5). The GSAP cinematic (Phase 7) will drive
- * revealing -> shooting -> results; until then the home page advances them with short timers.
+ * Scene state machine (docs/ARCHITECTURE.md section 5). The 3D scene's GSAP cinematic drives
+ * revealing -> shooting -> results and returning -> idle; without it (2D fallback) the home page
+ * advances them with short timers.
  */
 export type Phase = "idle" | "revealing" | "shooting" | "results" | "returning";
 
@@ -48,6 +49,9 @@ export function transition(state: SceneData, event: SceneEvent): SceneData {
 }
 
 interface SceneStore extends SceneData {
+  /** True while the 3D cinematic is mounted and drives the phases. */
+  cinematic: boolean;
+  setCinematic: (value: boolean) => void;
   send: (event: SceneEvent) => void;
   setInstantResults: (value: boolean) => void;
   reset: (gameId: string | null) => void;
@@ -57,6 +61,8 @@ export const useScene = create<SceneStore>((set) => ({
   phase: "idle",
   gameId: null,
   instantResults: false,
+  cinematic: false,
+  setCinematic: (cinematic) => set({ cinematic }),
   send: (event) => set((s) => transition(s, event)),
   setInstantResults: (instantResults) => set({ instantResults }),
   reset: (gameId) => set({ gameId, phase: "idle" }),

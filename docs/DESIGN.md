@@ -61,16 +61,17 @@
 | Pad ×2 | Rings of glowing points plus a soft glow disc and a small point light, in the hologram color | Under each player; slowly turns; dims with the loser |
 | Floor | A grid of faint points receding into fog | |
 | Stars | ~2,600 points, mostly white with some NBA blue and red, twinkling | `components/scene/arena-scene.tsx` |
-| Hoop | GLB (`/models/hoop.glb`) generated in Meshy or modeled simply | Placed far behind the players (~20m), hidden in fog until the cinematic |
-| Ball | Procedural sphere + simple seam texture | The ball is NOT in the shot animation clip. It's a separate object, attached to the hand bone, then flown procedurally |
-| Net | Simple cylinder/cone mesh with a line texture | "Swish" = quick vertex wobble or a scale pulse |
+| Hoop | Drawn in glowing lines (decided in Phase 7): backboard outline and target square, arm, pole, rim in the winner's hologram color, diamond net | 6.8 m in front of the winner once he turns (a long two), rim at 3.05 m; hidden until the cinematic. `components/scene/cinematic-props.tsx` |
+| Ball | A real basketball: lit sphere with a generated orange leather texture and black seams, plus a short glowing trail in the team color | Not in the shot clip: it rides between the winner's hands, then flies on the shot path |
+| Net | Part of the hoop | On the make it stretches and swings, settling in about 0.7 s |
+| Sparks | ~280 glowing points in the winner's colors and white, with a flash of team-color light at the rim (decided in Phase 7 instead of paper confetti) | Spray out from the rim, drift down and fade over 1.5 s |
 | Lights | Key (upper left, warm), fill (right, cool), back light (outline), low ambient, a soft room reflection (`RoomEnvironment`), a colored point light at each pad | The players are lit like real people, under the bloom threshold |
 
 ### Idle state
 - Both players play `Idle` variants with a random start offset and a random variant from `[Idle, Idle_02, Idle_03, ...]`, blending to another variant every 6 to 10s.
 - Subtle head look-at toward the cursor (small clamp, ±15°) adds life cheaply. Disable on mobile.
 - `prefers-reduced-motion`: animation, hologram effects, stars and pads hold still (`paused`); cards don't pop or sweep.
-- The camera does a very slow orbital drift (±2°, 12s period).
+- The camera drifts slightly with the pointer (parallax), not on its own.
 
 ### Swapping games
 - On card click: brief fade of the spotlights (200ms) → swap hologram colors, lettering and spotlight colors → fade up. Players don't reload, so there is nothing to preload.
@@ -80,18 +81,21 @@
 Driven by a single **GSAP timeline** controlled by a **zustand state machine**:
 `idle → revealing → shooting → results → returning → idle`.
 
+As built in Phase 7 (`components/scene/matchup.tsx`). The camera moves by blending from the home framing toward the cinematic's shot (`camera-override.ts`). Times are from the click; release and later depend on the outcome.
+
 | t (s) | Beat | Camera | Winner | Loser | UI |
 |---|---|---|---|---|---|
-| 0.0 | Click | — | — | — | Button pulses, then morphs into a thin progress line; nav fades to 30%, the games drawer closes and its tab dims |
-| 0.2 | Reveal | Holds | Spotlight intensifies, color flares | Spotlight and hologram dim (hologram to 25%); plays a "disappointed" or idle-look-down clip | Team names fade except the winner's |
-| 0.6 | Push-in | Dolly + arc (1.2s, `power2.inOut`) to an over-the-shoulder shot behind the winner, looking down-court; FOV 45→35 | Turns to face the hoop (rotate root 180° over 0.6s while playing `Turn`/idle) | Out of frame | Hide labels |
-| 1.8 | Hoop reveal | Fog recedes and the hoop lights up far down-court | Holds ball at chest | — | — |
-| 2.0 | Shot | Slight push toward the rim | Plays `JumpShot` clip. At the clip's **release frame** (marker in config), the ball detaches from the hand bone | — | — |
-| ~2.6 | Ball flight | Camera tilts to follow the arc | Follow-through hold | — | — |
-| ~3.8 | Make | Quick micro-shake (very subtle) | — | — | — |
-| 3.8 | Swish | — | Lands, plays `Celebrate` (arms up, sway and look around, arms down) | — | Light flash in team color + a short confetti burst in team colors |
-| 4.2 | Results | Camera settles at a 3/4 hero angle on the winner | Celebrating idle | — | Results overlay slides in (stagger 60ms per section); numbers count up |
-| — | Return | Reverse to the home camera (1.0s) | Turns back, idle | Hologram restores | Overlay fades out; nav and the drawer tab return |
+| 0.0 | Click | Holds | — | Hologram and pad dim to 30%; switches to `Idle_Look` | Predict becomes a thin red progress line; Skip appears; the loser's name dims, then all names and the matchup line fade (0.3 s delay); the games drawer closes and its tab dims |
+| 0.4 | Push-in | Blends (1.2 s, `power2.inOut`) to over his right shoulder, 3.6 m behind him, FOV 35→42 | 0.6–1.3: turns half around to face the hoop | — | — |
+| 1.2 | Hoop | — | — | — | The hoop fades in (0.6 s) |
+| 1.8 | Shot | 2.5–4.1: tilts up to follow the arc toward the rim | `JumpShot`; the ball pops into his hands | — | Scene store: `revealing → shooting` |
+| 3.07 | Release | — | At `JUMPSHOT_RELEASE_TIME` (1.27 s into the clip) the ball leaves his hands | — | — |
+| ~4.2 to 5.3 | Make | A brief shake (0.35 s) | — | — | Flash and sparks at the rim; the net swings |
+| make + 0.3 | Celebrate | — | Turns back to the camera and plays `Celebrate` | — | — |
+| make + 0.7 | Results | Moves (1.1 s) to a hero shot: his whole body, off to his side so the panel doesn't cover him; FOV back to 35 | Celebrating, then idle | — | `shooting → results`; the results panel appears; the hoop fades out |
+| Back | Return | Blends back to the home framing (1.0 s) | Turns back to rest, idle | Restores | `returning → idle`; names return |
+
+Without WebGL (2D fallback), the page advances the phases on short timers instead.
 
 ### Shot outcome tied to confidence
 Let `p = winner's win probability`.
@@ -105,7 +109,7 @@ Let `p = winner's win probability`.
 - Rattle: precomputed keyframes relative to the rim. Don't use a physics engine.
 
 ### Skipping and accessibility
-- **Skip** button (bottom-right) and the `Esc` key jump the timeline to the `results` label.
+- **Skip** button (bottom-right) and the `Esc` key jump the timeline to the `results` label (the make's sparks still fire, and the camera goes on to the hero shot).
 - `prefers-reduced-motion`: no camera moves. Crossfade to results with a static winner highlight.
 - All results content is real DOM (not canvas) so it's readable by screen readers. Announce "Prediction: Knicks win with 64% probability" via an `aria-live` region.
 

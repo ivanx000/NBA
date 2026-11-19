@@ -50,3 +50,31 @@
     transform: none;
   }
 }
+
+/* While the cinematic plays, Predict becomes a thin glowing line that fills. */
+.cinematic-progress {
+  position: relative;
+  width: min(22rem, 70vw);
+  height: 3px;
+  margin: 1.6rem 0;
+  border-radius: 999px;
+  background: rgba(243, 246, 252, 0.12);
+  overflow: hidden;
+}
+.cinematic-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--nba-red), var(--red-hi));
+  box-shadow: 0 0 14px rgba(255, 77, 94, 0.9);
+  animation: cinematic-fill 5.5s cubic-bezier(0.3, 0.1, 0.3, 1) forwards;
+}
+@keyframes cinematic-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

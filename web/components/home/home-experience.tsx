@@ -14,7 +14,7 @@ import { ResultPanel } from "./result-panel";
 import { TeamLabel } from "./team-label";
 import "./home.css";
 
-// Placeholder timings until the GSAP cinematic (Phase 7).
+// Phase timings for the 2D fallback, which has no cinematic.
 const REVEAL_MS = 700;
 const SHOT_MS = 900;
 const RETURN_MS = 400;
@@ -40,7 +40,7 @@ export function HomeExperience({
   syncUrl: boolean;
 }) {
   const reducedMotion = useReducedMotion();
-  const { phase, gameId, send, reset, setInstantResults } = useScene();
+  const { phase, gameId, send, reset, setInstantResults, cinematic } = useScene();
   // No games today: the visitor can ask for the next game day instead.
   const [showNext, setShowNext] = useState(false);
   const day = showNext && slate.next ? slate.next.day : slate.today;
@@ -58,15 +58,16 @@ export function HomeExperience({
 
   useEffect(() => setInstantResults(reducedMotion), [reducedMotion, setInstantResults]);
 
-  // Placeholder cinematic: advance the state machine on timers.
+  // Without the 3D cinematic (2D fallback), advance the state machine on short timers.
   useEffect(() => {
+    if (cinematic) return;
     const next = { revealing: ["revealDone", REVEAL_MS], shooting: ["shotDone", SHOT_MS],
                    returning: ["returned", RETURN_MS] } as const;  // prettier-ignore
     if (!(phase in next)) return;
     const [type, ms] = next[phase as keyof typeof next];
     const id = window.setTimeout(() => send({ type }), ms);
     return () => window.clearTimeout(id);
-  }, [phase, send]);
+  }, [phase, send, cinematic]);
 
   // Esc skips to results (DESIGN.md section 4).
   useEffect(() => {
@@ -101,11 +102,14 @@ export function HomeExperience({
   const predictArea =
     game && (phase === "results" || phase === "returning") ? (
       <ResultPanel game={game} onBack={() => send({ type: "back" })} />
+    ) : game && animating ? (
+      // The button becomes a thin line running while the shot plays.
+      <div className="cinematic-progress" role="progressbar" aria-label="Playing the prediction" />
     ) : game ? (
       <button
         ref={predictRef}
         type="button"
-        disabled={Boolean(blocker) || animating}
+        disabled={Boolean(blocker)}
         aria-describedby={blocker ? "predict-blocker" : undefined}
         onClick={() => send({ type: "predict" })}
         className="predict-button"
@@ -122,11 +126,16 @@ export function HomeExperience({
 
       {game ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col pt-16 pb-6 sm:pb-8">
-          <div className={`transition-opacity duration-300 ${animating ? "opacity-30" : ""}`}>
+          {/* The loser's name dims at the reveal, then both fade as the camera moves in; they come back with the home shot. */}
+          <div className={`transition-opacity duration-500 ${phase === "idle" ? "" : "opacity-0 delay-300"}`}>
             <MatchupHeader game={game} today={slate.today} />
           </div>
           {/* Team names over each player; the players are centered, so the columns are too. */}
-          <div className="mx-auto mt-3 grid w-full max-w-[1100px] grid-cols-2 gap-4 px-4 sm:mt-5 sm:px-10">
+          <div
+            className={`mx-auto mt-3 grid w-full max-w-[1100px] grid-cols-2 gap-4 px-4 transition-opacity duration-500 sm:mt-5 sm:px-10 ${
+              phase === "idle" ? "" : "opacity-0 delay-300"
+            }`}
+          >
             <TeamLabel team={game.away} side="away" neutral={game.isNeutral}
                        dimmed={phase !== "idle" && winner === "home"} />
             <TeamLabel team={game.home} side="home" neutral={game.isNeutral}

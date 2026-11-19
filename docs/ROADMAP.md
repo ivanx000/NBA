@@ -151,14 +151,20 @@ Notes:
 - `player.glb` is about 2 MB; ~390 KB of it is glTF JSON for ~2,400 animation accessors. Trim static channels in Phase 10 if the payload needs it.
 
 ## Phase 7: The prediction cinematic
-- [ ] GSAP master timeline per DESIGN §4 (camera rig, winner turn, loser dim)
-- [ ] Ball attach to the hand bone → release at `JUMPSHOT_RELEASE_TIME` → Bezier flight
-- [ ] Confidence-based shot outcome (swish / back-iron / rattle)
-- [ ] Hoop reveal, swish net wobble, team-color flash + confetti
-- [ ] Skip / Esc, reduced-motion path, return-to-home reverse
-- [ ] Performance pass: `<PerformanceMonitor>`, DPR scaling, post-processing toggle
+- [x] GSAP master timeline per DESIGN §4 (camera rig, winner turn, loser dim)
+- [x] Ball attach to the hand bone → release at `JUMPSHOT_RELEASE_TIME` → Bezier flight
+- [x] Confidence-based shot outcome (swish / back-iron / rattle)
+- [x] Hoop reveal, swish net wobble, team-color flash + confetti
+- [x] Skip / Esc, reduced-motion path, return-to-home reverse
+- [x] Performance pass: `<PerformanceMonitor>`, DPR scaling, post-processing toggle
 
 Notes:
+- Decided with the user: the hoop is drawn in glowing lines (matching the room), the ball is a real basketball with a team-color trail, and "confetti" is a burst of light sparks.
+- The cinematic never fights the home camera: it writes a target shot and a blend weight (`camera-override.ts`) and the rig lerps toward it, so push-in, hero shot and return are all one weight tween plus shot moves.
+- The ball sits between both hands (the jump shot is two-handed) and leaves at 1.27 s into `JumpShot`, which looks right with the arms overhead. Shot timing depends only on the outcome, so the timeline is built up front; the real path is computed at release from where the ball is.
+- `Player` now starts one-shot clips at their first frame (the idle offset that keeps the two players out of step was also applied to the jump shot).
+- `PerformanceMonitor`: DPR starts at 1.5, rises to 1.75 on fast devices, drops to 1 on slow ones, and turns off bloom if it keeps struggling.
+- Checked in Chrome with sample games in local Postgres: back iron (58%), swish (70%), rattle (51%), Skip/Esc, and Back. Reduced motion skips straight to results (no timeline), as before.
 
 ## Phase 8: Results + content pages
 - [ ] Results overlay: win prob bar, factor bars, Final-game ✓/✗ (player lines placeholder until Phase 9)

@@ -30,7 +30,7 @@ export type ClipName =
   | (typeof CLIPS.celebrate)[number];
 
 /**
- * Seconds into JumpShot when the ball leaves the hand. Estimated from the jump's peak (the hips
- * are highest at 1.27 s); confirm visually when the cinematic is built (Phase 7).
+ * Seconds into JumpShot when the ball leaves the hands: the jump's peak (the hips are highest at
+ * 1.27 s). Checked in the cinematic (Phase 7): the ball leaves with the arms extended overhead.
  */
 export const JUMPSHOT_RELEASE_TIME = 1.27;
