@@ -10,6 +10,7 @@ import { requireTeam } from "@/lib/teams";
 
 import { FactorBars } from "./factor-bars";
 import { FinalBadge } from "./final-badge";
+import { PlayerTable } from "./player-lines";
 import { TeamNumbers } from "./team-numbers";
 import "./game.css";
 
@@ -155,9 +156,38 @@ export function GameBreakdown({ detail }: { detail: GameDetail }) {
 
       <section className="breakdown__players holo-panel" aria-labelledby="players">
         <h2 id="players" className="eyebrow">
-          Projected player lines
+          {game.status === "final" ? "Player lines: projected and real" : "Projected player lines"}
         </h2>
-        <p className="breakdown__muted">Points, rebounds and assists for each team&apos;s rotation are coming soon.</p>
+        {game.players.home.length + game.players.away.length === 0 ? (
+          <p className="breakdown__muted">
+            {game.status === "scheduled"
+              ? "Projected lines are published with the prediction, around 9 AM ET on game day."
+              : "No player lines were projected before this game."}
+          </p>
+        ) : (
+          <>
+            <div className="player-tables">
+              {(["away", "home"] as const).map((side) =>
+                game.players[side].length ? (
+                  <PlayerTable
+                    key={side}
+                    lines={game.players[side]}
+                    teamName={`${game[side].city} ${game[side].name}`}
+                    color={readableTeamColor(requireTeam(game[side].teamId))}
+                  />
+                ) : null,
+              )}
+            </div>
+            <p className="breakdown__muted breakdown__small">
+              Each team&apos;s 8 players with the most projected minutes. Projections assume he plays; under each
+              number is its 80% range, which should hold the real number 8 times in 10.
+              {game.status === "final" && " Real numbers are marked ✓ inside the range, ✗ outside."}{" "}
+              {game.players.source === "backfill"
+                ? "These are a walk-forward backtest: models trained only on games before that week."
+                : "Published before tip-off."}
+            </p>
+          </>
+        )}
       </section>
 
       <Link href="/" className="breakdown__back">

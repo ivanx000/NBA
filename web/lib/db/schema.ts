@@ -109,10 +109,27 @@ export const playerProjections = pgTable(
     pts: real("pts"),
     reb: real("reb"),
     ast: real("ast"),
-    ptsLo: real("pts_lo"), // 80% interval
+    // 80% ranges
+    ptsLo: real("pts_lo"),
     ptsHi: real("pts_hi"),
+    rebLo: real("reb_lo"),
+    rebHi: real("reb_hi"),
+    astLo: real("ast_lo"),
+    astHi: real("ast_hi"),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+    featuresHash: text("features_hash"),
+    /** live = published before tip-off; backfill = walk-forward backtest (data cutoff before the game). */
+    source: text("source", { enum: PREDICTION_SOURCES }).notNull().default("live"),
+    /** The real line once the game is final (minutes 0 = didn't play); filled by `tipoff results`. */
+    actualMinutes: real("actual_minutes"),
+    actualPts: integer("actual_pts"),
+    actualReb: integer("actual_reb"),
+    actualAst: integer("actual_ast"),
   },
-  (t) => [primaryKey({ columns: [t.gameId, t.playerId, t.modelVersion] })],
+  (t) => [
+    primaryKey({ columns: [t.gameId, t.playerId, t.modelVersion] }),
+    check("player_projections_source_check", sql`${t.source} in ('live', 'backfill')`),
+  ],
 );
 
 /** Latest pregame prediction per game; live predictions win over backfilled ones. */
@@ -128,6 +145,38 @@ export const currentGamePredictions = pgView("current_game_predictions", {
   eloHomeWinProb: real("elo_home_win_prob"),
 }).as(
   sql`select distinct on (game_id) * from game_predictions where is_pregame order by game_id, (source = 'live') desc, generated_at desc`,
+);
+
+/**
+ * One projection set per game: the newest live set if there is one, else the newest backfill.
+ * (Whole sets, so a game never mixes players from two runs.)
+ */
+export const currentPlayerProjections = pgView("current_player_projections", {
+  gameId: text("game_id"),
+  playerId: integer("player_id"),
+  teamId: integer("team_id"),
+  playerName: text("player_name"),
+  jerseyNumber: text("jersey_number"),
+  modelVersion: text("model_version"),
+  projMinutes: real("proj_minutes"),
+  pts: real("pts"),
+  reb: real("reb"),
+  ast: real("ast"),
+  ptsLo: real("pts_lo"),
+  ptsHi: real("pts_hi"),
+  rebLo: real("reb_lo"),
+  rebHi: real("reb_hi"),
+  astLo: real("ast_lo"),
+  astHi: real("ast_hi"),
+  generatedAt: timestamp("generated_at", { withTimezone: true }),
+  featuresHash: text("features_hash"),
+  source: text("source"),
+  actualMinutes: real("actual_minutes"),
+  actualPts: integer("actual_pts"),
+  actualReb: integer("actual_reb"),
+  actualAst: integer("actual_ast"),
+}).as(
+  sql`select p.* from player_projections p join (select distinct on (game_id) game_id, model_version from player_projections order by game_id, (source = 'live') desc, generated_at desc) pick using (game_id, model_version)`,
 );
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
@@ -149,3 +198,4 @@ export const pipelineState = pgTable("pipeline_state", {
 
 export type Game = typeof games.$inferSelect;
 export type GamePrediction = typeof gamePredictions.$inferSelect;
+export type PlayerProjection = typeof currentPlayerProjections.$inferSelect;

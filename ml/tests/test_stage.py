@@ -82,3 +82,15 @@ def test_schema_rejects_inconsistent_scores(raw):
 def test_missing_raw_data_is_clear(tmp_path):
     with pytest.raises(StagingError, match="tipoff ingest"):
         load_raw(Endpoint.TEAM_LOGS, tmp_path)
+
+
+def test_short_team_minutes_take_the_games_length(raw):
+    """stats.nba.com once listed 168 team minutes for one side of a 240-minute game."""
+    logs = load_raw(Endpoint.TEAM_LOGS, raw)
+    gid = logs["GAME_ID"].iloc[0]
+    first = logs.index[logs["GAME_ID"] == gid][0]
+    logs.loc[first, "MIN"] = 168
+    tg = build_team_games(logs)
+    game = tg[tg["game_id"] == gid]
+    assert set(game["minutes"]) == {240}
+    assert game["pace"].between(60, 140).all()

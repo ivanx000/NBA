@@ -37,3 +37,16 @@ def test_cloud_update_uses_only_cdn(monkeypatch, tmp_path):
 
     cli._cloud_update(engine=None)
     assert calls == [["0022600002"], "stage", "push"]
+
+
+def test_cloud_player_steps_never_import_stats_nba():
+    """`daily --cloud` also projects players and fills results; those modules read staged data
+    and the database only."""
+    import inspect
+
+    from tipoff.features import players as features
+    from tipoff.predict import players as predict
+    from tipoff.publish import players as publish
+
+    for module in (features, predict, publish):
+        assert "nba_stats" not in inspect.getsource(module), module.__name__

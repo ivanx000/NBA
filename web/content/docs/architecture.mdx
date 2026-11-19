@@ -52,8 +52,11 @@ Next.js website that only reads them.
   tip-off) or `backfill` (walk-forward backtest).
 - `current_game_predictions`: a view with one prediction per game, live beating backfill. The site
   reads this.
-- `model_versions`, `pipeline_state` (the staged history and champion model for the cloud job),
-  and `player_projections` (Phase 9).
+- `player_projections`: each game's projected player lines (top 8 per team) with their 80% ranges,
+  the same provenance and `source`, and the real line once the game is final. The view
+  `current_player_projections` gives one whole set per game, live beating backfill.
+- `model_versions` and `pipeline_state` (the staged history and both champion models for the cloud
+  job).
 
 ## Rules the system keeps
 

@@ -22,12 +22,12 @@ EXPERIMENT = "tipoff-game"
 warnings.filterwarnings("ignore", message=".*Inferred schema contains integer column.*")
 
 
-def setup_mlflow() -> None:
+def setup_mlflow(experiment: str = EXPERIMENT) -> None:
     settings = get_settings()
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
-    if mlflow.get_experiment_by_name(EXPERIMENT) is None:
-        mlflow.create_experiment(EXPERIMENT, artifact_location=settings.mlflow_artifact_root)
-    mlflow.set_experiment(EXPERIMENT)
+    if mlflow.get_experiment_by_name(experiment) is None:
+        mlflow.create_experiment(experiment, artifact_location=settings.mlflow_artifact_root)
+    mlflow.set_experiment(experiment)
 
 
 def run_baselines(log_to_mlflow: bool = True) -> dict:

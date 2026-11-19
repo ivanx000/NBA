@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { FactorBars } from "@/components/game/factor-bars";
 import { FinalBadge } from "@/components/game/final-badge";
+import { PlayerList } from "@/components/game/player-lines";
 import { TeamNumbers } from "@/components/game/team-numbers";
 import { tipoffET } from "@/lib/dates";
 import type { Side } from "@/lib/scene-store";
@@ -90,6 +91,15 @@ export function ResultsView({
             </button>
           </div>
           <TeamNumbers stats={shown.stats} />
+          {game.players[viewing].length > 0 && (
+            <div className="results__players">
+              <p className="eyebrow results__muted">Projected lines</p>
+              <PlayerList lines={game.players[viewing]} color={shownColor} limit={5} />
+              <p className="results__muted results__small">
+                If he plays. Each range should hold the real number 8 times in 10.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="results__game">

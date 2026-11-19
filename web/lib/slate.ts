@@ -1,4 +1,5 @@
 import type { StoredFactor } from "@/lib/factor-copy";
+import type { GamePlayers } from "@/lib/players";
 import type { TeamStats } from "@/lib/team-stats";
 
 export type GameStatus = "scheduled" | "live" | "final" | "postponed";
@@ -39,6 +40,8 @@ export interface SlateGame {
   /** Season series before this game. */
   headToHead: { home: number; away: number };
   prediction: SlatePrediction | null;
+  /** Projected player lines (top 8 per team by minutes); empty when none are published. */
+  players: GamePlayers;
 }
 
 /** The home page's games: today only, plus the next game day when today has none. */

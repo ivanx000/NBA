@@ -135,6 +135,41 @@ LogReg's C was picked on validation (the strongest regularization within 0.0001 
 - **Scope:** players with ≥ 10 mpg over the last 10 games, top 8 by projected minutes per team.
 - Ship after the game model (see ROADMAP Phase 9).
 
+**As built (Phase 9, part 1: features):** `ml/src/tipoff/features/players.py` builds `data/features/player_features.parquet` (with `tipoff features`, next to the game table; `PLAYER_FEATURES_VERSION` in its hash).
+- **Rows:** one per regular-season appearance (minutes > 0) since 2015-16, plus scheduled games' candidates through the same code. Projections are "if he plays": candidates are the players whose most recent appearance was their team's previous game (a traded player counts for his new team only once he's played for it).
+- **Scope (`in_scope`):** ≥ 10 minutes per game over his last 10 appearances and an appearance in the team's last 5 games. 250,794 of 284,256 rows; about 22,500 per full season.
+- **Features (47):** minutes stage: last 3/5/10/25 and exponentially weighted minutes, their spread, a starter proxy (share of recent games among his team's five biggest minutes; the logs have no starter flag), days since his last game, missed the team's previous game, team games missed of the last 5, games with this team and this season, team rest and back-to-back, teammates out (the game model's `out_min_share`, `star_out`), blowout risk (|Elo edge|), the team's Elo win chance, home, point in the season. Rate stage: per-36 points, rebounds (offensive, defensive) and assists over 10 and 25 games and weighted, shot volume (FGA, FTA, 3PA per 36), turnovers, usage over 10 and 25 games, raw last-10 averages, and the opponent's defensive rating, pace, offensive and defensive rebound rates and eFG% allowed, plus his team's pace and offensive rating (season-to-date, blended with the prior).
+- **Usage from the box score:** `(FGA + 0.44 FTA + TOV) × (team minutes / 5) / (minutes × (team FGA + 0.44 team FTA + team TOV))`, summed over the window, so the cloud job's cdn.nba.com box scores need nothing extra.
+- Windows run over his career (across seasons and teams); everything is shifted so a row never sees its own game. `tests/test_player_features.py` repeats the game model's leakage checks for player rows (perturb a day's box scores; delete the future and predict the day as scheduled, on synthetic and real data).
+- **Last-10 baseline on 2024-25 (in-scope rows), MAE:** minutes 5.11, points 4.96, rebounds 2.04, assists 1.45.
+
+**As built (Phase 9, part 2: models):** `ml/src/tipoff/models/players.py` (the `PlayerModel`) and `models/train_player.py` (MLflow experiment `tipoff-player`). Settings in `ml/config/player_model.json`.
+- **Minutes:** LightGBM regressor. **Rates:** one LightGBM regressor per stat on stat per minute, weighted by minutes; projection = minutes × rate. **Direct** stat models were tried as a comparison; two-stage won for all three stats on validation (points 4.787 vs 4.803 MAE, rebounds 1.975 vs 1.979, assists 1.409 vs 1.413). Sizes come from a 3-step grid, picked on 2024-25 MAE; the differences between sizes were in the third decimal.
+- **Ranges:** LightGBM quantile regressors (10th and 90th percentiles) per stat, then a conformal correction (CQR) learned on a season the quantile models never saw (2024-25 for the test model; 2025-26 for the champion, from a model fit through 2024-25). Before the correction 2024-25 coverage was 77.9% (points), 78.4% (rebounds), 80.6% (assists), so the correction is small (under 0.1 of a point). Ranges never go below 0 and always contain the projection.
+- **Validation 2024-25** (trained on 2015-16..2023-24, 201,540 player-games; 22,529 evaluated). Source: `ml/reports/player_validation.md`.
+
+| Target | Last-10 MAE | Model MAE | vs baseline |
+|---|---|---|---|
+| Minutes | 5.106 | 4.771 | −6.6% |
+| Points | 4.962 | 4.787 | −3.5% |
+| Rebounds | 2.036 | 1.975 | −3.0% |
+| Assists | 1.453 | 1.409 | −3.0% |
+
+- **Test 2025-26, run once** (refit on 2015-16..2024-25; 23,170 player-games). Source: `ml/reports/test_player_2025-26.md`; `tipoff evaluate --test --player` refuses to run again without `--force-retest`.
+
+| Target | Last-10 MAE | Model MAE | vs baseline | 80% range coverage | Mean width |
+|---|---|---|---|---|---|
+| Minutes | 5.079 | 4.729 | −6.9% | | |
+| Points | 4.880 | 4.729 | −3.1% | 81.3% | 15.2 |
+| Rebounds | 2.001 | 1.936 | −3.2% | 81.1% | 6.2 |
+| Assists | 1.439 | 1.397 | −2.9% | 80.7% | 4.4 |
+
+- **Honest reading:** the models beat the last-10 average on every stat on a season they never saw, which was the bar to ship. The gains are modest (about 3% on the counting stats, 7% on minutes); a player's recent average is a strong baseline, and single games are noisy (the typical miss on points is still about 4.7). Most of the edge comes from minutes (rest, teammates out, blowout risk), which the last-10 average can't see. The 80% ranges are honest: 81% of real lines fell inside them.
+- **Champion:** `tipoff-player` v1 (`player-v1`), an MLflow pyfunc around the `PlayerModel`, fit on every in-scope player-game since 2015-16 (250,794 through 2026-11-13), registered `@champion`.
+
+**As built (Phase 9, part 3: pipeline):** `predict/players.py` projects a date's candidates through the champion and keeps each team's top 8 by projected minutes; `publish/players.py` writes them to `player_projections` (pregame-only, whole set per game) and fills `actual_*` once games are final (`tipoff results`). `tipoff predict`/`publish` do games and players together, and the daily job (local and `--cloud`, which pulls `player_champion` from `pipeline_state`) runs predict → publish → results. The player steps come after the game predictions are published, and a missing player champion or a database error there is reported without stopping the job.
+- **Walk-forward backfill 2026-27** (`tipoff backfill --what players`, model version `player-v1-wf`): each week refit on every in-scope player-game before it, with the champion's out-of-time range correction; projects the players who actually appeared (top 8 per team). On the 222 games through 2026-11-18 (3,469 lines): minutes 4.65 vs last-10 4.99 (−6.7%), points 5.00 vs 5.18 (−3.6%), rebounds 1.96 vs 2.02 (−2.7%), assists 1.47 vs 1.51 (−2.8%); ranges held 79.4% / 80.3% / 79.6%.
+
 ## 7. MLOps
 
 - **MLflow:** SQLite tracking store at `ml/mlflow.db`, artifacts in `ml/mlartifacts/` (both git-ignored); run `uv run mlflow ui --backend-store-uri sqlite:///mlflow.db` from `ml/`. Experiments `tipoff-game` and `tipoff-player`. Log params, metrics (val and test), the feature list, the data window, the calibration plot and SHAP summary plot as artifacts, and the model via `mlflow.sklearn` / `mlflow.lightgbm`.

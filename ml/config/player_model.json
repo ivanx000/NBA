@@ -1,0 +1,130 @@
+{
+  "point": {
+    "pts": "two_stage",
+    "reb": "two_stage",
+    "ast": "two_stage"
+  },
+  "params": {
+    "minutes": {
+      "num_leaves": 63,
+      "learning_rate": 0.03,
+      "n_estimators": 800,
+      "min_child_samples": 100
+    },
+    "pts_rate": {
+      "num_leaves": 15,
+      "learning_rate": 0.05,
+      "n_estimators": 400,
+      "min_child_samples": 200
+    },
+    "pts_direct": {
+      "num_leaves": 63,
+      "learning_rate": 0.03,
+      "n_estimators": 800,
+      "min_child_samples": 100
+    },
+    "reb_rate": {
+      "num_leaves": 15,
+      "learning_rate": 0.05,
+      "n_estimators": 400,
+      "min_child_samples": 200
+    },
+    "reb_direct": {
+      "num_leaves": 15,
+      "learning_rate": 0.05,
+      "n_estimators": 400,
+      "min_child_samples": 200
+    },
+    "ast_rate": {
+      "num_leaves": 15,
+      "learning_rate": 0.05,
+      "n_estimators": 400,
+      "min_child_samples": 200
+    },
+    "ast_direct": {
+      "num_leaves": 15,
+      "learning_rate": 0.05,
+      "n_estimators": 400,
+      "min_child_samples": 200
+    }
+  },
+  "valid_mae": {
+    "minutes": 4.7707,
+    "pts_rate": 4.7871,
+    "pts_direct": 4.8029,
+    "reb_rate": 1.9747,
+    "reb_direct": 1.9789,
+    "ast_rate": 1.4092,
+    "ast_direct": 1.4131
+  },
+  "candidates": {
+    "minutes": {
+      "tried": [
+        4.7824,
+        4.7734,
+        4.7707
+      ],
+      "best": 2
+    },
+    "pts_rate": {
+      "tried": [
+        4.7871,
+        4.7885,
+        4.7947
+      ],
+      "best": 0
+    },
+    "pts_direct": {
+      "tried": [
+        4.8042,
+        4.8029,
+        4.8029
+      ],
+      "best": 2
+    },
+    "reb_rate": {
+      "tried": [
+        1.9747,
+        1.9751,
+        1.9763
+      ],
+      "best": 0
+    },
+    "reb_direct": {
+      "tried": [
+        1.9789,
+        1.9792,
+        1.9806
+      ],
+      "best": 0
+    },
+    "ast_rate": {
+      "tried": [
+        1.4092,
+        1.4114,
+        1.4113
+      ],
+      "best": 0
+    },
+    "ast_direct": {
+      "tried": [
+        1.4131,
+        1.4139,
+        1.4134
+      ],
+      "best": 0
+    }
+  },
+  "widen": {
+    "pts": 0.0953624560917843,
+    "reb": 0.025586981539801722,
+    "ast": 0.0
+  },
+  "selected_on": "2024-25",
+  "features_hash": "32b5926bc1965079",
+  "raw_coverage": {
+    "pts": 0.7794,
+    "reb": 0.784,
+    "ast": 0.8056
+  }
+}

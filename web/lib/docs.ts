@@ -29,7 +29,7 @@ export const DOC_SECTIONS: { title: string; pages: { slug: string; title: string
       { slug: "models", title: "Models and baselines", description: "What was tried, how the champion was picked, and how it scored." },
       { slug: "calibration", title: "Calibration", description: "Whether a 70% pick really wins about 70% of the time." },
       { slug: "explaining-predictions", title: "Explaining predictions", description: "Turning a probability into the reasons shown on the site." },
-      { slug: "player-projections", title: "Player projections", description: "Points, rebounds and assists per player (coming next)." },
+      { slug: "player-projections", title: "Player projections", description: "Minutes, points, rebounds and assists per player, with 80% ranges." },
     ],
   },
   {

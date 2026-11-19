@@ -65,19 +65,23 @@ uv run ruff check . && uv run ruff format .
 uv run tipoff --help             # typer CLI (also: uv run python -m tipoff ...)
 uv run tipoff ingest              # stats + cdn, then stage/validate (idempotent; --dry-run, --force)
 uv run tipoff ingest --source cdn # cdn.nba.com only (safe in CI)
-uv run tipoff features           # build data/features/game_features.parquet (--tune-elo to re-tune Elo)
+uv run tipoff features           # build data/features/game_features.parquet + player_features.parquet (--tune-elo to re-tune Elo)
 uv run tipoff train --only baselines   # train + evaluate on 2024-25, log to MLflow
 uv run tipoff train --only game        # Optuna + calibration + champion kind -> ml/config/game_model.json
 uv run tipoff evaluate                 # 2025-26 walk-forward + factor importance (add --test only for a new major version)
+uv run tipoff evaluate --test --player  # the player models' one-time 2025-26 test (already run)
 uv run tipoff train --only champion    # fit on all games, register tipoff-game@champion
+uv run tipoff train --only player      # player projections: pick models on 2024-25 -> ml/config/player_model.json
+uv run tipoff train --only player-champion   # fit on all player-games, register tipoff-player@champion
 uv run tipoff sync [--target prod]     # games from cdn.nba.com (safe in CI)
-uv run tipoff predict --date today     # champion predictions + factors -> data/predictions/live/
-uv run tipoff publish --date today [--target prod]   # pregame-only guard
-uv run tipoff backfill [--target prod] # weekly walk-forward history, source='backfill'
+uv run tipoff predict --date today     # champion predictions + factors (live/) and player projections (players/) in data/predictions/
+uv run tipoff publish --date today [--target prod]   # games + player projections, pregame-only guard
+uv run tipoff results [--target prod]  # fill projected players' actual lines from staged box scores
+uv run tipoff backfill [--target prod] # weekly walk-forward history, source='backfill' (--what players: this season's projections)
 uv run tipoff freshness-check [--target prod]
 uv run tipoff daily --target prod --if-needed        # local fallback (launchd, scripts/daily.sh)
 uv run tipoff daily --cloud --target prod            # what .github/workflows/daily.yml runs (cdn only)
-uv run tipoff state push --what all --target prod    # staged history + champion for the cloud job
+uv run tipoff state push --what all --target prod    # staged history + both champions for the cloud job
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish
@@ -108,9 +112,9 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 
 **Data and ML**
 - **No data leakage.** Every feature for a game must be computable using only information available *before tip-off*. Rolling stats use `.shift(1)` or an equivalent. There's a test for this. Keep it passing.
-- **Time-based splits only.** Never random-split games for train/test. Train 2015-16..2023-24, validate 2024-25, test 2025-26 (`tipoff.config`). Only Phase 3's final evaluation may touch the test season; `models/data.train_valid` can't return it. The one-time test already ran (`ml/reports/test_2025-26.json`); `tipoff evaluate --test` refuses to run again without `--force-retest`, which is for a new major model version only. Never pick or tune a model based on test numbers.
+- **Time-based splits only.** Never random-split games for train/test. Train 2015-16..2023-24, validate 2024-25, test 2025-26 (`tipoff.config`). Only each model's one-time final evaluation may touch the test season (the game model's in Phase 3, the player models' in Phase 9); `models/data.train_valid` and `models/players.player_train_valid` can't return it. The one-time tests already ran (`ml/reports/test_2025-26.json`, `ml/reports/test_player_2025-26.json`); `tipoff evaluate --test` refuses to run again without `--force-retest`, which is for a new major model version only. Never pick or tune a model based on test numbers.
 - Always report against baselines (home team wins, Elo) next to any model metric.
-- Log every training run to MLflow with params, metrics, and the model artifact. After registering a new champion, push it for the cloud job: `tipoff state push --what champion --target prod`.
+- Log every training run to MLflow with params, metrics, and the model artifact. After registering a new champion, push it for the cloud job: `tipoff state push --what champion --target prod` (`--what player-champion` for the player model).
 - If a feature's definition changes, bump `FEATURES_VERSION` in `features/build.py` so `features_hash` changes.
 - `stats.nba.com` blocks cloud and CI IP ranges. **Never call it from GitHub Actions or Vercel.** The cloud daily job (`daily --cloud`) uses cdn.nba.com box scores only; a test enforces this. Historical and box-score ingestion runs on the developer's machine. The `cdn.nba.com` live and schedule JSON endpoints are fine to call from CI.
 - Be polite to NBA endpoints: rate-limit requests (about 0.6s between calls), cache raw responses to disk, and never re-fetch data you already have. All NBA HTTP goes through `tipoff.ingest.http` (shared limiter and retries).

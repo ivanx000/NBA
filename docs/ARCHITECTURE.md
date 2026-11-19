@@ -35,7 +35,7 @@
 | Time | Where | Job | What it does |
 |---|---|---|---|
 | ~06:07 | GitHub Actions | `schedule-sync` | `tipoff sync --target prod`: upserts the whole current season's games from the cdn schedule (which also carries final scores) |
-| hourly ~09:07–18:07 | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --if-needed` | pull staged history + champion from `pipeline_state` → cdn.nba.com box scores for newly finished games → incremental stage → push history back → sync → predict today → publish → freshness check. Exits immediately once today is published |
+| hourly ~09:07–18:07 | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --if-needed` | pull staged history + champions from `pipeline_state` → cdn.nba.com box scores for newly finished games → incremental stage → push history back → sync → predict today and project its players → publish both → fill projected players' actual lines → freshness check. The player steps run after the game predictions are out and never stop the job. Exits immediately once today is published |
 | 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`), **fallback** | `tipoff daily --target prod --if-needed` | same job using stats.nba.com; only acts if the cloud run hasn't published. To be removed after a week of clean cloud runs |
 | ~10:37 | GitHub Actions | `freshness-check` | syncs, then fails (GitHub emails) if any of today's games lacks a live prediction |
 | hourly ~18:17–02:17 | GitHub Actions | `results-sync` | same sync, plus live status/scores from today's scoreboard |
@@ -43,7 +43,7 @@
 
 GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for EST) and can start late. The daily job no longer needs the Mac: cdn.nba.com box scores carry every counting stat the features use (verified field by field against stats.nba.com), and pace and ratings come from the box-score possession formula for every season, so history and new games match. stats.nba.com is still used locally for historical ingest and rebuilds.
 
-**Pipeline state** (`pipeline_state` table, written by `tipoff state push`): `staged` = the three staged parquet tables (tar.gz, ~5 MB), `champion` = the champion `GameModel` (joblib) with its provenance. The cloud job reads both and pushes `staged` back after adding games. Pulls verify a SHA-256 and only unpack the three expected files. After registering a new champion locally, run `tipoff state push --what champion --target prod`.
+**Pipeline state** (`pipeline_state` table, written by `tipoff state push`): `staged` = the three staged parquet tables (tar.gz, ~5 MB), `champion` = the champion `GameModel` (joblib) with its provenance, `player_champion` = the champion `PlayerModel` (joblib) with its provenance. The cloud job reads them and pushes `staged` back after adding games; without a `player_champion` it still publishes game predictions and skips the projections. Pulls verify a SHA-256 and only unpack the three expected files. After registering a new champion locally, run `tipoff state push --what champion --target prod` (or `--what player-champion` for the player model).
 
 ## 3. Repo layout
 
@@ -76,11 +76,12 @@ GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for E
 │   │   │   ├── game_outcome.py   # GameModel: LogReg / LightGBM / log-odds ensemble + calibrator
 │   │   │   ├── train_game.py     # Optuna, out-of-time calibration, champion kind (validation only)
 │   │   │   ├── final.py          # one-time test, walk-forward, champion registration
-│   │   │   └── player_stats.py   # pts/reb/ast regressors (Phase 9)
+│   │   │   ├── players.py        # PlayerModel: minutes × per-minute rates, quantile ranges + CQR
+│   │   │   └── train_player.py   # selection on 2024-25, one-time test, tipoff-player@champion
 │   │   ├── evaluate/             # backtest, metrics, calibration, plots
-│   │   ├── predict/              # inference; explain.py turns contributions into top factors
-│   │   ├── publish/              # writes to Postgres (SQLAlchemy)
-│   │   └── cli.py                # typer CLI: tipoff ingest|features|train|predict|publish|daily
+│   │   ├── predict/              # inference; explain.py turns contributions into top factors; players.py projects lines (+ backfill)
+│   │   ├── publish/              # writes to Postgres (SQLAlchemy); players.py: projections + actual lines
+│   │   └── cli.py                # typer CLI: tipoff ingest|features|train|predict|publish|results|backfill|daily|state
 │   ├── tests/
 │   │   ├── test_no_leakage.py
 │   │   ├── test_features.py
@@ -176,9 +177,22 @@ create table player_projections (
   model_version  text references model_versions,
   proj_minutes   real,
   pts real, reb real, ast real,
-  pts_lo real, pts_hi real,                  -- 80% interval
+  pts_lo real, pts_hi real,                  -- 80% ranges
+  reb_lo real, reb_hi real, ast_lo real, ast_hi real,
+  generated_at   timestamptz not null default now(),
+  features_hash  text,
+  source         text not null default 'live',   -- live | backfill (walk-forward backtest)
+  actual_minutes real,                        -- the real line once final (0 = didn't play)
+  actual_pts integer, actual_reb integer, actual_ast integer,
   primary key (game_id, player_id, model_version)
 );
+
+-- One whole projection set per game: newest live set, else newest backfill
+create view current_player_projections as
+select p.* from player_projections p join (
+  select distinct on (game_id) game_id, model_version from player_projections
+  order by game_id, (source = 'live') desc, generated_at desc
+) pick using (game_id, model_version);
 
 -- Convenience view the website uses: latest pregame prediction per game (live beats backfill)
 create view current_game_predictions as
@@ -192,16 +206,17 @@ order by game_id, (source = 'live') desc, generated_at desc;
 - `publish` refuses to write a live prediction for a game whose `tipoff_utc` has passed. The upsert also carries `WHERE games.tipoff_utc > now()`, so a started game's prediction can't be replaced even if the local clock is wrong. Past predictions are immutable.
 - Backfilled rows (`source = 'backfill'`, model version `game-vN-wf`) are weekly walk-forward predictions: each comes from a model trained only on games before its week. They're labelled so `/performance` can say which history is a backtest and which was published live. They never replace live rows.
 - `/performance` joins `current_game_predictions` with `games where status = 'final'`.
+- Player projections follow the same rules: live sets are only written for games that haven't tipped off (checked against the database clock in the write's transaction, with the games' rows locked), each game's set is replaced whole for its model version so a player who drops out doesn't linger, and backfilled sets (`player-vN-wf`) never touch live rows. `tipoff results` fills `actual_*` from the staged box scores once a game is final; a projected player missing from a final box score gets `actual_minutes = 0`.
 
 ## 5. Web data flow
 
 Next.js 16 with **Cache Components** (`cacheComponents: true`): route-segment `revalidate` no longer exists.
 
 - `app/page.tsx` renders a static shell and, inside `<Suspense>`, a request-time `Home` that calls `await connection()`, reads `searchParams.game`, computes "today" in ET, and loads the slate. With no `?game=` (or one that isn't today's), `defaultGame` picks today's next game that hasn't started (`lib/slate.ts`); the client then writes `?game=` into the URL with `history.replaceState`, so refreshes and shares keep the game.
-- `getSlate(today)` (`lib/db/queries.ts`) is a `'use cache'` function with `cacheLife('minutes')` (stale 5 min, revalidate 1 min). It wraps `fetchSlate(db, today)`, a plain function that the tests run against Postgres. It returns today's games in tip-off order and, only when today has none, the closest later day with games (`next`), with `current_game_predictions` (live beats backfill). It also loads the season's finished regular-season games before that day and works out each team's numbers (`lib/team-stats.ts`: record, home/away, last 10, streak, points for/against, margin, rest) and the season series, so the results screen needs no extra request. Past days are never returned.
+- `getSlate(today)` (`lib/db/queries.ts`) is a `'use cache'` function with `cacheLife('minutes')` (stale 5 min, revalidate 1 min). It wraps `fetchSlate(db, today)`, a plain function that the tests run against Postgres. It returns today's games in tip-off order and, only when today has none, the closest later day with games (`next`), with `current_game_predictions` (live beats backfill). It also loads the season's finished regular-season games before that day and works out each team's numbers (`lib/team-stats.ts`: record, home/away, last 10, streak, points for/against, margin, rest) and the season series, so the results screen needs no extra request. Each game also carries its projected player lines from `current_player_projections` (one whole set per game, split by team, most projected minutes first; `lib/players.ts`). Past days are never returned.
 - `/docs/[[...slug]]` imports `web/content/docs/{slug}.mdx` (`@next/mdx`; `mdx-components.tsx` maps links and adds `<Diagram>`), prerendered for every page in `lib/docs.ts` (`DOC_SECTIONS`, the single list behind the sidebar, static params and previous/next). "On this page" comes from `docToc(slug)`, which reads the MDX source's headings (cached for good).
 - `/performance` reads `getGradedSeasons()` (cached, `cacheLife('hours')`, after `await connection()` so the page renders per request and CI builds need no database): every finished regular-season game with its `current_game_predictions` row, by season. `lib/performance.ts` turns a season into a summary (metrics vs Elo and the home-team baseline, rolling accuracy, calibration, best and worst calls, the last 150 picks) that a client component charts with Recharts.
-- `/game/[id]` reads `getGameDetail(id)` (cached, `cacheLife('minutes')`; wraps `fetchGameDetail`): the game for any day, plus each team's last 10 results and the season series, from the same finished-games query. The page reads `params` inside `<Suspense>` (no `generateStaticParams`), and `generateMetadata` and `opengraph-image.tsx` use the same cached call.
+- `/game/[id]` reads `getGameDetail(id)` (cached, `cacheLife('minutes')`; wraps `fetchGameDetail`): the game for any day (with its player lines and, once final, their real numbers), plus each team's last 10 results and the season series, from the same finished-games query. The page reads `params` inside `<Suspense>` (no `generateStaticParams`), and `generateMetadata` and `opengraph-image.tsx` use the same cached call.
 - DB driver (`lib/db/client.ts`, server-only): Neon's HTTP driver for `*.neon.tech` URLs, node-postgres otherwise (local Docker, CI).
 - Env: `next.config.ts` loads the repo-root `.env` with `@next/env` (`forceReload`, because Next has already cached `web/`'s env by then). Vercel sets `DATABASE_URL` itself.
 - `<HomeExperience>` (client) holds UI state in the zustand scene store. The 3D scene is loaded with `next/dynamic` and `ssr: false`; without WebGL (or if the scene crashes) a 2D fallback renders, and `?webgl=0` forces it.

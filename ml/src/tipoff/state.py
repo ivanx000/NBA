@@ -2,6 +2,7 @@
 
 - ``staged``: the three staged parquet tables, packed as a tar.gz
 - ``champion``: the champion ``GameModel`` (joblib) plus its provenance in ``meta``
+- ``player_champion``: the champion ``PlayerModel`` (joblib) plus its provenance
 
 GitHub Actions can't reach stats.nba.com and has no MLflow store, so it pulls these, adds new games
 from cdn.nba.com box scores, predicts, publishes, and pushes ``staged`` back.
@@ -94,4 +95,17 @@ def pull_champion(engine: Engine) -> tuple[Any, dict[str, Any]]:
 
     The bytes come only from our own database, written by `tipoff state push`."""
     data, meta = pull(engine, "champion")
+    return joblib.load(io.BytesIO(data)), meta
+
+
+def push_player_champion(engine: Engine, model: Any, info: dict[str, Any]) -> str:
+    buf = io.BytesIO()
+    joblib.dump(model, buf)
+    meta = json.loads(json.dumps(info, default=str))
+    return push(engine, "player_champion", buf.getvalue(), meta)
+
+
+def pull_player_champion(engine: Engine) -> tuple[Any, dict[str, Any]]:
+    """The champion PlayerModel and its provenance; bytes only from our own database."""
+    data, meta = pull(engine, "player_champion")
     return joblib.load(io.BytesIO(data)), meta

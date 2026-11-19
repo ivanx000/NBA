@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -43,6 +44,30 @@ def team_level_features(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.Data
     return pd.concat([tl[["game_id", "team_id", "game_date"]], feats], axis=1)
 
 
+@dataclass
+class Tables:
+    """Intermediate tables shared by the game and player feature builders."""
+
+    games: pd.DataFrame  # played + scheduled games
+    tl: pd.DataFrame  # one row per team-game (team_timeline)
+    team: pd.DataFrame  # pre-game team features, indexed by (game_id, team_id)
+    elo: pd.DataFrame  # pre-game Elo, indexed by game_id
+
+
+def build_tables(
+    staged_games: pd.DataFrame,
+    team_games: pd.DataFrame,
+    player_games: pd.DataFrame,
+    upcoming: pd.DataFrame | None = None,
+    elo_params: EloParams | None = None,
+) -> Tables:
+    games = prepare_games(staged_games, upcoming)
+    tl = team_timeline(games, team_games)
+    team = team_level_features(tl, player_games).set_index(["game_id", "team_id"])
+    elo = run_elo(games, elo_params or EloParams.load()).set_index("game_id")
+    return Tables(games=games, tl=tl, team=team, elo=elo)
+
+
 def build_features(
     staged_games: pd.DataFrame,
     team_games: pd.DataFrame,
@@ -50,13 +75,10 @@ def build_features(
     upcoming: pd.DataFrame | None = None,
     elo_params: EloParams | None = None,
     first_season: str = FIRST_SEASON,
+    tables: Tables | None = None,
 ) -> pd.DataFrame:
-    games = prepare_games(staged_games, upcoming)
-    elo_params = elo_params or EloParams.load()
-
-    tl = team_timeline(games, team_games)
-    team = team_level_features(tl, player_games).set_index(["game_id", "team_id"])
-    elo = run_elo(games, elo_params).set_index("game_id")
+    t = tables or build_tables(staged_games, team_games, player_games, upcoming, elo_params)
+    games, team, elo = t.games, t.team, t.elo
 
     in_window = games["season"].map(season_start_year) >= season_start_year(first_season)
     rows = games[(games["season_type"] == "regular") & in_window]

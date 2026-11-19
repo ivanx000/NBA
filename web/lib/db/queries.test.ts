@@ -69,6 +69,24 @@ beforeAll(async () => {
   );
 });
 
+async function addProjections() {
+  await pool.query(
+    `insert into model_versions values ('player-v1','player',now(),null,null,null),
+                                       ('player-v1-wf','player',now(),null,null,null)`,
+  );
+  const proj = (player: number, team: number, name: string, minutes: number, version: string, source: string) =>
+    pool.query(
+      `insert into player_projections (game_id, player_id, team_id, player_name, model_version, proj_minutes,
+         pts, reb, ast, pts_lo, pts_hi, reb_lo, reb_hi, ast_lo, ast_hi, generated_at, source)
+       values ('0022600003',$1,$2,$3,$4,$5,20,6,4,12,28,2,10,1,7,$6,$7)`,
+      [player, team, name, version, minutes, source === "live" ? "2026-11-14T14:00:00Z" : "2026-11-13T00:00:00Z", source],
+    );
+  await proj(1, NYK, "Jalen Brunson", 34, "player-v1", "live");
+  await proj(2, NYK, "Josh Hart", 36, "player-v1", "live");
+  await proj(3, BOS, "Jayson Tatum", 35, "player-v1", "live");
+  await proj(9, NYK, "Backtest Only", 40, "player-v1-wf", "backfill");
+}
+
 afterAll(async () => {
   await pool?.end();
 });
@@ -94,6 +112,24 @@ describe("fetchSlate", () => {
     expect(slate.next?.games.map((g) => g.gameId)).toEqual(["0022600005"]);
     const after = await fetchSlate(db, "2026-11-21");
     expect([after.games, after.next]).toEqual([[], null]);
+  });
+});
+
+describe("player projections", () => {
+  it("attach one whole set per game (live beats backfill), split by team, most minutes first", async () => {
+    if (!available) return;
+    await addProjections();
+    const db = drizzle(pool, { schema });
+    const [game] = (await fetchSlate(db, "2026-11-14")).games;
+    expect(game.players.source).toBe("live");
+    expect(game.players.home.map((p) => p.name)).toEqual(["Josh Hart", "Jalen Brunson"]);
+    expect(game.players.away.map((p) => p.name)).toEqual(["Jayson Tatum"]);
+    expect(game.players.home[0].range.pts).toEqual([12, 28]);
+    expect(game.players.home[0].actual).toBeNull();
+    const detail = await fetchGameDetail(db, "0022600003");
+    expect(detail?.game.players.home).toHaveLength(2);
+    // A game without projections gets empty lists.
+    expect((await fetchGameDetail(db, "0022600004"))?.game.players).toEqual({ home: [], away: [], source: null });
   });
 });
 

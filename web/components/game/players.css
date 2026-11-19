@@ -1,0 +1,161 @@
+/* Projected player lines: the results screen's list and the game page's tables. */
+.player-badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--team, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--team, #5b8cff) 14%, transparent);
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+/* --- Results screen ---------------------------------------------------------------------- */
+.player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+.player-list li {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+.player-list__body {
+  flex: 1;
+  min-width: 0;
+}
+.player-list__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+.player-list__name {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-list__min {
+  flex: none;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.player-list__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.9rem;
+  margin-top: 0.15rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.player-list__stats b {
+  font-family: var(--font-archivo), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--text);
+}
+.player-list__range {
+  color: var(--ink-faint);
+}
+.player-real {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* --- Game page --------------------------------------------------------------------------- */
+.player-tables {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 0.9rem;
+}
+@media (min-width: 1024px) {
+  .player-tables {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.player-table {
+  overflow-x: auto;
+}
+.player-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.player-table caption {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--team);
+  text-align: left;
+  font-weight: 750;
+}
+.player-table thead th {
+  padding: 0.35rem 0.6rem 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.player-table thead th:first-child {
+  text-align: left;
+}
+.player-table tbody th {
+  padding: 0.5rem 0.6rem 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.player-table tbody th .player-badge {
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-right: 0.55rem;
+  vertical-align: middle;
+  font-size: 0.6rem;
+}
+.player-table td {
+  padding: 0.5rem 0.6rem 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.player-table td b {
+  font-weight: 750;
+}
+.player-table td b.player-table__min {
+  font-weight: 400;
+}
+.player-table__range,
+.player-table__real {
+  display: block;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.64rem;
+  color: var(--ink-faint);
+}
+.player-table__real {
+  color: var(--text-muted);
+}
+.player-table__real[data-hit="true"] {
+  color: var(--good);
+}
+.player-table__real[data-hit="false"] {
+  color: var(--red-hi);
+}
+.player-table tr[data-dnp] {
+  opacity: 0.55;
+}

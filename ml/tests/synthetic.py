@@ -22,11 +22,23 @@ TRADED_PLAYER = 1_000_000 + 1610612738 % 1000 * 10 + 0  # BOS's first player
 TRADE_TO = 1610612747  # LAL
 
 
+def _player_box(rng: np.random.Generator, minutes: int) -> dict[str, int]:
+    share = minutes / 36
+    oreb, dreb = int(rng.poisson(1.2 * share)), int(rng.poisson(4 * share))
+    fg3a = int(rng.poisson(4 * share))
+    return dict(reb=oreb + dreb, oreb=oreb, dreb=dreb, ast=int(rng.poisson(3 * share)),
+                fga=fg3a + int(rng.poisson(9 * share)), fg3a=fg3a, fta=int(rng.poisson(3 * share)),
+                tov=int(rng.poisson(1.5 * share)))  # fmt: skip
+
+
 def make_league(
     seed: int = 7, dates_per_season: int = 45, seasons: dict[str, str] | None = None
 ) -> dict[str, pd.DataFrame]:
     seasons = seasons or SEASONS
     rng = np.random.default_rng(seed)
+    # Extra player box-score columns come from their own generator, so adding them didn't change
+    # anything the game-level tests see.
+    box_rng = np.random.default_rng(seed + 1000)
     games, team_rows, player_rows = [], [], []
     roster = {t: [1_000_000 + t % 1000 * 10 + j for j in range(9)] for t in TEAMS}
     strength = {t: rng.normal(0, 4) for t in TEAMS}
@@ -79,7 +91,7 @@ def make_league(
                             game_id=gid, season=season, season_type="regular", game_date=day,
                             player_id=pid, player_name=f"P{pid}", team_id=team, is_home=is_home,
                             minutes=minutes, pts=int(max(0, rng.normal(22 if j < 2 else 8, 5))),
-                            reb=4, ast=3,
+                            **_player_box(box_rng, minutes),
                         ))  # fmt: skip
     return {
         "games": pd.DataFrame(games),

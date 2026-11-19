@@ -15,7 +15,7 @@ anyone at a keyboard.
 | Time (ET) | Job | What it does |
 | --- | --- | --- |
 | ~06:07 | `schedule-sync` | Updates the season's games (dates, times, final scores) from the cdn schedule |
-| Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion model, adds box scores for newly finished games, builds features, predicts today, publishes. Stops once today is published |
+| Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion models, adds box scores for newly finished games, builds features, predicts today and projects its players, publishes, then fills in yesterday's real player lines. Stops once today is published |
 | ~10:37 | `freshness-check` | Fails (and emails) if any of today's games lacks a live prediction |
 | Hourly ~18:17–02:17 | `results-sync` | Live status and final scores, which grade the predictions |
 
@@ -25,8 +25,8 @@ planned (Phase 10); until then the champion is refit by hand.
 
 ## State between runs
 
-The cloud job has no disk, so the staged history (about 5 MB of parquet) and the champion model live
-in a `pipeline_state` table. Each run pulls both (checking a SHA-256), adds the new games, and pushes
+The cloud job has no disk, so the staged history (about 5 MB of parquet) and the two champion models
+(game and player) live in a `pipeline_state` table. Each run pulls them (checking a SHA-256), adds the new games, and pushes
 the history back.
 
 ## Keeping it honest

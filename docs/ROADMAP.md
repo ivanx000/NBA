@@ -195,11 +195,23 @@ Notes:
 - The page-stub component is gone; every nav page is built.
 
 ## Phase 9: Player stat projections
-- [ ] Minutes model + per-minute rate models + quantile intervals, compared against the last-10 baseline
-- [ ] Publish to `player_projections`, show in the overlay and the game page
-- [ ] Docs page
+- [x] Minutes model + per-minute rate models + quantile intervals, compared against the last-10 baseline
+- [x] Publish to `player_projections`, show in the overlay and the game page
+- [x] Docs page
 
 Notes:
+- Decisions: 80% ranges for points, rebounds and assists (the table gets `reb_lo/hi`, `ast_lo/hi`); usage computed from the box score, not ingested; the results screen shows the viewed team's top 5, the game page both teams' 8 with actual lines once final; this season gets a walk-forward backfill, labeled as backtest.
+- Part 1 done (features): `features/players.py`, built by `tipoff features` (see ML_PLAN section 6, "As built"). `build_features` was split so the player builder reuses the same team tables (`build_tables`); the game feature hash didn't change. Projections are "if he plays": candidates for a scheduled game are the players who appeared in the team's previous game.
+- The game logs have no starter flag, so "started" is a proxy: the team's five biggest minutes that night.
+- Opening night uses last season's finale for candidates, so roster moves over the summer aren't reflected until a player has played for his new team.
+- Part 2 done (models): minutes × per-minute rate (LightGBM), quantile ranges with a conformal correction; two-stage beat direct models for every stat. On the one-time 2025-26 test the projections beat each player's last-10 average on every stat (minutes −6.9%, points −3.1%, rebounds −3.2%, assists −2.9% MAE), and the 80% ranges held 80.7–81.3% of real lines. Registered `tipoff-player@champion` (v1). Details in ML_PLAN section 6.
+- The player test season was scored once, as the game model's was; `tipoff evaluate --test --player` writes `ml/reports/test_player_2025-26.json` and refuses to run again without `--force-retest`.
+- Part 3 done (pipeline): `player_projections` gained rebound and assist ranges, provenance (`generated_at`, `features_hash`, `source`) and the actual lines (`actual_*`), plus the `current_player_projections` view (migration `0002_player_projections`). `tipoff predict`/`publish` handle players too, `tipoff results` fills actual lines, `backfill --what players` runs the 2026-27 walk-forward, and `state push --what player-champion` gives the cloud job the model (`player_champion` key). Run on dev: tonight's 4 games (64 lines) live, 222 games backfilled with the same edge over the last-10 average as the test season.
+- Each game's projection set is replaced whole on republish, so a player who drops out of the candidates between morning runs doesn't linger.
+- No jersey numbers yet: the stats.nba.com logs don't carry them, so `jersey_number` stays empty and the site shows initials.
+- Staging found a feed error: stats.nba.com listed 168 team minutes for Denver in 0022600231 (Nov 14), which made its pace 142 and failed validation. Staging now uses the longer of the two teams' minutes (both play the same length) and logs it; it's the only such game since 2014.
+- Before this reaches prod: migrate the prod database, push the player champion (`tipoff state push --what player-champion --target prod`), and run the backfill with `--target prod`.
+- Part 4 done (web): the slate and game queries attach each game's projection set (`lib/players.ts`, from `current_player_projections`). The results screen lists the viewed team's top 5 (initials badge, short name, minutes, each stat with its range, the real line once final); the game page has a table per team with all 8, the real numbers marked ✓/✗ against the ranges, and a note saying whether the lines were live or a backtest. `/docs/player-projections` now describes what was built, with the test-season table and this season's backtest; the overview, architecture, pipeline and limitations pages no longer call projections upcoming.
 
 ## Phase 10: Launch polish
 - [ ] Lighthouse ≥ 80 mobile on home, a11y audit (keyboard, focus, aria-live)

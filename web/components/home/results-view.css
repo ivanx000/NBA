@@ -214,3 +214,9 @@
     animation: none;
   }
 }
+
+.results__players {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 0.6rem;
+}

@@ -1,15 +1,16 @@
-import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 
 import { seasonFor } from "@/lib/dates";
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GradedGame } from "@/lib/performance";
+import { type GamePlayers, NO_PLAYERS, type PlayerLine } from "@/lib/players";
 import type { GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
 import { headToHead, type PastGame, type RecentGame, recentGames, seriesGames, teamStats } from "@/lib/team-stats";
 import { requireTeam } from "@/lib/teams";
 
 import type { Db } from "./client";
-import { currentGamePredictions, games } from "./schema";
+import { currentGamePredictions, currentPlayerProjections, games } from "./schema";
 
 function rows<T>(result: unknown): T[] {
   return (Array.isArray(result) ? result : (result as { rows: T[] }).rows) as T[];
@@ -71,7 +72,51 @@ function team(teamId: number | null, past: PastGame[], day: string): SlateTeam {
   return { teamId: t.team_id, abbr: t.abbr, city: t.city, name: t.name, ...stats.record, stats };
 }
 
-function toSlateGame(row: GameRow, past: PastGame[], day: string): SlateGame {
+type ProjectionRow = typeof currentPlayerProjections.$inferSelect;
+
+function playerLine(r: ProjectionRow): PlayerLine {
+  const n = (v: number | null | undefined) => (v === null || v === undefined ? 0 : Number(v));
+  const opt = (v: number | null | undefined) => (v === null || v === undefined ? null : Number(v));
+  return {
+    playerId: Number(r.playerId),
+    teamId: Number(r.teamId),
+    name: r.playerName ?? "",
+    number: r.jerseyNumber ?? null,
+    minutes: n(r.projMinutes),
+    proj: { pts: n(r.pts), reb: n(r.reb), ast: n(r.ast) },
+    range: {
+      pts: [n(r.ptsLo), n(r.ptsHi)],
+      reb: [n(r.rebLo), n(r.rebHi)],
+      ast: [n(r.astLo), n(r.astHi)],
+    },
+    actual:
+      r.actualMinutes === null || r.actualMinutes === undefined
+        ? null
+        : { minutes: Number(r.actualMinutes), pts: opt(r.actualPts), reb: opt(r.actualReb), ast: opt(r.actualAst) },
+  };
+}
+
+/** Each game's current projection set (one set per game: live beats backfill), by game id. */
+async function playersFor(db: Db, rowsIn: GameRow[]): Promise<Map<string, GamePlayers>> {
+  const ids = rowsIn.map((r) => r.gameId);
+  const out = new Map<string, GamePlayers>();
+  if (!ids.length) return out;
+  const found = await db
+    .select()
+    .from(currentPlayerProjections)
+    .where(inArray(currentPlayerProjections.gameId, ids))
+    .orderBy(desc(currentPlayerProjections.projMinutes));
+  const homeOf = new Map(rowsIn.map((r) => [r.gameId, r.homeTeamId]));
+  for (const r of found) {
+    const gameId = r.gameId ?? "";
+    const entry = out.get(gameId) ?? { home: [], away: [], source: r.source === "live" ? "live" : "backfill" };
+    (r.teamId === homeOf.get(gameId) ? entry.home : entry.away).push(playerLine(r));
+    out.set(gameId, entry);
+  }
+  return out;
+}
+
+function toSlateGame(row: GameRow, past: PastGame[], day: string, players: GamePlayers = NO_PLAYERS): SlateGame {
   const iso = (d: Date | string | null) => (d ? new Date(d).toISOString() : null);
   return {
     gameId: row.gameId,
@@ -98,13 +143,14 @@ function toSlateGame(row: GameRow, past: PastGame[], day: string): SlateGame {
             modelVersion: row.modelVersion ?? "",
             generatedAt: iso(row.generatedAt) ?? "",
           },
+    players,
   };
 }
 
 async function withRecords(db: Db, rowsIn: GameRow[], day: string): Promise<SlateGame[]> {
   // Records and stats are as of the games' day (games before it only).
-  const past = await pastGames(db, day);
-  return rowsIn.map((r) => toSlateGame(r, past, day));
+  const [past, players] = await Promise.all([pastGames(db, day), playersFor(db, rowsIn)]);
+  return rowsIn.map((r) => toSlateGame(r, past, day, players.get(r.gameId)));
 }
 
 /**
@@ -140,8 +186,8 @@ export async function fetchGameDetail(db: Db, gameId: string): Promise<GameDetai
   const [row] = await selectGames(db).where(eq(games.gameId, gameId)).limit(1);
   if (!row) return null;
   const day = String(row.gameDate);
-  const past = await pastGames(db, day);
-  const game = toSlateGame(row, past, day);
+  const [past, players] = await Promise.all([pastGames(db, day), playersFor(db, [row])]);
+  const game = toSlateGame(row, past, day, players.get(gameId));
   return {
     game,
     form: {

@@ -159,8 +159,16 @@ def build_team_games(
     base["game_date"] = pd.to_datetime(base["game_date"])
     base = _assign_home(base, cdn_homes or {})
     base["win"] = base["wl"] == "W"
-    # Team minutes are 240 + 25 per overtime (stored as e.g. 240 or 265).
+    # Team minutes are 240 + 25 per overtime (stored as e.g. 240 or 265). Both teams play the same
+    # length, so a short value is a feed error (stats.nba.com once listed 168 for one side of
+    # 0022600231): use the longer of the two.
     base["minutes"] = base["minutes"].round().astype(int)
+    game_minutes = base.groupby("game_id")["minutes"].transform("max")
+    short = base["minutes"] < game_minutes
+    if short.any():
+        log.warning("team minutes corrected to the game's length for %s",
+                    sorted(base.loc[short, "game_id"].unique()))  # fmt: skip
+        base["minutes"] = game_minutes
     for c in BOX_COLS:
         base[c] = base[c].astype(int)
 

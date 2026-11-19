@@ -1,23 +1,76 @@
-> Coming in Phase 9. This page describes the plan; projected lines will appear on game pages and
-> the results screen once they're built and beat their baseline.
+Every game also gets projected lines for each team's 8 players with the most projected minutes:
+**minutes, points, rebounds and assists**, each stat with an 80% range. They're published with the
+game prediction, before tip-off, and graded once the game ends: each game's page (linked from the
+results screen and the [performance page](/performance)) shows the projection next to the real line.
 
-## What it will predict
-
-For each team's top 8 players by projected minutes (players averaging 10+ minutes over their last
-10 games): **points, rebounds and assists**, each with an 80% range.
+Projections mean **"if he plays"**. There's no injury report in the data, so the players projected
+for a game are the ones who played in their team's previous game.
 
 ## Two stages
 
-1. **Minutes:** from recent minutes, whether the player starts, rest, which teammates are out (more
-   minutes for the rest), and blowout risk (the size of the Elo gap).
-2. **Per-minute rates:** from rolling per-36 numbers, usage, the opponent's defensive rating and
-   pace, and home or away.
+Points are minutes times points per minute, and the two are driven by different things, so they're
+modelled separately:
 
-Projection = minutes × rate. One LightGBM regressor per stat, plus quantile models (10th and 90th
-percentiles) for the range.
+1. **Minutes:** recent minutes (last 3, 5, 10 and 25 games, and how much they vary), whether he's
+   been starting, rest, games he's missed, teammates who are out (more minutes for the rest), and
+   blowout risk (a big rating gap means starters sit in the fourth quarter).
+2. **Per-minute rates:** points, rebounds and assists per 36 minutes over recent windows, shot
+   volume, usage, and the opponent's defense, pace and rebounding.
 
-## The bar
+Projection = minutes × rate. Each stage is a LightGBM regressor; the rate models weight each game by
+its minutes, so a two-minute stint doesn't count as much as a full game.
 
-The baseline is each player's last-10 average. Projections ship only if they beat it on mean
-absolute error for each stat, on a season the models never saw, with the same
-[leakage rules](/docs/leakage) as the game model.
+```text
+points = projected minutes × projected points per minute
+```
+
+Models that predict each stat directly were tried as well. The two-stage version was slightly
+better for all three stats on the validation season, so it's the one used.
+
+## Usage from the box score
+
+Usage (the share of a team's possessions a player finishes while he's on the floor) is computed
+from the box score rather than fetched:
+
+```text
+usage = (FGA + 0.44 × FTA + TOV) × (team minutes / 5)
+        / (minutes × (team FGA + 0.44 × team FTA + team TOV))
+```
+
+That keeps the daily cloud job self-sufficient: it only has cdn.nba.com box scores.
+
+## The ranges
+
+Separate quantile models predict the 10th and 90th percentile of each stat. A conformal correction,
+learned on a season those models never saw, then nudges the ranges so that about 8 in 10 real lines
+land inside. In practice the correction was tiny: the quantile models were already close to 80%.
+
+## Against the baseline
+
+The bar was each player's average over his last 10 games. Settings were chosen on 2024-25, then
+the models were refit and scored **once** on 2025-26 (23,170 player-games), as the game model was.
+
+| | Last-10 average | Model | Better by | 80% range held |
+| --- | --- | --- | --- | --- |
+| Minutes | 5.08 | 4.73 | 6.9% | |
+| Points | 4.88 | 4.73 | 3.1% | 81.3% |
+| Rebounds | 2.00 | 1.94 | 3.2% | 81.1% |
+| Assists | 1.44 | 1.40 | 2.9% | 80.7% |
+
+(Mean absolute error: the average miss, in minutes or in points, rebounds or assists.)
+
+The model beats the baseline on every stat, but not by much. A player's recent average is a strong
+baseline and single games are noisy: the typical miss on points is still almost 5. Most of the edge
+comes from minutes, from things the last-10 average can't see (rest, who else is out, a likely
+blowout).
+
+This season so far (a weekly walk-forward backtest: each week from models trained only on earlier
+games), the edge is the same: minutes 6.7% better, points 3.6%, rebounds 2.7%, assists 2.8%, with
+the ranges holding 79–80% of real lines.
+
+## Limits
+
+- **Who plays:** a player who missed the previous game isn't projected, even if he's back tonight,
+  and a late scratch still gets a line.
+- **Opening night and trades:** a player counts for his new team only once he's played for it.
+- **No jersey numbers yet:** the game logs don't carry them, so players are shown by initials.

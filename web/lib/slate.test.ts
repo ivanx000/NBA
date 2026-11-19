@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { NO_PLAYERS } from "@/lib/players";
 import { teamStats } from "@/lib/team-stats";
 
 import { defaultGame, pickBlocker, predictedWinner, type SlateGame, verdict } from "@/lib/slate";
@@ -16,6 +17,7 @@ function game(id: string, over: Partial<SlateGame> = {}): SlateGame {
     isNeutral: false, gameLabel: null, headToHead: { home: 0, away: 0 },
     prediction: { homeWinProb: 0.64, eloHomeWinProb: 0.6, factors: [], source: "live",
                   modelVersion: "game-v2", generatedAt: "" },
+    players: NO_PLAYERS,
     ...over,
   };
 }

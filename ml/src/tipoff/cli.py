@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Annotated
 
 import typer
+from sqlalchemy.exc import SQLAlchemyError
 
 from tipoff import __version__
 from tipoff.config import CURRENT_SEASON, WARMUP_SEASON
@@ -98,12 +99,14 @@ def features(
         bool, typer.Option(help="Re-tune Elo parameters on the training seasons first.")
     ] = False,
 ) -> None:
-    """Build the leakage-safe game-level feature table (data/features/game_features.parquet)."""
+    """Build the leakage-safe feature tables: games (game_features.parquet) and players
+    (player_features.parquet), in data/features/."""
     import pandas as pd
 
     from tipoff.config import ELO_PARAMS_PATH, STAGED_DIR
     from tipoff.features import elo
     from tipoff.features.build import build_and_save
+    from tipoff.features.players import build_and_save_players
     from tipoff.features.timeline import prepare_games
 
     if tune_elo or not ELO_PARAMS_PATH.exists():
@@ -113,12 +116,19 @@ def features(
         typer.echo(f"elo: tuned {params} (train log loss {loss:.4f}) -> {ELO_PARAMS_PATH.name}")
     df, digest = build_and_save()
     typer.echo(f"features: {len(df):,} games, hash {digest}")
+    players, p_digest = build_and_save_players()
+    typer.echo(
+        f"features: {int(players['in_scope'].sum()):,} player-games in scope "
+        f"({len(players):,} rows), hash {p_digest}"
+    )
 
 
 class ModelSet(StrEnum):
     baselines = "baselines"
     game = "game"
     champion = "champion"
+    player = "player"
+    player_champion = "player-champion"
 
 
 @app.command()
@@ -131,8 +141,28 @@ def train(
 
     `--only game` tunes LightGBM, picks calibration and the champion kind, and writes
     ml/config/game_model.json. It never touches the test season.
+
+    `--only player` picks the player projection models on 2024-25 (ml/config/player_model.json);
+    `--only player-champion` fits them on everything and registers tipoff-player@champion.
     """
     from tipoff.evaluate.metrics import to_markdown
+
+    if only is ModelSet.player:
+        from tipoff.models.train_player import select_player
+
+        out = select_player(log_to_mlflow=mlflow_log)
+        typer.echo(f"player point projections: {out['config']['point']}")
+        typer.echo(out["table"].round(4).to_string())
+        return
+    if only is ModelSet.player_champion:
+        from tipoff.models.train_player import train_player_champion
+
+        info = train_player_champion()
+        typer.echo(
+            f"registered tipoff-player v{info['version']} @champion: "
+            f"{info['n_train']:,} player-games through {info['through']}"
+        )
+        return
 
     if only is ModelSet.champion:
         from tipoff.models.final import train_champion
@@ -161,10 +191,25 @@ def evaluate(
     test: Annotated[bool, typer.Option("--test", help="Run the one-time 2025-26 test.")] = False,
     force_retest: Annotated[bool, typer.Option(help="Allow re-running the test.")] = False,
     backtest: Annotated[bool, typer.Option(help="Also run the 2025-26 walk-forward.")] = True,
+    player: Annotated[
+        bool, typer.Option("--player", help="Evaluate the player projections instead.")
+    ] = False,
 ) -> None:
     """Final evaluation on the test season (once) and the monthly walk-forward backtest."""
     from tipoff.evaluate.metrics import to_markdown
     from tipoff.models.final import TestAlreadyRunError, final_test, walk_forward
+
+    if player:
+        from tipoff.models import train_player
+
+        if not test:
+            raise typer.BadParameter("the player models only have the one-time --test")
+        try:
+            out = train_player.final_test_player(force=force_retest)
+        except train_player.TestAlreadyRunError as e:
+            raise typer.BadParameter(str(e), param_hint="--test") from e
+        typer.echo("player test:\n" + out["table"].round(4).to_string())
+        return
 
     if test:
         try:
@@ -218,8 +263,12 @@ def predict(
         ModelSource, typer.Option(help="mlflow = local registry; db = pipeline_state (cloud).")
     ] = ModelSource.mlflow,
     target: TargetOpt = DbTarget.dev,
+    players: Annotated[
+        bool, typer.Option("--players/--no-players", help="Also project player lines.")
+    ] = True,
 ) -> None:
-    """Predict a date's scheduled games with the champion (writes data/predictions)."""
+    """Predict a date's scheduled games with the champion, and project the players' lines
+    with the player champion (writes data/predictions/live and data/predictions/players)."""
     from tipoff.db import get_engine
     from tipoff.predict.run import predict_date
 
@@ -231,6 +280,27 @@ def predict(
         return
     for r in preds.itertuples(index=False):
         typer.echo(f"{r.game_id}  P(home) {r.home_win_prob:.3f}  (Elo {r.elo_home_win_prob:.3f})")
+    if players:
+        _project_players(day, model_source, engine)
+
+
+def _project_players(day: date, model_source: ModelSource, engine) -> None:
+    """Project player lines; a missing player champion is reported, not fatal (games come first)."""
+    from mlflow.exceptions import MlflowException
+
+    from tipoff.predict.players import project_date
+    from tipoff.state import StateError
+
+    try:
+        proj = project_date(day, model_source=model_source.value, engine=engine)
+    except (StateError, MlflowException) as e:
+        typer.echo(f"players: no player champion available ({e}); skipping projections", err=True)
+        return
+    if proj.empty:
+        typer.echo(f"players: nobody to project on {day}")
+        return
+    typer.echo(f"players: {len(proj)} projections for {proj['game_id'].nunique()} games "
+               f"({proj['model_version'].iloc[0]})")  # fmt: skip
 
 
 @app.command()
@@ -246,27 +316,80 @@ def publish(date_: DateOpt = "today", target: TargetOpt = DbTarget.dev) -> None:
     path = PREDICTIONS_DIR / "live" / f"{day.isoformat()}.parquet"
     if not path.exists():
         raise typer.BadParameter(f"{path.name} not found; run `tipoff predict --date {day}`.")
-    res = do_publish(get_engine(target.value), pd.read_parquet(path))
+    engine = get_engine(target.value)
+    res = do_publish(engine, pd.read_parquet(path))
     typer.echo(f"publish: {res.written} predictions written to {target.value}; "
                f"skipped (already started): {res.skipped_started or 'none'}")  # fmt: skip
+    player_path = PREDICTIONS_DIR / "players" / f"{day.isoformat()}.parquet"
+    if player_path.exists():
+        from tipoff.publish.players import publish_projections
+
+        try:
+            pres = publish_projections(engine, pd.read_parquet(player_path))
+        except SQLAlchemyError as e:
+            typer.echo(f"publish: player projections failed ({type(e).__name__}); "
+                       "game predictions are unaffected", err=True)  # fmt: skip
+            return
+        typer.echo(f"publish: {pres.written} player projections for {pres.games} games; "
+                   f"skipped (already started): {pres.skipped_started or 'none'}")  # fmt: skip
+
+
+class BackfillWhat(StrEnum):
+    games = "games"
+    players = "players"
 
 
 @app.command()
 def backfill(
-    seasons: Annotated[str, typer.Option(help="Comma-separated seasons.")] = "2025-26,2026-27",
+    seasons: Annotated[
+        str | None,
+        typer.Option(help="Comma-separated seasons (games: 2025-26,2026-27; players: current)."),
+    ] = None,
+    what: Annotated[BackfillWhat, typer.Option("--what")] = BackfillWhat.games,
     target: TargetOpt = DbTarget.dev,
 ) -> None:
     """Weekly walk-forward predictions for past games, published with source='backfill'."""
     from tipoff.db import get_engine
+
+    engine = get_engine(target.value)
+    if what is BackfillWhat.players:
+        from tipoff.models.train_player import load_player_champion
+        from tipoff.predict.players import backfill_projections, save
+        from tipoff.publish.players import publish_projections
+
+        champion, info = load_player_champion()
+        version = info["model_version"] + "-wf"
+        chosen = (seasons or CURRENT_SEASON).split(",")
+        proj = backfill_projections(chosen, version, widen=champion.widen)
+        save(proj, "backfill")
+        res = publish_projections(engine, proj)
+        typer.echo(f"backfill: {res.written} player projections for {res.games} games "
+                   f"({version}) written to {target.value}")  # fmt: skip
+        return
     from tipoff.predict.backfill import backfill_predictions, save
     from tipoff.predict.run import champion_info
     from tipoff.publish.publish import publish as do_publish
 
     version = champion_info()["model_version"] + "-wf"
-    preds = backfill_predictions(seasons.split(","), version)
+    preds = backfill_predictions((seasons or "2025-26,2026-27").split(","), version)
     save(preds, "backfill")
-    res = do_publish(get_engine(target.value), preds)
+    res = do_publish(engine, preds)
     typer.echo(f"backfill: {res.written} predictions ({version}) written to {target.value}")
+
+
+@app.command()
+def results(target: TargetOpt = DbTarget.dev) -> None:
+    """Fill in projected players' real lines for games in the staged box scores."""
+    import pandas as pd
+
+    from tipoff.config import STAGED_DIR
+    from tipoff.db import get_engine
+    from tipoff.publish.players import record_results
+
+    n = record_results(get_engine(target.value),
+                       pd.read_parquet(STAGED_DIR / "player_games.parquet"),
+                       pd.read_parquet(STAGED_DIR / "games.parquet"))  # fmt: skip
+    typer.echo(f"results: {n} projected lines filled in ({target.value})")
 
 
 @app.command("freshness-check")
@@ -302,7 +425,8 @@ def daily(
         ),
     ] = False,
 ) -> None:
-    """The daily job: new results -> stage -> sync -> predict today (ET) -> publish."""
+    """The daily job: new results -> stage -> sync -> predict and project today (ET) ->
+    publish -> fill projected players' actual lines."""
     from tipoff.db import get_engine, today_et
     from tipoff.publish.freshness import missing_predictions
 
@@ -318,8 +442,14 @@ def daily(
                dry_run=False, stage=True, verbose=False)  # fmt: skip
     sync(target=target)
     source = ModelSource.db if cloud else ModelSource.mlflow
-    predict(date_=day.isoformat(), model_source=source, target=target)
+    predict(date_=day.isoformat(), model_source=source, target=target, players=True)
     publish(date_=day.isoformat(), target=target)
+    # Player steps come after the game predictions are out, and never stop the job.
+    try:
+        results(target=target)
+    except SQLAlchemyError as e:
+        typer.echo(f"results: failed ({type(e).__name__}); game predictions are unaffected",
+                   err=True)  # fmt: skip
     freshness_check(date_=day.isoformat(), target=target, upcoming_only=True)
 
 
@@ -354,6 +484,7 @@ app.add_typer(state_app, name="state")
 class StateWhat(StrEnum):
     staged = "staged"
     champion = "champion"
+    player_champion = "player-champion"
     all = "all"
 
 
@@ -362,7 +493,7 @@ def state_push(
     what: Annotated[StateWhat, typer.Option("--what")] = StateWhat.all,
     target: TargetOpt = DbTarget.dev,
 ) -> None:
-    """Upload local staged history and/or the MLflow champion to pipeline_state."""
+    """Upload local staged history and/or the MLflow champions to pipeline_state."""
     from tipoff.db import get_engine
     from tipoff.state import push_champion, push_staged
 
@@ -376,6 +507,14 @@ def state_push(
         info = champion_info()
         digest = push_champion(engine, load_champion(), info)
         typer.echo(f"state: champion {info['model_version']} pushed ({digest[:12]}) "
+                   f"to {target.value}")  # fmt: skip
+    if what in (StateWhat.player_champion, StateWhat.all):
+        from tipoff.models.train_player import load_player_champion
+        from tipoff.state import push_player_champion
+
+        model, pinfo = load_player_champion()
+        digest = push_player_champion(engine, model, pinfo)
+        typer.echo(f"state: player champion {pinfo['model_version']} pushed ({digest[:12]}) "
                    f"to {target.value}")  # fmt: skip
 
 

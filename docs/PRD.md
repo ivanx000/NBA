@@ -71,7 +71,7 @@ A panel beside the player being viewed; the camera frames that player.
 - **The game:** the model's win probability for both teams (split bar), the simple Elo baseline, the model's top reasons (factor copy), the season series, the tip-off time.
 - **Corner button** ("NYK stats →") switches to the other team's numbers and frames that player.
 - **Home** (top left) goes back to the matchup, where the drawer offers today's other games.
-- Player stat projections come in Phase 9.
+- **Projected lines** for the viewed team: its top 5 players by projected minutes, each with minutes, points, rebounds and assists and an 80% range for each stat ("if he plays"); the real line once the game is final.
 
 ### 3.4 Other pages (nav bar)
 
@@ -118,4 +118,4 @@ On every page except home: "Unofficial fan project. Not affiliated with the NBA.
 ## 7. Open questions
 - Project name and domain (placeholder: Tip-Off).
 - Whether to include predicted final score/spread in v1 (it needs a separate regression model; suggested for v1.1).
-- Whether player stat projections ship at launch or in v1.1 (see ROADMAP).
+- ~~Whether player stat projections ship at launch~~: they shipped in Phase 9, after beating the last-10 baseline on the held-out season.
