@@ -42,7 +42,6 @@ export function Player({
   number,
   debugMask = false,
   hologram = null,
-  hologramInk = null,
   intensity = 1,
   paused = false,
   clip = "Idle",
@@ -57,10 +56,8 @@ export function Player({
   number: string;
   /** Paint the uniform mask channels instead of the uniform (dev only). */
   debugMask?: boolean;
-  /** Draw the player as a hologram in this color (null: normal shading). */
+  /** Draw the player as a hologram with this glow color (null: plain shading). */
   hologram?: string | null;
-  /** Color the hologram's lettering glows in (default white). */
-  hologramInk?: string | null;
   /** Hologram brightness, 0 to 1 (eased toward this value, e.g. to dim the loser). */
   intensity?: number;
   /** Freeze animation and effects (prefers-reduced-motion). */
@@ -104,9 +101,8 @@ export function Player({
         heightM: PLAYER_HEIGHT_M,
         debugMask,
         hologram,
-        hologramInk,
       }),
-    [instance, mask, base, trim, text, shorts, chestText, number, debugMask, hologram, hologramInk],
+    [instance, mask, base, trim, text, shorts, chestText, number, debugMask, hologram],
   );
   const shown = useRef({ intensity, time: 0 });
   useFrame((_, dt) => {
@@ -125,8 +121,8 @@ export function Player({
       mesh.castShadow = !hologram; // a hologram has no body to block light
       if (hologram && mesh.parent) {
         // Depth pre-pass: an invisible copy on the same skeleton writes depth first, so the
-        // additive hologram only draws the surface facing the camera (no back number showing
-        // through the chest).
+        // see-through hologram only draws the surface nearest the camera (no back number or far
+        // arm showing through the chest).
         depthOnly = new THREE.SkinnedMesh(mesh.geometry, new THREE.MeshBasicMaterial({ colorWrite: false }));
         depthOnly.bind(mesh.skeleton, mesh.bindMatrix);
         depthOnly.frustumCulled = false;

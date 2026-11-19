@@ -134,6 +134,7 @@ Notes:
 - [x] Hologram players in the home scene: idle variety, offset loops, loser dims, reduced motion pauses, colors swap on card click
 - [x] Home redesign: hologram chamber room (glossy floor, grid walls, bloom, pointer parallax), reference-style holograms (contour lines, sparkles, outline, solid lettering, front surface only), arcade game wheel on the left (today + 2 days back), big hero players, no wordmark/footer on home
 - [x] Motion library: 63 extra clips (28 Text to Motion, 35 presets) in `motion-library.glb` for later (`pnpm assets:motions`); `Idle_03` trimmed to its shoulder stretch
+- [x] Redesign 2 (Nov 2026): real-color hologram players (scan lines, team rim, floor fade) centered and big under their names; star-field room with point-ring pads; today's games only, as flat hologram cards in a left-edge drawer (hover to reveal, tab on touch), "No games today" with a next-day button; site restyled after the hologram reference (Archivo wide headings, mono labels, NBA blue/red, grain)
 - [ ] Cursor look-at
 - [ ] Poly Haven floor + HDRI, `web/public/CREDITS.md`, CI size budget for `player.glb`
 
@@ -145,7 +146,8 @@ Notes:
 - A Text to Motion celebration didn't look human; `Celebrate` is the library preset "Cheer with Both Hands Up". One-shot clips blend back into the idle when they end.
 - The AI-generated model reads as slightly "off" when shaded realistically. A hologram variant of the player shader (team-colored, unlit, scanlines, rim glow) and a pixelated render (low `dpr` + `image-rendering: pixelated`) are prototyped in the lab as stylized alternatives. About 95 Meshy credits spent in Phase 6 before the motion library, then 290 more for it (balance 855). Library clips are free.
 - The motion library's index marks 20 clips as not in place (hips drift > 0.15 m); see ASSET_PIPELINE section 4.
-- Turbopack's dev server sometimes keeps serving a stale `app/globals.css`; component styles live in their own CSS files (`components/home/game-wheel.css`), which reload reliably.
+- Turbopack's dev server sometimes keeps serving a stale `app/globals.css`, even after a restart: stop the server and delete `web/.next`. Component styles live in their own CSS files (`components/home/game-drawer.css`, `home.css`), which reload reliably.
+- Redesign 2 replaced the arcade wheel and the line-art holograms; the old look is in git history (commit b7e7033).
 - `player.glb` is about 2 MB; ~390 KB of it is glTF JSON for ~2,400 animation accessors. Trim static channels in Phase 10 if the payload needs it.
 
 ## Phase 7: The prediction cinematic

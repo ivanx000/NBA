@@ -40,19 +40,19 @@ Land on home
 **Scene (center)**
 - Two generic, identical-build 3D players facing the camera at slight angles, each wearing their team's colors (city name + number on the chest). Home team on the right, away team on the left (a broadcast convention; keep it consistent).
 - Both loop idle animations (shifting weight, looking around, light bounce). Their loops are offset so they don't move in sync.
-- Above or below each player: team city and name, record (W-L), and "HOME"/"AWAY" tag.
+- Above each player, centered over it: team city, record (W-L) and "HOME"/"AWAY", then the nickname. Players are centered on screen and as large as fits with both fully visible.
 - Top center: matchup line, e.g. `BOS @ NYK · Tonight 7:30 PM ET`.
 
 **Primary action**
 - A prominent **Predict who wins** button, horizontally centered between the players and visually anchored at the lower-middle of the viewport.
 - Keyboard accessible (Enter/Space), with a visible focus state.
 
-**Game wheel** (DESIGN.md section 2)
-- An arcade-style prize wheel on the left (desktop) or at the bottom (mobile), facing the user. No box around it.
-- One card per game: both team abbreviations on the two teams' colors, tip-off time (user's local timezone), live or final score, and the day for past games.
-- The front card is the selected game. Scrolling down turns the wheel to older games, scrolling up to newer ones; arrow keys, clicking a visible card and dragging on touch work too. It ends at today's last game.
-- Shows **today and the 2 days before**. If that window has no games (off day, All-Star break, off-season), it shows the most recent earlier day with games.
-- **Default selection:** today's next game that hasn't started (otherwise today's last game, otherwise the most recent). The URL updates to `/?game=<id>` so it's shareable and refresh-stable.
+**Today's games** (DESIGN.md section 2)
+- **Only today's games** (ET). No past games and no way to browse other days.
+- Cards sit in a drawer on the left edge that slides out when the mouse nears the left side of the screen (a tab on the edge opens it on touch; keyboard focus opens it too). The cards are flat, hologram-styled, pop out and glow when hovered, and scroll when they don't all fit.
+- One card per game: both team abbreviations in the two teams' colors, the nicknames, and the tip-off time (user's local timezone) or live/final score.
+- **No games today:** the page says so, with a button to show the closest later day that has games.
+- **Default selection:** today's next game that hasn't started (otherwise today's last game). The URL updates to `/?game=<id>` so it's shareable and refresh-stable; a `?game=` that isn't today's is ignored.
 
 ### 3.2 Prediction cinematic
 

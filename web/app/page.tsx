@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { HomeExperience } from "@/components/home/home-experience";
 import { todayET } from "@/lib/dates";
-import { getWheel } from "@/lib/db/queries";
+import { getSlate } from "@/lib/db/queries";
 import { defaultGame } from "@/lib/slate";
 
 function HomeShell() {
@@ -20,13 +20,14 @@ async function Home({ searchParams }: { searchParams: PageProps<"/">["searchPara
   await connection();
   const params = await searchParams;
   const today = todayET();
-  const wheel = await getWheel(today);
+  const slate = await getSlate(today);
   const requested = typeof params.game === "string" ? params.game : null;
-  // Today's next game unless one is requested; the client then writes it into the URL.
-  const featured = defaultGame(wheel, requested);
+  // Today's next game unless another of today's games is requested; the client then writes it
+  // into the URL. Games on other days are never shown, even when requested.
+  const featured = defaultGame(slate.games, requested);
   return (
     <HomeExperience
-      wheel={wheel}
+      slate={slate}
       initialGameId={featured?.gameId ?? null}
       syncUrl={featured !== null && featured.gameId !== requested}
     />

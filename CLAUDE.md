@@ -121,7 +121,7 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 - Server Components fetch data. 3D runs in Client Components loaded with `dynamic(..., { ssr: false })`.
 - Cache Components are on: cache data with `'use cache'` + `cacheLife(...)`, never `export const revalidate`. Anything per request (`searchParams`, "today", `Math.random`) goes inside `<Suspense>` after `await connection()`. Client hooks that read the URL (`usePathname`) in the layout need a `<Suspense>` boundary.
 - `?webgl=0` forces the 2D fallback for testing.
-- Respect `prefers-reduced-motion`: skip the cinematic and go straight to results; holograms, the wheel and the camera hold still.
+- Respect `prefers-reduced-motion`: skip the cinematic and go straight to results; holograms, stars, the game cards and the camera hold still.
 - The site must stay usable on mobile and when WebGL fails (provide a 2D fallback).
 - Keep the initial JS and 3D payload small. Compress models (meshopt or Draco) and use compressed textures. See `docs/ASSET_PIPELINE.md`.
 

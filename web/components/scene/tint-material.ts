@@ -24,14 +24,33 @@ export interface TintOptions {
   /** Paint the mask channels instead of the uniform (dev only). */
   debugMask?: boolean;
   /**
-   * Draw the player as a hologram in this color: unlit and additive, brightness from the
-   * tinted uniform and skin (so lettering and the face still read), a rim glow, screen
-   * scanlines, a band sweeping up the body and a slight flicker.
+   * Draw the player as a hologram with this glow color (DESIGN.md section 1): lit in his real
+   * colors, with dark see-through scan lines drifting up, a rim glow, legs fading into the pad's
+   * light, a brighter band sweeping up now and then, and a slight flicker. Null: plain shading.
    */
   hologram?: string | null;
-  /** Color the lettering glows in (the jersey's text color as a hologram). */
-  hologramInk?: string | null;
 }
+
+/** Hologram look; one place to tune it. */
+export const HOLO = {
+  /** Brightest the lit surface gets (linear), under the bloom threshold so skin and jersey stay crisp. */
+  ceiling: 0.62,
+  /** Opacity of the darkest parts (lit parts and the rim go solid). */
+  alpha: 0.5,
+  /** How see-through the gaps between scan lines are, and how dark. */
+  gap: 0.45,
+  bandDepth: 0.5,
+  /** Scan lines per meter of height, and how fast they drift up (m/s). */
+  bands: 70,
+  bandSpeed: 0.05,
+  /** Rim glow strength and tightness (higher = tighter). Above the bloom threshold, so it glows. */
+  rim: 0.85,
+  rimPower: 2.4,
+  sweep: 0.16,
+  /** Height (m) over which the legs fade into the pad's glow, and how much. */
+  floorFade: 0.32,
+  floorGlow: 0.45,
+} as const;
 
 /**
  * Regions in meters, for the 1.98 m model (feet at 0, facing +z). Trim and side stripes are baked
@@ -49,7 +68,7 @@ function lettering(text: string, number: string, color: string, withText: boolea
   canvas.height = 512;
   const ctx = canvas.getContext("2d")!;
   const family =
-    getComputedStyle(document.documentElement).getPropertyValue("--font-oswald").trim() ||
+    getComputedStyle(document.documentElement).getPropertyValue("--font-jersey").trim() ||
     "Impact, sans-serif";
   ctx.fillStyle = color;
   ctx.textAlign = "center";
@@ -74,12 +93,8 @@ function lettering(text: string, number: string, color: string, withText: boolea
   return tex;
 }
 
-function holoGain(color: string | null | undefined): number {
-  if (!color) return 1;
-  const c = new THREE.Color(color);
-  const luma = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; // linear
-  return luma > 0.5 ? 0.6 : 1;
-}
+/** A float literal for GLSL. */
+const f = (n: number) => n.toFixed(4);
 
 /** Clone ``source`` into a tinted material. Dispose the returned textures with the material. */
 export function makeTintMaterial(source: THREE.MeshStandardMaterial, opts: TintOptions) {
@@ -99,24 +114,25 @@ export function makeTintMaterial(source: THREE.MeshStandardMaterial, opts: TintO
     uOrigin: { value: new THREE.Vector3(center.x, opts.bounds.min.y, center.z) },
     uScale: { value: opts.heightM / size.y },
     uHolo: { value: new THREE.Color(opts.hologram ?? "#ffffff") },
-    uInk: { value: new THREE.Color(opts.hologramInk ?? "#ffffff") },
-    // Bright (white-ish) holograms bloom much more: bring them down to match colored ones.
-    uGain: { value: holoGain(opts.hologram) },
     uTime: { value: 0 },
     uIntensity: { value: 1 },
   };
   if (opts.hologram) {
     material.defines = { ...material.defines, TIPOFF_HOLO: "" };
+    // Translucent, drawn over the player's own depth pre-pass so only the nearest surface shows.
     material.transparent = true;
     material.depthWrite = false;
-    material.blending = THREE.AdditiveBlending;
+    material.depthFunc = THREE.LessEqualDepth;
+    material.envMapIntensity = 0.35;
   }
 
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vBind;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvBind = position;");
+      .replace("#include <common>", "#include <common>\nvarying float vWorldY;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvBind = position;")
+      .replace("#include <project_vertex>", "#include <project_vertex>\nvWorldY = (modelMatrix * vec4(transformed, 1.0)).y;");
     const r = REGION;
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -126,16 +142,12 @@ varying vec3 vBind;
 uniform sampler2D uMask, uFront, uBack;
 uniform vec3 uJersey, uTrim, uShorts, uOrigin;
 uniform float uScale, uTime, uIntensity;
-uniform vec3 uHolo, uInk;
-uniform float uGain;
-float gUniform = 0.0; // jersey or shorts
-float gTrim = 0.0;    // collar, armholes, side stripes
-float gInk = 0.0;     // lettering
-float gLum = 0.0;     // brightness of the tinted surface
-float hash13(vec3 p) {
-  p = fract(p * 0.1031);
-  p += dot(p, p.zyx + 31.32);
-  return fract((p.x + p.y) * p.z);
+uniform vec3 uHolo;
+varying float vWorldY;
+float holoHash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
 }
 float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
       )
@@ -164,45 +176,50 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
   }
   kit = mix(kit, ink.rgb, ink.a);
   diffuseColor.rgb = mix(diffuseColor.rgb, kit * shade, m);
-  gUniform = m;
-  gTrim = m * max(mask.g, mask.b);
-  gInk = m * ink.a;
-  gLum = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
   ${opts.debugMask ? "diffuseColor.rgb = mask;" : ""}
 }`,
       )
       .replace(
-        "#include <dithering_fragment>",
-        `#include <dithering_fragment>
-#ifdef TIPOFF_HOLO
+        "#include <opaque_fragment>",
+        `#ifdef TIPOFF_HOLO
 {
-  // A projected hologram (DESIGN.md section 1): fine contour lines that follow the body, a
-  // glowing outline, twinkling points, a sweep band; the uniform is filled more solidly than the
-  // skin so it reads as clothing, and the lettering is bright and solid.
-  vec3 p = (vBind - uOrigin) * uScale; // bind-pose meters
-  float rim = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.0);
-  float ly = p.y * 55.0;
-  float line = 1.0 - min(abs(fract(ly) - 0.5) / max(fwidth(ly), 1e-4), 1.0);
-  vec3 cell = floor(p * 30.0);
-  float h = hash13(cell);
-  float dotShape = smoothstep(0.32, 0.0, length(fract(p * 30.0) - 0.5));
-  float sparkle = step(0.94, h) * dotShape * (0.55 + 0.45 * sin(uTime * (2.0 + 3.0 * h) + h * 50.0));
-  float band = pow(0.5 + 0.5 * sin(p.y * 2.6 - uTime * 1.4), 18.0);
-  float flicker = 0.95 + 0.05 * sin(uTime * 21.0) * sin(uTime * 6.7);
+  // The hologram (DESIGN.md section 1), after the lit color: his real colors under dark,
+  // see-through scan lines drifting up, a rim glow, legs fading into the pad's light.
+  vec3 col = outgoingLight;
+  // Soft ceiling under the bloom threshold: the lit surface never blooms, only the rim does.
+  float top = max(col.r, max(col.g, col.b));
+  float knee = ${f(HOLO.ceiling * 0.7)};
+  if (top > knee) col *= (knee + ${f(HOLO.ceiling * 0.3)} * (1.0 - exp(-(top - knee) / ${f(HOLO.ceiling * 0.3)}))) / top;
+  float lit = pow(clamp(dot(col, vec3(0.2126, 0.7152, 0.0722)) / ${f(HOLO.ceiling)}, 0.0, 1.0), 0.65);
+  float ndv = clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0);
+  float fres = pow(1.0 - ndv, ${f(HOLO.rimPower)});
+  float y = vWorldY;
 
-  float fill = mix(0.03, 0.13, gUniform) + 0.12 * gLum; // dark core: the glow comes from lines
-  float glow = fill + line * mix(0.42, 0.55, gUniform) + rim * 1.7 + band * 0.3 + gTrim * 0.9;
-  vec3 col = uHolo * glow;
-  col += mix(uHolo, vec3(1.0), 0.75) * sparkle * 2.2;
-  // Lettering: solid, in the jersey's text color, drawn over the body glow so it reads.
-  col = mix(col, uInk * 1.9, gInk);
-  gl_FragColor = linearToOutputTexel(vec4(col * flicker * uIntensity * uGain, 1.0));
+  float band = fract((y - uTime * ${f(HOLO.bandSpeed)}) * ${f(HOLO.bands)});
+  float bright = smoothstep(0.0, 0.22, band) * smoothstep(1.0, 0.6, band);
+  col *= 1.0 - ${f(HOLO.bandDepth)} * (1.0 - bright);
+  float alpha = mix(${f(HOLO.alpha)}, 1.0, lit) * (1.0 - ${f(HOLO.gap)} * (1.0 - bright));
+  alpha = clamp(alpha + fres * 0.6, 0.0, 1.0);
+
+  float sweepY = mix(-0.3, 2.3, fract(uTime * 0.11));
+  col += uHolo * ${f(HOLO.sweep)} * exp(-pow((y - sweepY) * 8.0, 2.0));
+  col += uHolo * fres * ${f(HOLO.rim)};
+  float h = smoothstep(0.0, ${f(HOLO.floorFade)}, y);
+  col = mix(uHolo * (0.3 + 0.25 * bright), col, 1.0 - ${f(HOLO.floorGlow)} * (1.0 - h));
+
+  // Flicker: a quick dip every few seconds, with a little line noise.
+  float beat = step(0.985, fract(sin(floor(uTime * 3.0) * 91.7) * 4375.85));
+  col *= 1.0 - beat * (0.35 + 0.65 * holoHash(vec2(floor(y * 70.0), floor(uTime * 40.0)))) * 0.3;
+
+  outgoingLight = col * uIntensity;
+  diffuseColor.a = alpha * mix(0.35, 1.0, uIntensity);
 }
-#endif`,
+#endif
+#include <opaque_fragment>`,
       );
   };
   const variant = `${opts.debugMask ? "-debug" : ""}${opts.hologram ? "-holo" : ""}`; // same program for every color
-  material.customProgramCacheKey = () => `tipoff-tint-v3${variant}`;
+  material.customProgramCacheKey = () => `tipoff-tint-v4${variant}`;
   return {
     material,
     textures: [front, back],

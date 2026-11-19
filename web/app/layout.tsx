@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Oswald } from "next/font/google";
+import { Archivo, JetBrains_Mono, Oswald } from "next/font/google";
 import { Suspense } from "react";
 
 import { HideOnHome } from "@/components/hide-on-home";
@@ -7,13 +7,22 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNav, SiteNavFallback } from "@/components/site-nav";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+// Archivo's width axis gives the wide, heavy headings (font-stretch: 125%).
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
+  axes: ["wdth"],
 });
 
-const oswald = Oswald({
-  variable: "--font-oswald",
+// Jersey lettering only (drawn onto the 3D uniforms), not page text.
+const jersey = Oswald({
+  variable: "--font-jersey",
+  subsets: ["latin"],
+  weight: "700",
+});
+
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
 });
 
@@ -25,7 +34,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`dark ${inter.variable} ${oswald.variable} h-full antialiased`}>
+    <html lang="en" className={`dark ${archivo.variable} ${jetbrains.variable} ${jersey.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"

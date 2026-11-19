@@ -36,23 +36,23 @@ export interface SlateGame {
   prediction: SlatePrediction | null;
 }
 
-/** The games on the home page's wheel: today and the two days before, oldest first. */
-export interface Wheel {
-  /** Today in ET when the wheel was built. */
+/** The home page's games: today only, plus the next game day when today has none. */
+export interface Slate {
+  /** Today in ET when the slate was built. */
   today: string;
+  /** Today's games, in tip-off order. */
   games: SlateGame[];
+  /** Only when today has no games: the closest later day with games, and its games. */
+  next: { day: string; games: SlateGame[] } | null;
 }
 
 /**
- * The game to put at the front of the wheel: the requested one if it's on the wheel, otherwise
- * today's next game that hasn't started, otherwise today's last game, otherwise the most recent.
+ * The game to feature from ``games``: the requested one if it's there, otherwise the next game
+ * that hasn't started, otherwise the last one.
  */
-export function defaultGame(wheel: Wheel, requested: string | null): SlateGame | null {
-  const { games, today } = wheel;
+export function defaultGame(games: SlateGame[], requested: string | null): SlateGame | null {
   const requestedGame = requested ? games.find((g) => g.gameId === requested) : undefined;
-  if (requestedGame) return requestedGame;
-  const todays = games.filter((g) => g.gameDate === today);
-  return todays.find((g) => g.status === "scheduled") ?? todays.at(-1) ?? games.at(-1) ?? null;
+  return requestedGame ?? games.find((g) => g.status === "scheduled") ?? games.at(-1) ?? null;
 }
 
 export type Side = "home" | "away";
@@ -78,5 +78,5 @@ export function predictBlocker(game: SlateGame): string | null {
   if (game.prediction) return null;
   if (game.status !== "scheduled") return "No prediction was made before tip-off.";
   if (game.seasonType !== "regular") return "Predictions cover regular-season games only.";
-  return "Prediction pending. Predictions are published around 9 AM ET.";
+  return "Prediction pending. Predictions are published around 9 AM ET on game day.";
 }

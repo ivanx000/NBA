@@ -1,9 +1,9 @@
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 
-import { addDays, seasonFor } from "@/lib/dates";
+import { seasonFor } from "@/lib/dates";
 import type { StoredFactor } from "@/lib/factor-copy";
-import type { GameStatus, SlateGame, SlateTeam, Wheel } from "@/lib/slate";
+import type { GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
 import { requireTeam } from "@/lib/teams";
 
 import type { Db } from "./client";
@@ -99,36 +99,29 @@ function toSlateGame(row: GameRow, records: Records): SlateGame {
   };
 }
 
-/** Days the game wheel covers: today and up to this many days before it. */
-export const WHEEL_PAST_DAYS = 2;
-
-/**
- * Games for the home page's wheel, oldest first: today and the previous ``WHEEL_PAST_DAYS``
- * days. When that window has no games (off-season, All-Star break), the most recent earlier day
- * that has games. Uncached.
- */
-export async function fetchWheel(db: Db, today: string): Promise<Wheel> {
-  let rowsIn = await gamesBetween(db, addDays(today, -WHEEL_PAST_DAYS), today);
-  if (!rowsIn.length) {
-    const result = await db.execute(
-      sql`select max(game_date)::text as day from games where game_date < ${addDays(today, -WHEEL_PAST_DAYS)}`,
-    );
-    const day = rows<{ day: string | null }>(result)[0]?.day;
-    if (day) rowsIn = await gamesBetween(db, day, day);
-  }
-  // Records (W-L) are as of each game's day.
-  const days = [...new Set(rowsIn.map((r) => String(r.gameDate)))];
-  const records = new Map(await Promise.all(days.map(async (d) => [d, await recordsBefore(db, d)] as const)));
-  return {
-    today,
-    games: rowsIn.map((r) => toSlateGame(r, records.get(String(r.gameDate))!)),
-  };
+async function withRecords(db: Db, rowsIn: GameRow[], day: string): Promise<SlateGame[]> {
+  // Records (W-L) are as of the games' day.
+  const records = await recordsBefore(db, day);
+  return rowsIn.map((r) => toSlateGame(r, records));
 }
 
-/** Cached wheel (predictions change about once a day; scores every few minutes). */
-export async function getWheel(today: string): Promise<Wheel> {
+/**
+ * The home page's games: today's only (ET). When today has none, also the closest later day
+ * that has games, so the page can offer it. Past days are never shown. Uncached.
+ */
+export async function fetchSlate(db: Db, today: string): Promise<Slate> {
+  const todays = await gamesBetween(db, today, today);
+  if (todays.length) return { today, games: await withRecords(db, todays, today), next: null };
+  const result = await db.execute(sql`select min(game_date)::text as day from games where game_date > ${today}`);
+  const day = rows<{ day: string | null }>(result)[0]?.day ?? null;
+  if (!day) return { today, games: [], next: null };
+  return { today, games: [], next: { day, games: await withRecords(db, await gamesBetween(db, day, day), day) } };
+}
+
+/** Cached slate (predictions change about once a day; scores every few minutes). */
+export async function getSlate(today: string): Promise<Slate> {
   "use cache";
   cacheLife("minutes");
   const { getDb } = await import("./client");
-  return fetchWheel(getDb(), today);
+  return fetchSlate(getDb(), today);
 }

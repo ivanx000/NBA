@@ -1,39 +1,52 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SceneHost } from "@/components/scene/scene-host";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useScene } from "@/lib/scene-store";
-import { predictBlocker, predictedWinner, type Wheel } from "@/lib/slate";
+import { dayLabel } from "@/lib/dates";
+import { defaultGame, predictBlocker, predictedWinner, type Slate } from "@/lib/slate";
 
-import { GameWheel } from "./game-wheel";
+import { GameDrawer } from "./game-drawer";
 import { MatchupHeader } from "./matchup-header";
 import { ResultPanel } from "./result-panel";
 import { TeamLabel } from "./team-label";
+import "./home.css";
 
 // Placeholder timings until the GSAP cinematic (Phase 7).
 const REVEAL_MS = 700;
 const SHOT_MS = 900;
 const RETURN_MS = 400;
 
+/** "Wednesday, November 19" */
+function longDate(day: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long", month: "long", day: "numeric", timeZone: "UTC",
+  }).format(new Date(`${day}T12:00:00Z`)); // prettier-ignore
+}
+
 function urlFor(gameId: string) {
   return `/?game=${gameId}`;
 }
 
 export function HomeExperience({
-  wheel,
+  slate,
   initialGameId,
   syncUrl,
 }: {
-  wheel: Wheel;
+  slate: Slate;
   initialGameId: string | null;
   syncUrl: boolean;
 }) {
   const reducedMotion = useReducedMotion();
   const { phase, gameId, send, reset, setInstantResults } = useScene();
+  // No games today: the visitor can ask for the next game day instead.
+  const [showNext, setShowNext] = useState(false);
+  const day = showNext && slate.next ? slate.next.day : slate.today;
+  const shown = showNext && slate.next ? slate.next.games : slate.games;
   const selectedId = gameId ?? initialGameId;
-  const game = wheel.games.find((g) => g.gameId === selectedId) ?? null;
+  const game = shown.find((g) => g.gameId === selectedId) ?? null;
   const winner = game ? predictedWinner(game) : null;
   const predictRef = useRef<HTMLButtonElement>(null);
 
@@ -72,8 +85,18 @@ export function HomeExperience({
     window.history.replaceState(null, "", urlFor(id));
   };
 
+  const showNextDay = () => {
+    if (!slate.next) return;
+    setShowNext(true);
+    const first = defaultGame(slate.next.games, null);
+    reset(first?.gameId ?? null);
+    if (first) window.history.replaceState(null, "", urlFor(first.gameId));
+  };
+
   const blocker = game ? predictBlocker(game) : null;
   const animating = phase === "revealing" || phase === "shooting";
+  const dayName = dayLabel(day, slate.today);
+  const heading = dayName === "Tonight" ? "Today's games" : `${dayName} games`;
 
   const predictArea =
     game && (phase === "results" || phase === "returning") ? (
@@ -85,77 +108,84 @@ export function HomeExperience({
         disabled={Boolean(blocker) || animating}
         aria-describedby={blocker ? "predict-blocker" : undefined}
         onClick={() => send({ type: "predict" })}
-        className="rounded-full bg-primary px-10 py-4 font-display text-xl font-semibold tracking-wider text-primary-foreground uppercase shadow-[0_0_40px_-8px] shadow-primary/60 transition hover:brightness-110 focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:text-2xl"
+        className="predict-button"
       >
         Predict who wins
       </button>
     ) : null;
 
   return (
-    <main id="main" className="relative h-svh min-h-[600px] overflow-hidden bg-background">
+    <main id="main" className="relative h-svh min-h-[560px] overflow-hidden bg-background">
       <div className="absolute inset-0">
-        {game ? (
-          <SceneHost game={game} phase={phase} winner={winner} reducedMotion={reducedMotion} />
-        ) : (
-          <div className="h-full bg-background" />
-        )}
+        <SceneHost game={game} phase={phase} winner={winner} reducedMotion={reducedMotion} />
       </div>
 
-      {/* Players' area: everything right of the wheel on desktop, above it on phones. */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col pt-14 pb-[17rem] lg:pb-10 lg:pl-[380px]">
-        {game ? (
-          <>
-            <div className={`transition-opacity duration-300 ${animating ? "opacity-30" : ""}`}>
-              <MatchupHeader game={game} today={wheel.today} />
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-4 px-4 sm:mt-6 sm:px-10 lg:px-[8%]">
-              <TeamLabel team={game.away} side="away" neutral={game.isNeutral}
-                         dimmed={phase !== "idle" && winner === "home"} />
-              <TeamLabel team={game.home} side="home" neutral={game.isNeutral}
-                         dimmed={phase !== "idle" && winner === "away"} />
-            </div>
-            <div className="flex-1" />
-            <div className="pointer-events-auto flex flex-col items-center gap-2 px-4">
-              {predictArea}
-              {/* Why Predict is off, for screen readers; the disabled button says it visually. */}
-              {blocker && <p id="predict-blocker" className="sr-only">{blocker}</p>}
-            </div>
-          </>
-        ) : (
-          <div className="pointer-events-auto m-auto max-w-sm px-6 text-center text-muted-foreground">
-            No games to show yet.
+      {game ? (
+        <div className="pointer-events-none absolute inset-0 flex flex-col pt-16 pb-6 sm:pb-8">
+          <div className={`transition-opacity duration-300 ${animating ? "opacity-30" : ""}`}>
+            <MatchupHeader game={game} today={slate.today} />
           </div>
-        )}
-      </div>
+          {/* Team names over each player; the players are centered, so the columns are too. */}
+          <div className="mx-auto mt-3 grid w-full max-w-[1100px] grid-cols-2 gap-4 px-4 sm:mt-5 sm:px-10">
+            <TeamLabel team={game.away} side="away" neutral={game.isNeutral}
+                       dimmed={phase !== "idle" && winner === "home"} />
+            <TeamLabel team={game.home} side="home" neutral={game.isNeutral}
+                       dimmed={phase !== "idle" && winner === "away"} />
+          </div>
+          <div className="flex-1" />
+          <div className="pointer-events-auto flex flex-col items-center gap-2 px-4">
+            {predictArea}
+            {blocker && (
+              <p id="predict-blocker" className="max-w-xs text-center text-xs text-muted-foreground">
+                {blocker}
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="absolute inset-0 grid place-items-center px-6">
+          <div className="max-w-md text-center">
+            <p className="eyebrow">{longDate(slate.today)}</p>
+            <h1 className="mt-3 font-display text-4xl leading-none font-extrabold uppercase sm:text-6xl">
+              No games today.
+            </h1>
+            {slate.next && !showNext ? (
+              <>
+                <p className="mt-4 text-muted-foreground">
+                  The next games are {dayLabel(slate.next.day, slate.today).replace("Tomorrow", "tomorrow")}.
+                </p>
+                <button type="button" onClick={showNextDay} className="predict-button mt-6 whitespace-nowrap">
+                  Show {dayLabel(slate.next.day, slate.today)}
+                </button>
+              </>
+            ) : (
+              <p className="mt-4 text-muted-foreground">No upcoming games are scheduled yet.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {animating && (
         <button
           type="button"
           onClick={() => send({ type: "skip" })}
-          className="absolute right-4 bottom-[17rem] rounded-md border border-white/15 bg-black/50 px-3 py-1.5 text-sm backdrop-blur lg:bottom-6"
+          className="holo-panel absolute right-4 bottom-6 rounded-md px-3 py-1.5 font-mono text-xs uppercase"
         >
           Skip
         </button>
       )}
 
-      {wheel.games.length > 0 && (
-        <div
-          className={`absolute inset-x-0 bottom-3 flex justify-center transition-opacity duration-300 lg:inset-x-auto lg:top-1/2 lg:bottom-auto lg:left-10 lg:-translate-y-1/2 ${
-            animating ? "pointer-events-none opacity-30" : ""
-          }`}
-        >
-          <GameWheel
-            games={wheel.games}
-            today={wheel.today}
-            selectedId={selectedId}
-            onSelect={selectGame}
-            reducedMotion={reducedMotion}
-            disabled={animating}
-          />
-        </div>
+      {shown.length > 0 && (
+        <GameDrawer
+          games={shown}
+          heading={heading}
+          selectedId={selectedId}
+          onSelect={selectGame}
+          disabled={animating}
+        />
       )}
 
-      <p className="pointer-events-none absolute top-5 left-4 z-50 text-[10px] text-white/35 lg:top-auto lg:right-3 lg:bottom-1.5 lg:left-auto">
+      <p className="pointer-events-none absolute right-3 bottom-1.5 z-20 font-mono text-[9px] tracking-wide text-white/35 uppercase">
         Unofficial fan project. Not affiliated with the NBA.
       </p>
     </main>

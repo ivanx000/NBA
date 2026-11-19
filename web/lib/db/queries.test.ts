@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { teams } from "@/lib/teams";
 
-import { fetchWheel } from "./queries";
+import { fetchSlate } from "./queries";
 import * as schema from "./schema";
 
 const URL =
@@ -73,23 +73,26 @@ afterAll(async () => {
   await pool?.end();
 });
 
-describe("fetchWheel", () => {
-  it("returns today and the two days before, oldest first, with records as of each day", async () => {
+describe("fetchSlate", () => {
+  it("returns today's games only, with records as of today", async () => {
     if (!available) return;
     const db = drizzle(pool, { schema });
-    const wheel = await fetchWheel(db, "2026-11-14");
-    expect(wheel.games.map((g) => g.gameId)).toEqual(["0022600002", "0022600003", "0022600004"]);
-    const [nov12, nov14] = [wheel.games[0], wheel.games[1]];
-    expect([nov12.away.abbr, nov12.away.wins, nov12.away.losses]).toEqual(["BOS", 1, 0]);
+    const slate = await fetchSlate(db, "2026-11-14");
+    expect(slate.games.map((g) => g.gameId)).toEqual(["0022600003", "0022600004"]);
+    expect(slate.next).toBeNull();
+    const [nov14] = slate.games;
     expect([nov14.away.abbr, nov14.away.wins, nov14.away.losses]).toEqual(["BOS", 2, 0]);
     expect(nov14.prediction?.source).toBe("live");
   });
 
-  it("goes back to the most recent day with games when the window is empty", async () => {
+  it("offers the closest later day with games when today has none, never a past day", async () => {
     if (!available) return;
     const db = drizzle(pool, { schema });
-    const wheel = await fetchWheel(db, "2026-11-19");
-    expect(wheel.games.map((g) => g.gameId)).toEqual(["0022600003", "0022600004"]);
-    expect((await fetchWheel(db, "2026-11-01")).games).toEqual([]);
+    const slate = await fetchSlate(db, "2026-11-15");
+    expect(slate.games).toEqual([]);
+    expect(slate.next?.day).toBe("2026-11-20");
+    expect(slate.next?.games.map((g) => g.gameId)).toEqual(["0022600005"]);
+    const after = await fetchSlate(db, "2026-11-21");
+    expect([after.games, after.next]).toEqual([[], null]);
   });
 });

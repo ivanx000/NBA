@@ -3,7 +3,8 @@ import { matchupJerseys } from "@/lib/team-colors";
 import { requireTeam } from "@/lib/teams";
 
 /** 2D stand-in for the arena: two team-colored panels with the jersey number. */
-export function Fallback2D({ game, winner }: { game: SlateGame; winner: Side | null }) {
+export function Fallback2D({ game, winner }: { game: SlateGame | null; winner: Side | null }) {
+  if (!game) return <div className="h-full bg-background" aria-hidden />;
   const home = requireTeam(game.home.teamId);
   const away = requireTeam(game.away.teamId);
   const jerseys = matchupJerseys(home, away);
@@ -26,7 +27,7 @@ export function Fallback2D({ game, winner }: { game: SlateGame; winner: Side | n
     );
   };
   return (
-    <div className="flex h-full bg-background pb-[22rem] lg:pb-0 lg:pl-[380px]" aria-hidden>
+    <div className="flex h-full bg-background pt-40 pb-24" aria-hidden>
       {panel("away")}
       {panel("home")}
     </div>

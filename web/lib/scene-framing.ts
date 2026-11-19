@@ -1,7 +1,7 @@
 /**
- * Camera framing for the home scene: make the two players as big as possible inside the part of
- * the screen the UI leaves free (right of the game wheel on desktop, above the wheel and Predict
- * button on phones).
+ * Camera framing for the home scene: the two players centered on screen and as big as possible
+ * between the team names (top) and the Predict button (bottom), each standing under its team
+ * name, with both fully visible.
  */
 
 export interface Viewport {
@@ -9,11 +9,12 @@ export interface Viewport {
   height: number;
 }
 
-/** Screen space (CSS px) the players may use; the rest is covered by UI. */
+/** Screen space (CSS px) kept clear of the players. */
 export interface FreeRegion {
-  left: number;
   top: number;
   bottom: number;
+  /** Margin left and right. */
+  side: number;
 }
 
 export interface Framing {
@@ -26,37 +27,48 @@ export interface Framing {
   playerX: number;
 }
 
-/** Both players, feet on the floor: about 2 m tall, plus room for raised arms. */
-const BOX_HEIGHT = 2.3;
-const BOX_CENTER_Y = 1.1;
-/** Width of one player with arms at rest, and the gap between them. */
+/** A player from the soles to just over the head (1.98 m model), with a little air. */
+const BOX_HEIGHT = 2.12;
+const BOX_BOTTOM = -0.04;
+/** Width of one player with arms at rest. */
 const PLAYER_WIDTH = 0.8;
 
 export function freeRegion({ width }: Viewport): FreeRegion {
-  // Desktop: wheel on the left; header and team names on top; Predict at the bottom.
-  if (width >= 1024) return { left: 380, top: 150, bottom: 130 };
-  // Phones and tablets: header and team names on top; Predict and the wheel at the bottom.
-  return { left: 0, top: 140, bottom: 350 };
+  // Nav, matchup line and team names on top; the Predict button at the bottom.
+  if (width >= 1024) return { top: 175, bottom: 104, side: 40 };
+  if (width >= 640) return { top: 165, bottom: 100, side: 24 };
+  return { top: 150, bottom: 96, side: 10 };
+}
+
+/**
+ * Where the team names' centers sit: this many CSS px left and right of the screen's center
+ * (two equal columns in a container up to 1100 px wide, px-4 / sm:px-10, gap-4).
+ */
+export function labelOffset(width: number): number {
+  const pad = width >= 640 ? 40 : 16;
+  return (Math.min(width, 1100) - 2 * pad) / 4 + 4;
 }
 
 export function frameCamera(viewport: Viewport, fovDeg: number, region = freeRegion(viewport)): Framing {
   const { width: W, height: H } = viewport;
-  const w = Math.max(1, W - region.left);
   const h = Math.max(1, H - region.top - region.bottom);
   const t = Math.tan(((fovDeg / 2) * Math.PI) / 180);
   const aspect = W / H;
-  // Narrow regions bring the players closer together.
-  const playerX = Math.min(0.95, Math.max(0.55, (w / h) * 0.45));
-  const boxWidth = 2 * playerX + PLAYER_WIDTH;
-  // Closest distance at which the box fits both the region's height and its width.
-  const distance = Math.max((BOX_HEIGHT * H) / (2 * t * h), (boxWidth * H) / (2 * t * w));
+  const offset = labelOffset(W);
+  // Closest distance where the box fits the region's height...
+  const byHeight = (BOX_HEIGHT * H) / (2 * t * h);
+  // ...and where each player, centered under its name, stays inside the side margins.
+  const room = Math.max(1, W / 2 - region.side - offset);
+  const byWidth = ((PLAYER_WIDTH / 2) * (W / 2)) / (room * t * aspect);
+  const distance = Math.max(byHeight, byWidth);
+  // Put each player's center under its team name.
+  const playerX = (offset / (W / 2)) * distance * t * aspect;
   // Shift the camera so the box's center lands on the region's center.
-  const cx = ((region.left + w / 2) / W) * 2 - 1;
   const cy = 1 - ((region.top + h / 2) / H) * 2;
   return {
     distance,
-    x: -cx * distance * t * aspect,
-    y: BOX_CENTER_Y - cy * distance * t,
+    x: 0,
+    y: BOX_BOTTOM + BOX_HEIGHT / 2 - cy * distance * t,
     playerX,
   };
 }

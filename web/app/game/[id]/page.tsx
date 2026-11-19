@@ -19,7 +19,7 @@ export default function Page({ params }: PageProps<"/game/[id]">) {
         <GameId params={params} />
       </Suspense>{" "}
       is coming soon.{" "}
-      <Link href="/" className="text-brand-accent underline-offset-4 hover:underline">
+      <Link href="/" className="text-blue-hi underline-offset-4 hover:underline">
         Back to predictions
       </Link>
     </PageStub>

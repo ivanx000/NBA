@@ -24,26 +24,26 @@ export function ResultPanel({ game, onBack }: { game: SlateGame; onBack: () => v
   return (
     <section
       aria-label="Prediction"
-      className="w-full max-w-md rounded-xl border border-white/10 bg-black/60 p-5 backdrop-blur-md"
+      className="holo-panel w-full max-w-md rounded-xl p-5"
     >
       <p className="sr-only" aria-live="polite">
         Prediction: {winner.city} {winner.name} win with {pct}% probability.
       </p>
       <div className="flex items-baseline justify-between gap-4">
         <h2
-          className="font-display text-4xl font-bold tracking-wide uppercase"
+          className="font-display text-3xl leading-none font-extrabold uppercase sm:text-4xl"
           style={{ color: readableTeamColor(wTeam) }}
         >
           {winner.name} win
         </h2>
-        <span className="font-display text-4xl font-bold tabular">{pct}%</span>
+        <span className="font-display text-3xl font-extrabold tabular sm:text-4xl">{pct}%</span>
       </div>
       <div className="mt-4 flex h-2 overflow-hidden rounded-full" aria-hidden>
         <div style={{ width: `${100 - homePct}%`, background: jerseys.away.base }} />
         <div className="w-0.5 bg-background" />
         <div style={{ width: `${homePct}%`, background: jerseys.home.base }} />
       </div>
-      <p className="mt-2 flex justify-between text-xs text-muted-foreground tabular">
+      <p className="mt-2 flex justify-between font-mono text-[11px] text-muted-foreground uppercase tabular">
         <span>{game.away.abbr} {100 - homePct}%</span>
         <span>{game.home.abbr} {homePct}%</span>
       </p>
@@ -68,7 +68,7 @@ export function ResultPanel({ game, onBack }: { game: SlateGame; onBack: () => v
         </button>
         <Link
           href={`/game/${game.gameId}`}
-          className="rounded-md px-3 py-2 text-sm text-brand-accent hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-ring"
+          className="rounded-md px-3 py-2 text-sm text-blue-hi hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-ring"
         >
           Full breakdown
         </Link>

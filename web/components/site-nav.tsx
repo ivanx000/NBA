@@ -35,7 +35,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
       >
         {/* No wordmark on the home page (or while the path streams in): the room is the brand. */}
         {pathname !== null && pathname !== "/" ? (
-          <Link href="/" className="font-display text-xl font-bold tracking-wide uppercase">
+          <Link href="/" className="font-display text-lg font-extrabold uppercase">
             Tip-Off
           </Link>
         ) : (
@@ -43,7 +43,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
         )}
         <button
           type="button"
-          className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground md:hidden"
+          className="rounded-md px-3 py-1.5 font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase hover:text-foreground md:hidden"
           aria-expanded={open}
           aria-controls="site-menu"
           onClick={() => setOpen((v) => !v)}
@@ -60,7 +60,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
                 href={l.href}
                 onClick={() => setOpen(false)}
                 aria-current={isActive(l.href) ? "page" : undefined}
-                className={`block py-1.5 text-sm transition-colors hover:text-foreground ${
+                className={`block py-1.5 font-mono text-xs tracking-[0.08em] uppercase transition-colors hover:text-foreground ${
                   isActive(l.href) ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -73,7 +73,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
               href={GITHUB_URL}
               target="_blank"
               rel="noreferrer"
-              className="block py-1.5 text-sm text-muted-foreground hover:text-foreground"
+              className="block py-1.5 font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase hover:text-foreground"
             >
               GitHub
             </a>

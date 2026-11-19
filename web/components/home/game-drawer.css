@@ -1,0 +1,239 @@
+/*
+ * Today's games: flat hologram cards in a drawer on the left edge (DESIGN.md section 2).
+ * Kept out of globals.css: Turbopack's dev server sometimes serves a stale globals.css.
+ */
+.game-drawer {
+  --drawer-w: min(22rem, calc(100vw - 3.5rem));
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--drawer-w);
+  display: flex;
+  flex-direction: column;
+  padding: 4.25rem 1.1rem 1.25rem 1.5rem;
+  background: linear-gradient(90deg, rgba(2, 4, 10, 0.92) 0%, rgba(2, 4, 10, 0.72) 70%, rgba(2, 4, 10, 0) 100%);
+  transform: translateX(-100%);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.25s ease,
+    visibility 0s linear 0.38s;
+}
+.game-drawer[data-open] {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease,
+    visibility 0s;
+}
+
+.game-drawer__heading {
+  margin: 0 0 0.9rem 0.25rem;
+}
+
+/* The cards scroll when they don't all fit; room on the right for the hover pop. */
+.game-drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 1.25rem 0.6rem 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 140, 255, 0.4) transparent;
+  mask-image: linear-gradient(180deg, transparent 0, #000 0.6rem, #000 calc(100% - 1.2rem), transparent 100%);
+}
+
+/* Edge tab: always visible, says the games are there; tap target on touch. */
+.game-drawer__tab {
+  position: absolute;
+  z-index: 31;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 1.9rem;
+  padding: 1.1rem 0;
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: rgba(6, 10, 24, 0.7);
+  box-shadow: inset 2px 0 0 var(--nba-red), 0 0 24px -6px rgba(200, 16, 46, 0.7);
+  color: var(--text);
+  cursor: pointer;
+  transition: opacity 0.25s ease;
+}
+.game-drawer__tab[data-open] {
+  opacity: 0;
+  pointer-events: none;
+}
+.game-drawer__tab:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.game-drawer__tab:focus-visible {
+  outline: 2px solid var(--blue-hi);
+  outline-offset: 2px;
+}
+.game-drawer__tab-text {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.game-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 29;
+  background: transparent;
+  border: 0;
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .game-drawer__scrim {
+    display: none;
+  }
+}
+
+/* --- The card ------------------------------------------------------------------------- */
+.game-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.8rem 1rem 0.85rem 1.1rem;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background:
+    repeating-linear-gradient(0deg, rgba(91, 140, 255, 0.06) 0 1px, transparent 1px 4px),
+    linear-gradient(100deg, color-mix(in srgb, var(--away) 22%, transparent), transparent 55%),
+    linear-gradient(280deg, color-mix(in srgb, var(--home) 22%, transparent), transparent 55%),
+    rgba(6, 10, 24, 0.78);
+  transform-origin: left center;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s ease,
+    box-shadow 0.22s ease;
+}
+/* A light that sweeps across on hover. */
+.game-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.12) 50%, transparent 65%);
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  opacity: 0;
+}
+
+.game-card:hover:not(:disabled),
+.game-card:focus-visible {
+  transform: translateX(0.6rem) scale(1.045);
+  border-color: rgba(91, 140, 255, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(91, 140, 255, 0.25),
+    0 10px 34px -10px rgba(91, 140, 255, 0.65),
+    inset 0 0 28px -12px rgba(91, 140, 255, 0.6);
+}
+.game-card:hover:not(:disabled)::after,
+.game-card:focus-visible::after {
+  opacity: 1;
+  animation: game-card-sweep 0.7s ease-out;
+}
+.game-card:focus-visible {
+  outline: 2px solid var(--blue-hi);
+  outline-offset: 2px;
+}
+.game-card[aria-current] {
+  border-color: rgba(255, 77, 94, 0.75);
+  box-shadow:
+    0 0 0 1px rgba(255, 77, 94, 0.3),
+    0 0 26px -10px rgba(200, 16, 46, 0.9);
+}
+.game-card:disabled {
+  cursor: default;
+}
+
+.game-card__status {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red-hi);
+}
+.game-card__label {
+  color: var(--text-muted);
+}
+.game-card__matchup {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 1.85rem;
+  line-height: 1.05;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+}
+.game-card__at {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.game-card__teams {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+/* A small glowing dot in each team's color before its nickname. */
+.game-card__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+}
+
+@keyframes game-card-sweep {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -20% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-drawer,
+  .game-drawer[data-open],
+  .game-card {
+    transition: none;
+  }
+  .game-card:hover:not(:disabled),
+  .game-card:focus-visible {
+    transform: none;
+  }
+  .game-card:hover:not(:disabled)::after,
+  .game-card:focus-visible::after {
+    animation: none;
+    opacity: 0;
+  }
+}

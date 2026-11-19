@@ -4,22 +4,22 @@
 
 **Mood:** a dark, empty arena right before tip-off. Cinematic lighting, team colors as the only saturated color on screen. Think broadcast intro, not cartoon.
 
-- **Players are holograms** (decided in Phase 6). Each player is projected in their jersey color from a glowing disc on the floor: unlit and additive, with scanlines, a rim glow, a light band sweeping up the body and a faint flicker. The lettering and face still read through. Why: the AI-generated model looks slightly "off" shaded as a real person; as a hologram nobody expects a real person, and the motion-captured animation still reads as natural.
-- **Room: a hologram chamber** (decided with the holograms). A black, mirror-like glossy floor that reflects the holograms; faint blue grid lines on the back wall, side walls and ceiling that recede in perspective and fade into fog. Each hologram stands on a ring projector pad (concentric rings, slowly turning) that casts its color on the floor. The camera shifts slightly with the pointer (parallax: near players move against far walls), which is what makes the page read as a 3D space rather than a flat picture.
-- **Holograms** (the look of your reference image): fine horizontal contour lines that follow the body, a strong glowing outline, twinkling points, a sweep band, a dark core. The uniform is filled more solidly than the skin so it reads as clothing; lettering is solid, in the jersey's text color. Only the surface facing the camera is drawn (a depth pre-pass), so the back number never shows through the chest.
-- **Colors:** each hologram glows in its jersey's base color, brightened (`hologramColor`). Black jerseys use a colorful trim; white or grey jerseys glow cool white. If two holograms would look alike (navy vs royal blue), one team switches to its alternate jersey; if both are still white-ish, the away hologram turns cyan (`hologramMatchup`, tested over all 870 matchups).
-- **Post-processing:** bloom (makes the lines, rims and pads glow) and a vignette.
-- **UI:** clean and minimal. Glassy dark panels (`bg-white/5`, `backdrop-blur`, 1px `white/10` border). The UI should never fight the scene.
+- **Players are holograms with real colors** (decided Nov 2026, replacing the line-art holograms; the look follows the hologram site in the user's promo video and the `kyledev223/lions-share` repo). Each player is lit like a real person (skin, shoes, his team's actual jersey colors from `matchupJerseys`) and then turned into projected light: dark, see-through scan lines drifting slowly up the body, a glowing rim in the team's hologram color, the legs fading into the pad's light, a brighter band sweeping up now and then, and a rare flicker. The lit surface is held under the bloom threshold so faces and lettering stay crisp; only the rim, pads and stars glow. Only the surface nearest the camera is drawn (a depth pre-pass), so the back number never shows through the chest. Tuning lives in `HOLO` (`components/scene/tint-material.ts`).
+- **Room: points of light in the dark.** A near-black space with a star field (mostly white, some NBA blue and red, slowly twinkling), a faint floor of points receding into fog, and under each player a pad of glowing point rings in the team's hologram color (slowly turning). No walls. Key, fill and back lights plus a soft room reflection light the players. The camera shifts slightly with the pointer (parallax against the stars).
+- **Glow colors:** each team's rim and pad glow in its jersey color, brightened (`hologramColor`); if the two would look alike, `hologramMatchup` switches one team to its alternate (or turns the away glow cyan).
+- **Post-processing:** bloom (threshold 0.66, so only light sources glow) and a vignette. Fine film grain over every page (CSS).
+- **UI: the hologram site's mix of 3D and regular web.** Huge, wide, heavy uppercase headings; small mono labels (e.g. `TONIGHT · 7:30 PM ET`) in NBA red; thin glowing accent bars; dark glass panels with a hairline edge and faint scan lines (`holo-panel`). Every page sits on the same backdrop: near-black with a blue glow overhead, a red one low, faint stars.
 
 ### Typography
-- Display: a condensed sports face (e.g. **Oswald** or **Bebas Neue** from Google Fonts) for team names, scores and big numbers.
-- Body/UI: **Inter**.
+- Display and body: **Archivo** (variable). Headings use its width axis at 125% and weight 800+ (wide, heavy, uppercase), like the reference site.
+- Labels: **JetBrains Mono**, small, uppercase, tracked (`eyebrow` utility).
+- Jersey lettering on the 3D uniforms: **Oswald** (condensed, like real jerseys); not used for page text.
 - Numbers: tabular figures (`font-variant-numeric: tabular-nums`) in all stat tables.
 
 ### Color tokens
-- `--bg: #0A0A0C`, `--panel: rgba(255,255,255,0.05)`, `--border: rgba(255,255,255,0.10)`
-- `--text: #F5F5F7`, `--text-muted: #A1A1AA`
-- `--accent: #FF6B1A` (basketball orange, used for the Predict button and links)
+- `--bg: #02040A`, `--panel: rgba(8,14,32,0.62)`, `--line: rgba(243,246,252,0.14)`
+- `--text: #F3F6FC`, `--text-muted: rgba(243,246,252,0.66)`
+- NBA colors: `--nba-blue: #1D428A`, `--nba-red: #C8102E` (Predict button and primary actions). On black, text and glows use brighter versions: `--blue-hi: #5B8CFF` (links, focus rings, accent bars) and `--red-hi: #FF4D5E` (mono labels).
 - `--good: #22C55E` (correct prediction ✓), `--bad: #EF4444` (✗)
 - Team colors come from `shared/teams.json` at runtime. Check contrast. If a team's primary color is too dark for text on `--bg`, use its secondary color or white.
 
@@ -29,27 +29,27 @@
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │                     Predict   How it works   Performance   Docs   GitHub │  nav (no wordmark on home)
-│                          IND @ PHI · Tonight 1:00 PM ET                   │
-│   ╭──────────╮            PACERS                76ERS                     │
-│   │ CHI @ MIN│  ← older   5-8 · Away            10-3 · Home               │
-│  ╔══════════╗                                                             │
-│  ║ IND @ PHI║  front        ✦ (3D hologram)      ✦ (3D hologram)          │
-│  ╚══════════╝                                                             │
-│   │ LAL @ PHX│  ← newer        ◎ pad               ◎ pad                  │
-│   ╰──────────╯                 [  PREDICT WHO WINS  ]                     │
-│                                         Unofficial fan project… (tiny)   │
+│                           TONIGHT · 7:30 PM ET                            │
+│ ▌           BOSTON · 2-0 · AWAY          NEW YORK · 1-1 · HOME            │
+│ ▌              CELTICS                       KNICKS                        │
+│ T              ───                           ───                           │
+│ O            (hologram)                    (hologram)                      │
+│ D              player                        player                        │
+│ A              ◎ pad                         ◎ pad                         │
+│ Y                     [  PREDICT WHO WINS  ]                               │
+│ ▌                                             Unofficial fan project… (tiny)│
 └──────────────────────────────────────────────────────────────────────┘
 ```
-- The whole page is one 3D room (section 3): the canvas fills the viewport and the UI floats in it with no panels or boxes.
-- **Game wheel** (left, about 300px): an arcade prize wheel facing the viewer (`components/home/game-wheel.tsx`). Cards sit on a drum; the front card is the selected game, cards above are older and cards below newer, dimming as they curve away. Scrolling down (or Up arrow, or dragging down on touch) turns the drum so older games come to the front; scrolling up brings newer ones. It ends at today's last game, so then there's no card below the front. Covers today and the 2 days before; if those have no games, the most recent earlier day with games.
-- **Wheel cards** look like arcade panels: split in the two teams' primary colors with a faint painted-wood grain and an oval medallion, the matchup in big white outlined letters, and the time, live score or final score below.
-- The players are the hero: the camera frames them as large as fits right of the wheel, between the team names and the Predict button (`lib/scene-framing.ts`).
+- The canvas fills the viewport; the UI floats over it.
+- **Players:** centered, each under its team name, as big as fits between the names and the Predict button with both fully visible (`lib/scene-framing.ts`; tested at desktop, tablet and phone sizes).
+- **Games: today only.** No past days and no way to browse other days. The cards hide in a **drawer on the left edge**: with a mouse it slides out when the pointer comes within about 110px of the left edge and tucks away when the pointer leaves; a thin "Today's games · N" tab on the edge shows it's there (and opens it on touch). Keyboard focus opens it too; Escape closes it.
+- **Cards** are flat, in the hologram style: dark glass with faint scan lines, a split strip and wash in the two teams' colors, the time (or live/final score) as a mono label, the matchup wide and heavy, the nicknames below. Hovering (or focusing) pops a card out (slides right and scales up) with a blue glow and a light sweep; the selected card has a red edge. When they don't all fit, the list scrolls.
+- **No games today:** "No games today." with a button for the closest later day that has games (e.g. "Show Fri, Nov 21"), which then shows that day's games the same way. If nothing is scheduled, it says so.
 - No wordmark and no footer bar on the home page; the disclaimer is one tiny line in a corner (CLAUDE.md, Brand and IP). Other pages keep the nav wordmark and the footer.
 
 ### Mobile (<1024px)
-- Nav collapses into a hamburger menu; the disclaimer sits in the top-left corner.
-- Team labels on top, the players (closer together) in the middle, then Predict, then the wheel at the bottom showing the front card and one neighbor on each side.
-- Predict button sits above a bottom horizontal card strip (cards ~140px wide, scroll-snap).
+- Nav collapses into a menu; same order: matchup line, team names, players (fully visible), Predict at the bottom.
+- The games drawer opens from the edge tab and closes after picking a game or tapping outside it.
 - Results overlay becomes a bottom sheet (drag to expand).
 
 ## 3. The 3D scene
@@ -57,19 +57,19 @@
 ### Elements
 | Element | Source | Notes |
 |---|---|---|
-| Player ×2 | One rigged GLB (`/models/player.glb`) with all animation clips, instanced twice | Hologram in the jersey's color (`hologramColor` of the colorway from `matchupJerseys`), over the shader tint of the white base uniform (ASSET_PIPELINE section 5). No shadow |
-| Projector disc ×2 | Circle with a canvas radial gradient, additive, in the hologram color | Under each player; dims with the loser |
-| Floor | Black glossy plane | `MeshReflectorMaterial` (mirror 0.8) so the holograms reflect, like the reference |
-| Room | Back wall, side walls, ceiling: planes with a grid shader that fades with distance | `components/scene/arena-scene.tsx` |
+| Player ×2 | One rigged GLB (`/models/player.glb`) with all animation clips, instanced twice | Lit in real colors (team jersey via the shader tint of the white base uniform, ASSET_PIPELINE section 5), then the hologram pass (section 1). Rim in the team's hologram color (`hologramMatchup`). No shadow |
+| Pad ×2 | Rings of glowing points plus a soft glow disc and a small point light, in the hologram color | Under each player; slowly turns; dims with the loser |
+| Floor | A grid of faint points receding into fog | |
+| Stars | ~2,600 points, mostly white with some NBA blue and red, twinkling | `components/scene/arena-scene.tsx` |
 | Hoop | GLB (`/models/hoop.glb`) generated in Meshy or modeled simply | Placed far behind the players (~20m), hidden in fog until the cinematic |
 | Ball | Procedural sphere + simple seam texture | The ball is NOT in the shot animation clip. It's a separate object, attached to the hand bone, then flown procedurally |
 | Net | Simple cylinder/cone mesh with a line texture | "Swish" = quick vertex wobble or a scale pulse |
-| Lights | Low ambient, a colored point light at each projector pad | Holograms are unlit; lights only color the floor |
+| Lights | Key (upper left, warm), fill (right, cool), back light (outline), low ambient, a soft room reflection (`RoomEnvironment`), a colored point light at each pad | The players are lit like real people, under the bloom threshold |
 
 ### Idle state
 - Both players play `Idle` variants with a random start offset and a random variant from `[Idle, Idle_02, Idle_03, ...]`, blending to another variant every 6 to 10s.
 - Subtle head look-at toward the cursor (small clamp, ±15°) adds life cheaply. Disable on mobile.
-- `prefers-reduced-motion`: animation and hologram effects freeze (`paused`).
+- `prefers-reduced-motion`: animation, hologram effects, stars and pads hold still (`paused`); cards don't pop or sweep.
 - The camera does a very slow orbital drift (±2°, 12s period).
 
 ### Swapping games
@@ -82,7 +82,7 @@ Driven by a single **GSAP timeline** controlled by a **zustand state machine**:
 
 | t (s) | Beat | Camera | Winner | Loser | UI |
 |---|---|---|---|---|---|
-| 0.0 | Click | — | — | — | Button pulses, then morphs into a thin progress line; nav and wheel fade to 30% |
+| 0.0 | Click | — | — | — | Button pulses, then morphs into a thin progress line; nav fades to 30%, the games drawer closes and its tab dims |
 | 0.2 | Reveal | Holds | Spotlight intensifies, color flares | Spotlight and hologram dim (hologram to 25%); plays a "disappointed" or idle-look-down clip | Team names fade except the winner's |
 | 0.6 | Push-in | Dolly + arc (1.2s, `power2.inOut`) to an over-the-shoulder shot behind the winner, looking down-court; FOV 45→35 | Turns to face the hoop (rotate root 180° over 0.6s while playing `Turn`/idle) | Out of frame | Hide labels |
 | 1.8 | Hoop reveal | Fog recedes and the hoop lights up far down-court | Holds ball at chest | — | — |
@@ -91,7 +91,7 @@ Driven by a single **GSAP timeline** controlled by a **zustand state machine**:
 | ~3.8 | Make | Quick micro-shake (very subtle) | — | — | — |
 | 3.8 | Swish | — | Lands, plays `Celebrate` (arms up, sway and look around, arms down) | — | Light flash in team color + a short confetti burst in team colors |
 | 4.2 | Results | Camera settles at a 3/4 hero angle on the winner | Celebrating idle | — | Results overlay slides in (stagger 60ms per section); numbers count up |
-| — | Return | Reverse to the home camera (1.0s) | Turns back, idle | Hologram restores | Overlay fades out; nav and wheel return |
+| — | Return | Reverse to the home camera (1.0s) | Turns back, idle | Hologram restores | Overlay fades out; nav and the drawer tab return |
 
 ### Shot outcome tied to confidence
 Let `p = winner's win probability`.

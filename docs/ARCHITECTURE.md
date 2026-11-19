@@ -98,7 +98,7 @@ GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for E
 │   │   ├── game/[id]/page.tsx (+ opengraph-image.tsx)
 │   ├── components/
 │   │   ├── scene/                # Canvas, Player, Hoop, Ball, Lights, CameraRig, Cinematic
-│   │   ├── home/                 # GameWheel (arcade drum), MatchupHeader, TeamLabel, ResultPanel
+│   │   ├── home/                 # GameDrawer (today's cards), MatchupHeader, TeamLabel, ResultPanel
 │   │   ├── charts/               # WinProbBar, FactorBars, CalibrationChart, RollingAccuracy
 │   │   └── ui/                   # shadcn components
 │   ├── lib/
@@ -196,12 +196,12 @@ order by game_id, (source = 'live') desc, generated_at desc;
 
 Next.js 16 with **Cache Components** (`cacheComponents: true`): route-segment `revalidate` no longer exists.
 
-- `app/page.tsx` renders a static shell and, inside `<Suspense>`, a request-time `Home` that calls `await connection()`, reads `searchParams.game`, computes "today" in ET, and loads the wheel. With no `?game=`, `defaultGame` picks today's next game that hasn't started (`lib/slate.ts`); the client then writes `?game=` into the URL with `history.replaceState`, so refreshes and shares keep the game.
-- `getWheel(today)` (`lib/db/queries.ts`) is a `'use cache'` function with `cacheLife('minutes')` (stale 5 min, revalidate 1 min). It wraps `fetchWheel(db, today)`, a plain function that the tests run against Postgres. It returns the games of today and the 2 days before (or, if none, the most recent earlier day with games), oldest first, with team records as of each game's day (regular-season W-L before it) and `current_game_predictions` (live beats backfill).
+- `app/page.tsx` renders a static shell and, inside `<Suspense>`, a request-time `Home` that calls `await connection()`, reads `searchParams.game`, computes "today" in ET, and loads the slate. With no `?game=` (or one that isn't today's), `defaultGame` picks today's next game that hasn't started (`lib/slate.ts`); the client then writes `?game=` into the URL with `history.replaceState`, so refreshes and shares keep the game.
+- `getSlate(today)` (`lib/db/queries.ts`) is a `'use cache'` function with `cacheLife('minutes')` (stale 5 min, revalidate 1 min). It wraps `fetchSlate(db, today)`, a plain function that the tests run against Postgres. It returns today's games in tip-off order and, only when today has none, the closest later day with games (`next`), each with team records as of that day (regular-season W-L before it) and `current_game_predictions` (live beats backfill). Past days are never returned.
 - DB driver (`lib/db/client.ts`, server-only): Neon's HTTP driver for `*.neon.tech` URLs, node-postgres otherwise (local Docker, CI).
 - Env: `next.config.ts` loads the repo-root `.env` with `@next/env` (`forceReload`, because Next has already cached `web/`'s env by then). Vercel sets `DATABASE_URL` itself.
 - `<HomeExperience>` (client) holds UI state in the zustand scene store. The 3D scene is loaded with `next/dynamic` and `ssr: false`; without WebGL (or if the scene crashes) a 2D fallback renders, and `?webgl=0` forces it.
-- Turning the game wheel updates the store and the URL (`replaceState`, no server round trip); all of the wheel's games ship with the page.
+- Picking a card updates the store and the URL (`replaceState`, no server round trip); all of the day's games ship with the page.
 - Prediction data ships with the page, so pressing Predict triggers no network call. The cinematic starts instantly.
 
 ### Scene state machine (zustand)
