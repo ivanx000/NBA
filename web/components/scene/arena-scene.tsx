@@ -12,6 +12,7 @@ import type { Phase } from "@/lib/scene-store";
 import type { Side, SlateGame } from "@/lib/slate";
 
 import { cameraOverride } from "./camera-override";
+import { Arena } from "./arena";
 import { Matchup } from "./matchup";
 import { geometryFrom, pointsMaterial, rng, tickPoints } from "./points";
 
@@ -19,7 +20,12 @@ export interface ArenaSceneProps {
   /** Null: the room alone (no games to show). */
   game: SlateGame | null;
   phase: Phase;
-  winner: Side | null;
+  /** The team the user picked (its player shoots). */
+  pick: Side | null;
+  /** Whose numbers the results screen shows (the camera frames that player). */
+  viewing: Side | null;
+  /** Clicking a player picks its team. */
+  pickable: boolean;
   reducedMotion: boolean;
 }
 
@@ -29,7 +35,7 @@ const BG = "#02040a";
 const BLUE = "#5b8cff";
 const RED = "#ff4d5e";
 
-/** Stars behind the players: mostly white, some NBA blue and red. */
+/** Dust in the arena's light: faint motes around and behind the players, twinkling slowly. */
 function StarField({ still }: { still: boolean }) {
   const { geometry, material } = useMemo(() => {
     const random = rng(42);
@@ -37,45 +43,18 @@ function StarField({ still }: { still: boolean }) {
     const col: number[] = [];
     const size: number[] = [];
     const tint = [new THREE.Color("#ffffff"), new THREE.Color(BLUE), new THREE.Color(RED)];
-    for (let i = 0; i < 2600; i++) {
-      const z = -4 - random() * 34;
-      const spread = 6 + -z * 0.9;
-      pos.push((random() - 0.5) * spread * 2.2, -1 + random() * spread * 1.2, z);
+    for (let i = 0; i < 900; i++) {
+      const z = -1 - random() * 18;
+      pos.push((random() - 0.5) * 26, random() * 9, z);
       const pick = random();
-      const c = tint[pick < 0.78 ? 0 : pick < 0.9 ? 1 : 2].clone().multiplyScalar(0.6 + random() * 1.4);
+      const c = tint[pick < 0.8 ? 0 : pick < 0.9 ? 1 : 2].clone().multiplyScalar(0.15 + random() * 0.45);
       col.push(c.r, c.g, c.b);
-      size.push(random() < 0.04 ? 5 + random() * 4 : 1.2 + random() * 2.4);
+      size.push(0.8 + random() * 1.6);
     }
     return { geometry: geometryFrom(pos, col, size), material: pointsMaterial(14, 0.55) };
   }, []);
   const ref = useRef<THREE.ShaderMaterial>(null);
   useFrame(({ clock, viewport }) => tickPoints(ref.current, viewport.dpr, still ? null : clock.elapsedTime));
-  return (
-    <points geometry={geometry} frustumCulled={false}>
-      <shaderMaterial ref={ref} args={[material]} />
-    </points>
-  );
-}
-
-/** A floor of faint points, receding into the dark. */
-function FloorPoints() {
-  const { geometry, material } = useMemo(() => {
-    const random = rng(9);
-    const pos: number[] = [];
-    const col: number[] = [];
-    const size: number[] = [];
-    for (let x = -12; x <= 12; x += 0.42) {
-      for (let z = -16; z <= 5; z += 0.42) {
-        pos.push(x + (random() - 0.5) * 0.08, 0, z + (random() - 0.5) * 0.08);
-        const b = 0.12 + random() * 0.12;
-        col.push(b * 0.8, b * 0.9, b * 1.3);
-        size.push(1.6);
-      }
-    }
-    return { geometry: geometryFrom(pos, col, size), material: pointsMaterial(10, 0) };
-  }, []);
-  const ref = useRef<THREE.ShaderMaterial>(null);
-  useFrame(({ viewport }) => tickPoints(ref.current, viewport.dpr, null));
   return (
     <points geometry={geometry} frustumCulled={false}>
       <shaderMaterial ref={ref} args={[material]} />
@@ -142,14 +121,14 @@ function CameraRig({ parallax }: { parallax: boolean }) {
   return null;
 }
 
-function Stage({ game, phase, winner, reducedMotion, lowPower }: ArenaSceneProps & { lowPower: boolean }) {
+function Stage({ game, phase, pick, viewing, pickable, reducedMotion, lowPower }: ArenaSceneProps & { lowPower: boolean }) {
   const size = useThree((s) => s.size);
   const framing = useMemo(() => frameCamera({ width: size.width, height: size.height }, FOV), [size]);
 
   return (
     <>
       <color attach="background" args={[BG]} />
-      <fog attach="fog" args={[BG, 12, 40]} />
+      <fog attach="fog" args={[BG, 16, 60]} />
       <Reflections />
       {/* Key from the upper left in front, a cooler fill from the right, a back light for the outline. */}
       <ambientLight intensity={0.25} />
@@ -157,12 +136,20 @@ function Stage({ game, phase, winner, reducedMotion, lowPower }: ArenaSceneProps
       <directionalLight position={[4, 2, 3]} intensity={0.55} color="#dbe6ff" />
       <directionalLight position={[0, 3, -4]} intensity={1.2} color="#cfdcff" />
       <CameraRig parallax={!reducedMotion} />
+      <Arena still={reducedMotion} />
       <StarField still={reducedMotion} />
-      <FloorPoints />
 
       <Suspense fallback={null}>
         {game && (
-          <Matchup game={game} phase={phase} winner={winner} reducedMotion={reducedMotion} playerX={framing.playerX} />
+          <Matchup
+            game={game}
+            phase={phase}
+            pick={pick}
+            viewing={viewing}
+            pickable={pickable}
+            reducedMotion={reducedMotion}
+            playerX={framing.playerX}
+          />
         )}
       </Suspense>
 

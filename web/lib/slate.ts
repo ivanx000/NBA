@@ -1,4 +1,5 @@
 import type { StoredFactor } from "@/lib/factor-copy";
+import type { TeamStats } from "@/lib/team-stats";
 
 export type GameStatus = "scheduled" | "live" | "final" | "postponed";
 
@@ -9,6 +10,8 @@ export interface SlateTeam {
   name: string;
   wins: number;
   losses: number;
+  /** Season numbers before this game (lib/team-stats.ts). */
+  stats: TeamStats;
 }
 
 export interface SlatePrediction {
@@ -33,6 +36,8 @@ export interface SlateGame {
   awayScore: number | null;
   isNeutral: boolean;
   gameLabel: string | null;
+  /** Season series before this game. */
+  headToHead: { home: number; away: number };
   prediction: SlatePrediction | null;
 }
 
@@ -72,11 +77,25 @@ export function actualWinner(game: SlateGame): Side | null {
   return game.homeScore > game.awayScore ? "home" : "away";
 }
 
-/** Why Predict is unavailable for a game, or null when it can be used. */
-export function predictBlocker(game: SlateGame): string | null {
+/** Why the user can't pick a winner for a game, or null when they can. */
+export function pickBlocker(game: SlateGame): string | null {
   if (game.status === "postponed") return "This game was postponed.";
-  if (game.prediction) return null;
+  if (game.prediction || actualWinner(game)) return null;
   if (game.status !== "scheduled") return "No prediction was made before tip-off.";
   if (game.seasonType !== "regular") return "Predictions cover regular-season games only.";
   return "Prediction pending. Predictions are published around 9 AM ET on game day.";
+}
+
+export interface Verdict {
+  right: boolean;
+  /** What the pick was judged against: the final score, or the model before the game ends. */
+  judgedBy: "final" | "model";
+}
+
+/** Was the user's pick right? Against the final score once the game is over, else the model. */
+export function verdict(game: SlateGame, pick: Side): Verdict | null {
+  const actual = actualWinner(game);
+  if (actual) return { right: actual === pick, judgedBy: "final" };
+  const model = predictedWinner(game);
+  return model ? { right: model === pick, judgedBy: "model" } : null;
 }

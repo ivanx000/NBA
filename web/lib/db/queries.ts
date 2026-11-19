@@ -4,35 +4,31 @@ import { cacheLife } from "next/cache";
 import { seasonFor } from "@/lib/dates";
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
+import { headToHead, type PastGame, teamStats } from "@/lib/team-stats";
 import { requireTeam } from "@/lib/teams";
 
 import type { Db } from "./client";
 import { currentGamePredictions, games } from "./schema";
 
-type Records = Map<number, { wins: number; losses: number }>;
-
 function rows<T>(result: unknown): T[] {
   return (Array.isArray(result) ? result : (result as { rows: T[] }).rows) as T[];
 }
 
-/** Regular-season wins/losses for every team, counting final games before ``day``. */
-async function recordsBefore(db: Db, day: string): Promise<Records> {
-  const season = seasonFor(day);
+/** The season's finished regular-season games before ``day`` (team stats are built from these). */
+async function pastGames(db: Db, day: string): Promise<PastGame[]> {
   const result = await db.execute(sql`
-    select team_id, sum(won)::int as wins, sum(1 - won)::int as losses from (
-      select home_team_id as team_id, (home_score > away_score)::int as won from games
-        where season = ${season} and season_type = 'regular' and status = 'final'
-          and game_date < ${day}
-      union all
-      select away_team_id, (away_score > home_score)::int from games
-        where season = ${season} and season_type = 'regular' and status = 'final'
-          and game_date < ${day}
-    ) t group by team_id`);
-  const map: Records = new Map();
-  for (const r of rows<{ team_id: number; wins: number; losses: number }>(result)) {
-    map.set(Number(r.team_id), { wins: Number(r.wins), losses: Number(r.losses) });
-  }
-  return map;
+    select game_date::text as game_date, home_team_id, away_team_id, home_score, away_score from games
+      where season = ${seasonFor(day)} and season_type = 'regular' and status = 'final'
+        and game_date < ${day} and home_score is not null and away_score is not null`);
+  return rows<{ game_date: string; home_team_id: number; away_team_id: number; home_score: number; away_score: number }>(
+    result,
+  ).map((r) => ({
+    gameDate: String(r.game_date),
+    homeTeamId: Number(r.home_team_id),
+    awayTeamId: Number(r.away_team_id),
+    homeScore: Number(r.home_score),
+    awayScore: Number(r.away_score),
+  }));
 }
 
 async function gamesBetween(db: Db, from: string, to: string) {
@@ -64,13 +60,13 @@ async function gamesBetween(db: Db, from: string, to: string) {
 
 type GameRow = Awaited<ReturnType<typeof gamesBetween>>[number];
 
-function team(teamId: number | null, records: Records): SlateTeam {
+function team(teamId: number | null, past: PastGame[], day: string): SlateTeam {
   const t = requireTeam(teamId ?? -1);
-  const r = records.get(t.team_id) ?? { wins: 0, losses: 0 };
-  return { teamId: t.team_id, abbr: t.abbr, city: t.city, name: t.name, ...r };
+  const stats = teamStats(past, t.team_id, day);
+  return { teamId: t.team_id, abbr: t.abbr, city: t.city, name: t.name, ...stats.record, stats };
 }
 
-function toSlateGame(row: GameRow, records: Records): SlateGame {
+function toSlateGame(row: GameRow, past: PastGame[], day: string): SlateGame {
   const iso = (d: Date | string | null) => (d ? new Date(d).toISOString() : null);
   return {
     gameId: row.gameId,
@@ -78,8 +74,9 @@ function toSlateGame(row: GameRow, records: Records): SlateGame {
     seasonType: row.seasonType,
     tipoffUtc: iso(row.tipoffUtc),
     status: row.status as GameStatus,
-    home: team(row.homeTeamId, records),
-    away: team(row.awayTeamId, records),
+    home: team(row.homeTeamId, past, day),
+    away: team(row.awayTeamId, past, day),
+    headToHead: headToHead(past, row.homeTeamId ?? -1, row.awayTeamId ?? -1, day),
     homeScore: row.homeScore,
     awayScore: row.awayScore,
     isNeutral: row.isNeutral,
@@ -100,9 +97,9 @@ function toSlateGame(row: GameRow, records: Records): SlateGame {
 }
 
 async function withRecords(db: Db, rowsIn: GameRow[], day: string): Promise<SlateGame[]> {
-  // Records (W-L) are as of the games' day.
-  const records = await recordsBefore(db, day);
-  return rowsIn.map((r) => toSlateGame(r, records));
+  // Records and stats are as of the games' day (games before it only).
+  const past = await pastGames(db, day);
+  return rowsIn.map((r) => toSlateGame(r, past, day));
 }
 
 /**

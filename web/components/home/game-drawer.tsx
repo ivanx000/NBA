@@ -163,9 +163,26 @@ export function GameDrawer({
         data-open={open || undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
+        aria-label={`${heading}: ${games.length}`}
       >
-        <span className="game-drawer__tab-text">
-          {heading} · {games.length}
+        {/* One small tick per game in its two teams' colors; tonight's pick is longer and lit. */}
+        <span className="game-drawer__ticks" aria-hidden>
+          {games.map((g) => (
+            <span
+              key={g.gameId}
+              className="game-drawer__tick"
+              data-current={g.gameId === selectedId || undefined}
+              style={
+                {
+                  "--away": requireTeam(g.away.teamId).colors.primary,
+                  "--home": requireTeam(g.home.teamId).colors.primary,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </span>
+        <span className="game-drawer__count" aria-hidden>
+          {games.length} games
         </span>
       </button>
       <div

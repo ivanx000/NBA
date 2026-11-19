@@ -130,13 +130,14 @@ Notes:
 - [x] Uniform mask baked automatically (`pnpm assets:mask`), `Player` component with tint material, `/dev/jerseys` lab
 - [x] Celebration: Meshy library preset "Cheer with Both Hands Up"
 - [x] Players' look: **holograms** in the jersey color (DESIGN.md section 1)
-- [ ] All 30 jerseys (+ alternates) checked in the lab, clash rule implemented
+- [x] All 30 jerseys (+ alternates) checked in the lab (`/dev/jerseys/all`, `?alt=1`), clash rule implemented
 - [x] Hologram players in the home scene: idle variety, offset loops, loser dims, reduced motion pauses, colors swap on card click
 - [x] Home redesign: hologram chamber room (glossy floor, grid walls, bloom, pointer parallax), reference-style holograms (contour lines, sparkles, outline, solid lettering, front surface only), arcade game wheel on the left (today + 2 days back), big hero players, no wordmark/footer on home
 - [x] Motion library: 63 extra clips (28 Text to Motion, 35 presets) in `motion-library.glb` for later (`pnpm assets:motions`); `Idle_03` trimmed to its shoulder stretch
 - [x] Redesign 2 (Nov 2026): real-color hologram players (scan lines, team rim, floor fade) centered and big under their names; star-field room with point-ring pads; today's games only, as flat hologram cards in a left-edge drawer (hover to reveal, tab on touch), "No games today" with a next-day button; site restyled after the hologram reference (Archivo wide headings, mono labels, NBA blue/red, grain)
-- [ ] Cursor look-at
-- [ ] Poly Haven floor + HDRI, `web/public/CREDITS.md`, CI size budget for `player.glb`
+- [x] Redesign 3 (Nov 2026): pick a winner by clicking a player (hover grows and brightens him; no Predict button); the picked player's shot goes in if the pick is right (model before the game, final score after) and misses if wrong; results screen with the team's numbers and the game's, a corner button for the other team, and Home; arena drawn in light; still hexagonal platforms; tick column for today's games; bigger, livelier players with smaller names
+- [x] Cursor look-at
+- [x] ~~Poly Haven floor + HDRI~~ (replaced by the arena drawn in light, generated in code), `web/public/CREDITS.md`, CI size budget for `player.glb` (`lib/asset-budget.test.ts`)
 
 Notes:
 - No Blender needed. gltf-transform scripts rename clips, check drift and optimize; the uniform mask is generated from the base texture and mesh.
@@ -148,6 +149,8 @@ Notes:
 - The motion library's index marks 20 clips as not in place (hips drift > 0.15 m); see ASSET_PIPELINE section 4.
 - Turbopack's dev server sometimes keeps serving a stale `app/globals.css`, even after a restart: stop the server and delete `web/.next`. Component styles live in their own CSS files (`components/home/game-drawer.css`, `home.css`), which reload reliably.
 - Redesign 2 replaced the arcade wheel and the line-art holograms; the old look is in git history (commit b7e7033).
+- Redesign 3 decisions (with the user): the picked player shoots and misses when the pick is wrong; "right" means the model's pick before the game and the final score after; team stats come from data already in Postgres (no pipeline change); the background is an arena drawn in light.
+- Moving vertices in the hologram shader (for a glitch) speckled the surface: even an unused branch changed how the GPU computed positions, so the hologram no longer matched its depth pre-pass. Glitches are done per fragment instead.
 - `player.glb` is about 2 MB; ~390 KB of it is glTF JSON for ~2,400 animation accessors. Trim static channels in Phase 10 if the payload needs it.
 
 ## Phase 7: The prediction cinematic

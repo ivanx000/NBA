@@ -4,11 +4,12 @@
 
 **Mood:** a dark, empty arena right before tip-off. Cinematic lighting, team colors as the only saturated color on screen. Think broadcast intro, not cartoon.
 
-- **Players are holograms with real colors** (decided Nov 2026, replacing the line-art holograms; the look follows the hologram site in the user's promo video and the `kyledev223/lions-share` repo). Each player is lit like a real person (skin, shoes, his team's actual jersey colors from `matchupJerseys`) and then turned into projected light: dark, see-through scan lines drifting slowly up the body, a glowing rim in the team's hologram color, the legs fading into the pad's light, a brighter band sweeping up now and then, and a rare flicker. The lit surface is held under the bloom threshold so faces and lettering stay crisp; only the rim, pads and stars glow. Only the surface nearest the camera is drawn (a depth pre-pass), so the back number never shows through the chest. Tuning lives in `HOLO` (`components/scene/tint-material.ts`).
-- **Room: points of light in the dark.** A near-black space with a star field (mostly white, some NBA blue and red, slowly twinkling), a faint floor of points receding into fog, and under each player a pad of glowing point rings in the team's hologram color (slowly turning). No walls. Key, fill and back lights plus a soft room reflection light the players. The camera shifts slightly with the pointer (parallax against the stars).
+- **Players are holograms with real colors** (decided Nov 2026, replacing the line-art holograms; the look follows the hologram site in the user's promo video and the `kyledev223/lions-share` repo). Each player is lit like a real person (skin, shoes, his team's actual jersey colors from `matchupJerseys`) and then turned into projected light: fine, dark, see-through scan lines drifting slowly up the body, a glowing rim in the team's hologram color with a crisp bright edge at the silhouette, the legs fading into the platform's light, a brighter band sweeping up now and then, a rare flicker, and every ten seconds or so a quick glitch where a few thin slices flash (done in the fragment shader; moving vertices would fight the depth pre-pass and speckle the surface). The lit surface is held under the bloom threshold so faces and lettering stay crisp; only the rim, platforms and arena lights glow. Only the surface nearest the camera is drawn (a depth pre-pass), so the back number never shows through the chest. Tuning lives in `HOLO` (`components/scene/tint-material.ts`).
+- **Room: an arena drawn in light** (decided Nov 2026). Court lines in points on the floor around the players (boundary, half-court line and circle, keys, three-point arcs), tiered stands of faint twinkling lights behind and at both ends, a big screen of blue and red cells on the far wall between the players' heads, rows of lights in the rafters, a soft blue glow behind the far stands, and faint dust in the air (`components/scene/arena.tsx`). Key, fill and back lights plus a soft room reflection light the players. The camera shifts slightly with the pointer (parallax).
+- **Platforms:** each player stands on a raised, dark, glossy hexagonal plinth with glowing edges and a target inlay in the team's color, a faint column of light rising from it and a few motes drifting up the light (`components/scene/platform.tsx`). They hold still (no turning). They brighten when the player is hovered and dim when the other team is in focus.
 - **Glow colors:** each team's rim and pad glow in its jersey color, brightened (`hologramColor`); if the two would look alike, `hologramMatchup` switches one team to its alternate (or turns the away glow cyan).
 - **Post-processing:** bloom (threshold 0.66, so only light sources glow) and a vignette. Fine film grain over every page (CSS).
-- **UI: the hologram site's mix of 3D and regular web.** Huge, wide, heavy uppercase headings; small mono labels (e.g. `TONIGHT · 7:30 PM ET`) in NBA red; thin glowing accent bars; dark glass panels with a hairline edge and faint scan lines (`holo-panel`). Every page sits on the same backdrop: near-black with a blue glow overhead, a red one low, faint stars.
+- **UI: the hologram site's mix of 3D and regular web.** Huge, wide, heavy uppercase headings; small mono labels (e.g. `TONIGHT · 7:30 PM ET`) in NBA red; thin glowing accent bars; dark glass panels with a hairline edge and faint scan lines (`holo-panel`). Every page sits on the same backdrop: near-black with a blue glow overhead, a red one low, faint stars. Team names over the players are small (the players are the hero).
 
 ### Typography
 - Display and body: **Archivo** (variable). Headings use its width axis at 125% and weight 800+ (wide, heavy, uppercase), like the reference site.
@@ -30,27 +31,27 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │                     Predict   How it works   Performance   Docs   GitHub │  nav (no wordmark on home)
 │                           TONIGHT · 7:30 PM ET                            │
-│ ▌           BOSTON · 2-0 · AWAY          NEW YORK · 1-1 · HOME            │
-│ ▌              CELTICS                       KNICKS                        │
-│ T              ───                           ───                           │
-│ O            (hologram)                    (hologram)                      │
-│ D              player                        player                        │
-│ A              ◎ pad                         ◎ pad                         │
-│ Y                     [  PREDICT WHO WINS  ]                               │
-│ ▌                                             Unofficial fan project… (tiny)│
+│ ▬       BOSTON · 2-0 · AWAY     ┌big screen┐   NEW YORK · 1-1 · HOME      │  small names
+│ ▬           CELTICS             └──────────┘        KNICKS                 │
+│ ━          (hologram)                             (hologram)               │  ticks = today's games
+│ ▬            player                                 player                 │
+│ ▬           ⬡ platform          court lines        ⬡ platform              │
+│                    CLICK A PLAYER TO PICK WHO WINS                         │
+│                                             Unofficial fan project… (tiny)│
 └──────────────────────────────────────────────────────────────────────┘
 ```
 - The canvas fills the viewport; the UI floats over it.
-- **Players:** centered, each under its team name, as big as fits between the names and the Predict button with both fully visible (`lib/scene-framing.ts`; tested at desktop, tablet and phone sizes).
-- **Games: today only.** No past days and no way to browse other days. The cards hide in a **drawer on the left edge**: with a mouse it slides out when the pointer comes within about 110px of the left edge and tucks away when the pointer leaves; a thin "Today's games · N" tab on the edge shows it's there (and opens it on touch). Keyboard focus opens it too; Escape closes it.
-- **Cards** are flat, in the hologram style: dark glass with faint scan lines, a split strip and wash in the two teams' colors, the time (or live/final score) as a mono label, the matchup wide and heavy, the nicknames below. Hovering (or focusing) pops a card out (slides right and scales up) with a blue glow and a light sweep; the selected card has a red edge. When they don't all fit, the list scrolls.
+- **Players:** centered, each on its platform under its team name, as big as fits between the (small) names and the one-line hint, with both fully visible (`lib/scene-framing.ts`; tested at desktop, tablet and phone sizes).
+- **Picking:** hovering a player grows him 6% and brightens him and his platform; the team name's color bar lengthens. Clicking picks. The team names are buttons too.
+- **Games: today only.** A slim column of small two-tone ticks on the left edge, one per game in its teams' colors, the selected one longer and lit, with "10 games" set vertically below. With a mouse the drawer slides out when the pointer comes within about 110px of the left edge and tucks away when it leaves; a tap on the ticks opens it on touch; keyboard focus opens it too; Escape closes it.
+- **Cards** are flat, in the hologram style: dark glass with faint scan lines, a wash in the two teams' colors, the time (or live/final score) as a mono label, the matchup wide and heavy, and the nicknames with a small glowing dot in each team's color. Hovering (or focusing) pops a card out (slides right and scales up) with a blue glow and a light sweep; the selected card has a red edge. When they don't all fit, the list scrolls.
 - **No games today:** "No games today." with a button for the closest later day that has games (e.g. "Show Fri, Nov 21"), which then shows that day's games the same way. If nothing is scheduled, it says so.
 - No wordmark and no footer bar on the home page; the disclaimer is one tiny line in a corner (CLAUDE.md, Brand and IP). Other pages keep the nav wordmark and the footer.
 
 ### Mobile (<1024px)
-- Nav collapses into a menu; same order: matchup line, team names, players (fully visible), Predict at the bottom.
-- The games drawer opens from the edge tab and closes after picking a game or tapping outside it.
-- Results overlay becomes a bottom sheet (drag to expand).
+- Nav collapses into a menu; same order: matchup line, team names (record on its own line), players (fully visible; platforms sized to the gap between them), the "Tap a player" hint.
+- The games drawer opens from the ticks and closes after picking a game or tapping outside it.
+- The results panel is a sheet over the lower part of the screen; the camera puts the viewed player above it.
 
 ## 3. The 3D scene
 
@@ -58,9 +59,8 @@
 | Element | Source | Notes |
 |---|---|---|
 | Player ×2 | One rigged GLB (`/models/player.glb`) with all animation clips, instanced twice | Lit in real colors (team jersey via the shader tint of the white base uniform, ASSET_PIPELINE section 5), then the hologram pass (section 1). Rim in the team's hologram color (`hologramMatchup`). No shadow |
-| Pad ×2 | Rings of glowing points plus a soft glow disc and a small point light, in the hologram color | Under each player; slowly turns; dims with the loser |
-| Floor | A grid of faint points receding into fog | |
-| Stars | ~2,600 points, mostly white with some NBA blue and red, twinkling | `components/scene/arena-scene.tsx` |
+| Platform ×2 | Raised hexagonal plinth (0.16 m) with glowing edges, an inlay, a column of light and rising motes, in the hologram color | Still; brightens on hover, dims out of focus |
+| Arena | Court lines, stands, big screen and rafter lights in points; a soft back glow; ~900 dust motes | `components/scene/arena.tsx`; the floor is 0.16 m below the players' feet |
 | Hoop | Drawn in glowing lines (decided in Phase 7): backboard outline and target square, arm, pole, rim in the winner's hologram color, diamond net | 6.8 m in front of the winner once he turns (a long two), rim at 3.05 m; hidden until the cinematic. `components/scene/cinematic-props.tsx` |
 | Ball | A real basketball: lit sphere with a generated orange leather texture and black seams, plus a short glowing trail in the team color | Not in the shot clip: it rides between the winner's hands, then flies on the shot path |
 | Net | Part of the hoop | On the make it stretches and swings, settling in about 0.7 s |
@@ -68,8 +68,8 @@
 | Lights | Key (upper left, warm), fill (right, cool), back light (outline), low ambient, a soft room reflection (`RoomEnvironment`), a colored point light at each pad | The players are lit like real people, under the bloom threshold |
 
 ### Idle state
-- Both players play `Idle` variants with a random start offset and a random variant from `[Idle, Idle_02, Idle_03, ...]`, blending to another variant every 6 to 10s.
-- Subtle head look-at toward the cursor (small clamp, ±15°) adds life cheaply. Disable on mobile.
+- Both players play idle variants with a random start offset, blending to another after each loop: mostly the plain idles (`Idle`, `Idle_02`, `Idle_03`, `Idle_Look`), with a livelier one 40% of the time (`BounceLoose`, `ArmSwings`, `ShoulderStretch`, `NeckRoll`, `FocusBreath`, `AdjustJersey`, `LookUpScoreboard`), never two lively ones in a row.
+- Head look-at: while waiting for a pick, the head and neck turn toward where the cursor points (yaw up to about 25°, pitch about 12°, eased), on top of the animation. Off during the cinematic and with reduced motion.
 - `prefers-reduced-motion`: animation, hologram effects, stars and pads hold still (`paused`); cards don't pop or sweep.
 - The camera drifts slightly with the pointer (parallax), not on its own.
 
@@ -81,27 +81,32 @@
 Driven by a single **GSAP timeline** controlled by a **zustand state machine**:
 `idle → revealing → shooting → results → returning → idle`.
 
-As built in Phase 7 (`components/scene/matchup.tsx`). The camera moves by blending from the home framing toward the cinematic's shot (`camera-override.ts`). Times are from the click; release and later depend on the outcome.
+As built (`components/scene/matchup.tsx`). The camera moves by blending from the home framing toward the cinematic's shot (`camera-override.ts`). Times are from the click; release and later depend on the outcome.
 
-| t (s) | Beat | Camera | Winner | Loser | UI |
+| t (s) | Beat | Camera | Picked player | Other player | UI |
 |---|---|---|---|---|---|
-| 0.0 | Click | Holds | — | Hologram and pad dim to 30%; switches to `Idle_Look` | Predict becomes a thin red progress line; Skip appears; the loser's name dims, then all names and the matchup line fade (0.3 s delay); the games drawer closes and its tab dims |
+| 0.0 | Click (pick) | Holds | — | Hologram and platform dim to 30%; switches to `Idle_Look` | A thin red progress line replaces the hint; Skip appears; the names and matchup line fade (0.3 s delay); the games drawer closes and its ticks dim |
 | 0.4 | Push-in | Blends (1.2 s, `power2.inOut`) to over his right shoulder, 3.6 m behind him, FOV 35→42 | 0.6–1.3: turns half around to face the hoop | — | — |
 | 1.2 | Hoop | — | — | — | The hoop fades in (0.6 s) |
 | 1.8 | Shot | 2.5–4.1: tilts up to follow the arc toward the rim | `JumpShot`; the ball pops into his hands | — | Scene store: `revealing → shooting` |
 | 3.07 | Release | — | At `JUMPSHOT_RELEASE_TIME` (1.27 s into the clip) the ball leaves his hands | — | — |
-| ~4.2 to 5.3 | Make | A brief shake (0.35 s) | — | — | Flash and sparks at the rim; the net swings |
-| make + 0.3 | Celebrate | — | Turns back to the camera and plays `Celebrate` | — | — |
-| make + 0.7 | Results | Moves (1.1 s) to a hero shot: his whole body, off to his side so the panel doesn't cover him; FOV back to 35 | Celebrating, then idle | — | `shooting → results`; the results panel appears; the hoop fades out |
-| Back | Return | Blends back to the home framing (1.0 s) | Turns back to rest, idle | Restores | `returning → idle`; names return |
+| ~4.2 to 5.3 | Decided | A brief shake (softer on a miss) | — | — | Make: flash and sparks at the rim, the net swings. Miss: nothing |
+| decided + 0.3 | Reaction | — | Turns back to the camera; `Celebrate` on a make, `HeadShake` on a miss | — | — |
+| decided + 0.7 | Results | Moves (1.1 s) to a hero shot: his whole body in his half of the screen, clear of the panel | Then idle | — | `shooting → results`; the results panel appears; the hoop fades out |
+| Switch team | — | Moves (0.9 s) to the other player's hero shot | Dims | Lights up | The panel moves to the other side |
+| Home | Return | Blends back to the home framing (1.0 s) | Turns back to rest, idle | Restores | `returning → idle`; names and the drawer return |
 
 Without WebGL (2D fallback), the page advances the phases on short timers instead.
 
-### Shot outcome tied to confidence
-Let `p = winner's win probability`.
+### Shot outcome
+Let `p` = the model's win probability for the picked team. If the pick is right (`lib/slate.ts` `verdict`):
 - `p ≥ 0.70`: clean swish (ball path ends at the rim center).
 - `0.58 ≤ p < 0.70`: kisses the back iron, then drops (2-segment path).
-- `p < 0.58`: rattles: hits the front rim, bounces up, rolls around, drops in (3 to 4 segments). Show the copy "Coin flip. The model barely leans this way."
+- `p < 0.58`: rattles: hits the front rim, bounces up, rolls around, drops in (3 to 4 segments). (This also covers a right pick against the model, once the final score decides.)
+
+If it's wrong (`pickShot` in `lib/shot-path.ts`):
+- `p ≥ 0.40`: off the back iron, around the rim and out the side.
+- `p < 0.40`: off the front of the rim and back toward the shooter.
 
 ### Ball flight math
 - Parabola from release point `P0` to rim `P1` with apex height `h = max(P0.y, P1.y) + 2.5m`. Sample it with a quadratic Bezier, and drive `t` with GSAP `power1.in` for slight acceleration.
@@ -113,28 +118,30 @@ Let `p = winner's win probability`.
 - `prefers-reduced-motion`: no camera moves. Crossfade to results with a static winner highlight.
 - All results content is real DOM (not canvas) so it's readable by screen readers. Announce "Prediction: Knicks win with 64% probability" via an `aria-live` region.
 
-## 5. Results overlay
+## 5. Results screen
 
 ```
-┌───────────────────────────────────────────────┐
-│  KNICKS WIN                          64%      │ team color stripe
-│  ██████████████████░░░░░░░░░  NYK 64 · BOS 36 │ win prob split bar
-├───────────────────────────────────────────────┤
-│  WHY                                          │
-│  Home court                         +4%  ███  │
-│  BOS on back-to-back                +6%  ████ │
-│  NYK last-10 net rating             +5%  ███▌ │
-│  BOS better season net rating       −7%  ████ │ (bars in the favored team's color)
-├───────────────────────────────────────────────┤
-│  PROJECTED LINES          PTS   REB   AST     │
-│  NYK  #11  J. Brunson     27.4  3.1   6.8     │  (tabs: NYK | BOS)
-│  ...                                          │
-├───────────────────────────────────────────────┤
-│  [ ← Back to matchup ]     [ Full breakdown → ]│
-└───────────────────────────────────────────────┘
+[← HOME]                                    ┌─────────────────────────────────┐
+                                            │ YOUR PICK · CELTICS             │
+        (hero shot of the viewed            │ YOU'RE RIGHT.                   │
+         player, in his half)               │ The model gives the Celtics 58% │
+                                            ├─────────────────────────────────┤
+                                            │ BOSTON              [NYK STATS →]│
+                                            │ CELTICS ───                     │
+                                            │ Record  Home   Away             │
+                                            │ Last 10 Streak Rest             │
+                                            │ Points  Allowed Margin          │
+                                            ├─────────────────────────────────┤
+                                            │ THE GAME                        │
+                                            │ ██████████░░░░░  BOS 58 · NYK 42│
+                                            │ Simple Elo baseline …           │
+                                            │ Celtics in better recent form +5│
+                                            │ Season series · Tip-off         │
+                                            └─────────────────────────────────┘
 ```
-- Factor copy is generated from feature names via a mapping table in `web/lib/factor-copy.ts`. Never show raw feature names to casual users.
-- For Final games, add a header badge: `FINAL · NYK 112 – 104 BOS · ✓ Model correct`.
+- The panel sits on the side away from the viewed player (`components/home/results-view.tsx`); on phones it's a sheet at the bottom. The verdict is red when wrong, white with a blue glow when right; the team name is underlined in its color.
+- Factor copy comes from `web/lib/factor-copy.ts`. Never show raw feature names.
+- The verdict is announced in an `aria-live` region and focus moves to it.
 
 ## 6. Other pages
 

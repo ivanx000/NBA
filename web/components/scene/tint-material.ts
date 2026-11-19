@@ -38,14 +38,18 @@ export const HOLO = {
   /** Opacity of the darkest parts (lit parts and the rim go solid). */
   alpha: 0.5,
   /** How see-through the gaps between scan lines are, and how dark. */
-  gap: 0.45,
-  bandDepth: 0.5,
+  gap: 0.38,
+  bandDepth: 0.4,
   /** Scan lines per meter of height, and how fast they drift up (m/s). */
-  bands: 70,
-  bandSpeed: 0.05,
+  bands: 95,
+  bandSpeed: 0.06,
   /** Rim glow strength and tightness (higher = tighter). Above the bloom threshold, so it glows. */
-  rim: 0.85,
+  rim: 0.95,
   rimPower: 2.4,
+  /** A thin bright outline right at the silhouette, for a crisp edge. */
+  edge: 0.7,
+  /** How strongly a glitch slice flashes (0 to 1); glitches come every 10 seconds or so. */
+  glitch: 0.8,
   sweep: 0.16,
   /** Height (m) over which the legs fade into the pad's glow, and how much. */
   floorFade: 0.32,
@@ -204,8 +208,17 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
   float sweepY = mix(-0.3, 2.3, fract(uTime * 0.11));
   col += uHolo * ${f(HOLO.sweep)} * exp(-pow((y - sweepY) * 8.0, 2.0));
   col += uHolo * fres * ${f(HOLO.rim)};
+  col += mix(uHolo, vec3(1.0), 0.6) * pow(1.0 - ndv, 6.0) * ${f(HOLO.edge)};
   float h = smoothstep(0.0, ${f(HOLO.floorFade)}, y);
   col = mix(uHolo * (0.3 + 0.25 * bright), col, 1.0 - ${f(HOLO.floorGlow)} * (1.0 - h));
+
+  // Glitch: now and then a few thin slices flash and tint, like a signal dropping for a frame or
+  // two. Done here, not by moving vertices: the surface must match its depth pre-pass exactly.
+  float when = step(0.985, fract(sin(floor(uTime * 6.0) * 91.7) * 4375.85));
+  float slice = floor(y * 14.0 + floor(uTime * 24.0) * 3.1);
+  float hit = when * step(0.72, fract(sin(slice * 12.9898) * 43758.5453));
+  col = mix(col, uHolo * 1.6 + col * 0.4, hit * ${f(HOLO.glitch)});
+  alpha = mix(alpha, 0.35, hit * 0.6);
 
   // Flicker: a quick dip every few seconds, with a little line noise.
   float beat = step(0.985, fract(sin(floor(uTime * 3.0) * 91.7) * 4375.85));
@@ -219,7 +232,7 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
       );
   };
   const variant = `${opts.debugMask ? "-debug" : ""}${opts.hologram ? "-holo" : ""}`; // same program for every color
-  material.customProgramCacheKey = () => `tipoff-tint-v4${variant}`;
+  material.customProgramCacheKey = () => `tipoff-tint-v7${variant}`;
   return {
     material,
     textures: [front, back],

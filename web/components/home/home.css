@@ -78,3 +78,25 @@
     transform: scaleX(1);
   }
 }
+
+/* Under the players while waiting for a pick. */
+.pick-hint {
+  max-width: 22rem;
+  text-align: center;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.pick-hint__touch {
+  display: none;
+}
+@media (hover: none) {
+  .pick-hint__mouse {
+    display: none;
+  }
+  .pick-hint__touch {
+    display: inline;
+  }
+}

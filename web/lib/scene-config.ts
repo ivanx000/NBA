@@ -20,14 +20,23 @@ export const HAND_BONE = "mixamorigRightHand";
 /** Clip names in player.glb (docs/ASSET_PIPELINE.md section 4). */
 export const CLIPS = {
   idle: ["Idle", "Idle_02", "Idle_03", "Idle_Look"],
+  /** Livelier idles from the motion library, mixed in now and then between plain idles. */
+  idleExtras: ["BounceLoose", "ArmSwings", "ShoulderStretch", "NeckRoll", "FocusBreath", "AdjustJersey", "LookUpScoreboard"],
   shot: "JumpShot",
   celebrate: ["Celebrate"], // Meshy library preset "Cheer with Both Hands Up"
+  /** After a missed shot (a wrong pick). */
+  miss: "HeadShake",
 } as const;
+
+/** Chance that the next idle is one of the livelier extras (after a plain idle). */
+export const IDLE_EXTRA_CHANCE = 0.4;
 
 export type ClipName =
   | (typeof CLIPS.idle)[number]
+  | (typeof CLIPS.idleExtras)[number]
   | typeof CLIPS.shot
-  | (typeof CLIPS.celebrate)[number];
+  | (typeof CLIPS.celebrate)[number]
+  | typeof CLIPS.miss;
 
 /**
  * Seconds into JumpShot when the ball leaves the hands: the jump's peak (the hips are highest at

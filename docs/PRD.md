@@ -2,7 +2,7 @@
 
 ## 1. Vision
 
-A website that makes an ML model fun to use. A visitor lands on a dark arena scene with two players in the jerseys of tonight's matchup, presses **Predict who wins**, and watches the predicted winner's player hit a shot. Then the numbers appear: win probability, why the model thinks so, and predicted player stat lines. Anyone curious can open the docs and see how the model works.
+A website that makes an ML model fun to use. A visitor lands on an arena drawn in light with two hologram players in the jerseys of tonight's matchup, **clicks the player they think will win**, and watches him shoot: it goes in if they're right and misses if they're wrong. Then the numbers appear: that team's numbers, the game's win probabilities and why the model thinks so. Anyone curious can open the docs and see how the model works.
 
 ### Goals
 1. A memorable 3D experience that takes under 10 seconds from landing to seeing a prediction.
@@ -26,51 +26,52 @@ A website that makes an ML model fun to use. A visitor lands on a dark arena sce
 ```
 Land on home
   └─ Scene loads with a featured game (today's next game that hasn't started)
-       ├─ Side cards list all games for the selected day
-       │    └─ Click a card -> players swap jerseys -> scene resets to idle
-       └─ Click "Predict who wins"
-            └─ Cinematic: camera pushes in on winner -> jump shot -> swish
-                 └─ Results overlay: win prob, key factors, player stat lines
-                      ├─ "Back to matchup" -> returns to idle (same game)
-                      └─ "Full breakdown" -> /game/[id]
+       ├─ Today's games in a drawer on the left edge
+       │    └─ Pick a card -> players swap jerseys -> scene resets to idle
+       └─ Click a player (or its team name) to pick that team to win
+            └─ Cinematic: the picked player shoots -> in if the pick is right, off the rim if wrong
+                 └─ Results: right or wrong, the picked team's numbers, the game's numbers
+                      ├─ "<other team> stats" (corner button) -> the other team's numbers
+                      └─ "Home" -> back to the matchup (pick another game from the drawer)
 ```
 
 ### 3.1 Home page (`/`)
 
 **Scene (center)**
-- Two generic, identical-build 3D players facing the camera at slight angles, each wearing their team's colors (city name + number on the chest). Home team on the right, away team on the left (a broadcast convention; keep it consistent).
-- Both loop idle animations (shifting weight, looking around, light bounce). Their loops are offset so they don't move in sync.
-- Above each player, centered over it: team city, record (W-L) and "HOME"/"AWAY", then the nickname. Players are centered on screen and as large as fits with both fully visible.
-- Top center: matchup line, e.g. `BOS @ NYK · Tonight 7:30 PM ET`.
+- Two generic, identical-build 3D players in their team's colors, standing on raised platforms in an arena drawn in light. Home team on the right, away team on the left (a broadcast convention; keep it consistent).
+- Both loop idle animations, with livelier ones now and then (a bounce, a stretch, a look up at the scoreboard). Their loops are offset so they don't move in sync. Their heads follow the cursor a little.
+- Above each player, small: team city, record (W-L) and "HOME"/"AWAY", then the nickname. Players are centered and as large as fits with both fully visible.
+- Top center: a small matchup line, e.g. `TONIGHT · 7:30 PM ET`.
 
-**Primary action**
-- A prominent **Predict who wins** button, horizontally centered between the players and visually anchored at the lower-middle of the viewport.
-- Keyboard accessible (Enter/Space), with a visible focus state.
+**Primary action: pick a winner** (no Predict button)
+- Hovering a player highlights him and makes him a little bigger; clicking him picks his team.
+- Each team name is also a button ("Pick the Boston Celtics to win") for keyboards and touch; focusing it highlights the player. A small line under the players says "Click a player to pick who wins" (or "Tap…" on touch).
+- Picking is off, with the reason shown, when the game is postponed or its prediction isn't published yet. Finished games can always be picked (the final score judges them).
 
 **Today's games** (DESIGN.md section 2)
 - **Only today's games** (ET). No past games and no way to browse other days.
-- Cards sit in a drawer on the left edge that slides out when the mouse nears the left side of the screen (a tab on the edge opens it on touch; keyboard focus opens it too). The cards are flat, hologram-styled, pop out and glow when hovered, and scroll when they don't all fit.
+- A slim column of ticks on the left edge (one per game, in its two teams' colors) shows they're there. The cards sit in a drawer that slides out when the mouse nears the left side (a tap on the ticks opens it on touch; keyboard focus opens it too). The cards are flat, hologram-styled, pop out and glow when hovered, and scroll when they don't all fit.
 - One card per game: both team abbreviations in the two teams' colors, the nicknames, and the tip-off time (user's local timezone) or live/final score.
 - **No games today:** the page says so, with a button to show the closest later day that has games.
 - **Default selection:** today's next game that hasn't started (otherwise today's last game). The URL updates to `/?game=<id>` so it's shareable and refresh-stable; a `?game=` that isn't today's is ignored.
 
-### 3.2 Prediction cinematic
+### 3.2 Pick cinematic
 
 Full storyboard and timings: `docs/DESIGN.md §4`. Requirements:
-- Total length about 4 to 5 seconds, with a **Skip** control visible throughout.
-- The shot outcome reflects confidence. A high-confidence prediction is a clean swish. A near coin-flip rattles around the rim before dropping in.
-- With `prefers-reduced-motion`, or if the user has already watched a cinematic this session and toggled "Instant results", skip straight to results.
+- The picked player shoots. **Right or wrong:** before the game ends, a pick is right when it matches the model's pick; once the game is final, when it matches the real winner.
+- Right: it goes in, and how depends on the model's confidence in that team (clean swish, off the back iron, or a rattle in). Wrong: it misses (around the rim and out if the team had a fair chance, off the front of the rim if not).
+- About 5 to 6 seconds, with a **Skip** control (and Esc) throughout.
+- With `prefers-reduced-motion`, skip straight to results.
 
-### 3.3 Results overlay
+### 3.3 Results screen
 
-Appears over the scene after the swish. The scene stays visible behind it, dimmed.
-- **Winner banner**: team name in its colors, e.g. "Knicks win: 64%".
-- **Win probability bar**: split bar, both teams, percentages.
-- **Why the model thinks so**: top 3 to 5 factors as signed bars (from SHAP), in plain language, e.g. "Celtics on 2nd night of back-to-back: −6%".
-- **Projected player lines**: for each team, the top ~5 players by projected minutes: PTS / REB / AST, plus ranges.
-- **For past (Final) games**: the actual score and a ✓ or ✗ showing whether the model got it right.
-- Buttons: **Back to matchup** (returns to idle), **Full breakdown** (`/game/[id]`).
-- Note: "Predictions are generated daily at ~10 AM ET from data available before tip-off."
+A panel beside the player being viewed; the camera frames that player.
+- **Verdict:** "You're right." or "Not this time.", with why: the model's chance for the pick (and which team it likes), or the final score.
+- **Team numbers** (the picked team first): record, home and away records, last 10, streak, rest (days off, back-to-back), points scored and allowed per game, average margin. Worked out from the season's finished games before this one (`lib/team-stats.ts`).
+- **The game:** the model's win probability for both teams (split bar), the simple Elo baseline, the model's top reasons (factor copy), the season series, the tip-off time.
+- **Corner button** ("NYK stats →") switches to the other team's numbers and frames that player.
+- **Home** (top left) goes back to the matchup, where the drawer offers today's other games.
+- Player stat projections come in Phase 9.
 
 ### 3.4 Other pages (nav bar)
 
@@ -102,8 +103,8 @@ On every page except home: "Unofficial fan project. Not affiliated with the NBA.
 
 ## 5. Edge cases
 
-- **Game postponed or cancelled**: the card shows "Postponed". Predict is disabled with an explanation.
-- **Prediction missing** (pipeline failed): the card shows "Prediction pending". The scene still loads and Predict is disabled.
+- **Game postponed or cancelled**: the card shows "Postponed". Picking is off, with an explanation.
+- **Prediction missing** (pipeline failed): the hint under the players says the prediction is pending. The scene still loads and picking is off (unless the game is already final).
 - **Live game**: the prediction is still the pre-game one. The card shows the live score with a "Live" badge, and results include "Pre-game prediction".
 - **Same team colors clash** (e.g. two red teams): use the away team's alternate color (see `shared/teams.json` `jersey.away`).
 - **Very slow device**: auto-reduce quality (lower DPR, disable post-processing) using a performance monitor.

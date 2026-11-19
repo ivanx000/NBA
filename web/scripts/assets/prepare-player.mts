@@ -10,6 +10,7 @@
  * 3. Report the right-hand bone, the model height and the JumpShot jump peak (the release).
  * 4. Optimize: dedup, prune, resample keyframes, WebP textures, meshopt compression.
  */
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,6 +27,7 @@ import {
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import sharp from "sharp";
 
+import { BATCH_DIR, copyAnimation, libraryName } from "./build-motion-library.mjs";
 import { clipReports, findNode, MAX_DRIFT_M, trimWithLeadIn } from "./clips.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -60,7 +62,36 @@ const TRIMS: Record<string, { from: number; leadIn: number }> = {
   Idle_03: { from: 2.5, leadIn: 0.8 },
 };
 
-export const REQUIRED_CLIPS = ["Idle", "Idle_02", "Idle_03", "Idle_Look", "JumpShot", "Celebrate"];
+/**
+ * Subtle, in-place clips from the motion library (assets-src/motions batches, docs/ASSET_PIPELINE.md
+ * section 4) that the site uses: more idle variety, and a head shake for a missed pick.
+ */
+export const FROM_LIBRARY = [
+  "BounceLoose",
+  "ArmSwings",
+  "ShoulderStretch",
+  "NeckRoll",
+  "FocusBreath",
+  "AdjustJersey",
+  "LookUpScoreboard",
+  "HeadShake",
+];
+
+export const REQUIRED_CLIPS = ["Idle", "Idle_02", "Idle_03", "Idle_Look", "JumpShot", "Celebrate", ...FROM_LIBRARY];
+
+/** Copy ``FROM_LIBRARY`` from the motion batches into ``doc`` (bones match by name). */
+async function addLibraryClips(io: NodeIO, doc: Document) {
+  const wanted = new Set(FROM_LIBRARY);
+  const files = fs.readdirSync(BATCH_DIR).filter((f) => /^batch_.*\.glb$/.test(f)).sort();
+  for (const file of files) {
+    const batch = await io.read(path.join(BATCH_DIR, file));
+    for (const anim of batch.getRoot().listAnimations()) {
+      const name = libraryName(anim.getName());
+      if (name && wanted.delete(name)) copyAnimation(anim, doc, name);
+    }
+  }
+  if (wanted.size) throw new Error(`motion batches lack: ${[...wanted].join(", ")}`);
+}
 
 const BUDGET_BYTES = 4 * 1024 * 1024;
 
@@ -101,6 +132,7 @@ async function main() {
   const doc = await io.read(input);
 
   renameClips(doc);
+  await addLibraryClips(io, doc);
   for (const [name, { from, leadIn }] of Object.entries(TRIMS)) {
     const anim = doc.getRoot().listAnimations().find((a) => a.getName() === name);
     if (!anim) throw new Error(`trim: no clip ${name}`);

@@ -1,7 +1,7 @@
 /**
  * Camera framing for the home scene: the two players centered on screen and as big as possible
- * between the team names (top) and the Predict button (bottom), each standing under its team
- * name, with both fully visible.
+ * between the team names (top) and the pick hint (bottom), each standing on its platform under
+ * its team name, with both fully visible.
  */
 
 export interface Viewport {
@@ -27,17 +27,17 @@ export interface Framing {
   playerX: number;
 }
 
-/** A player from the soles to just over the head (1.98 m model), with a little air. */
-const BOX_HEIGHT = 2.12;
-const BOX_BOTTOM = -0.04;
+/** From the bottom of the platform (0.16 m) to just over the head (1.98 m model). */
+const BOX_BOTTOM = -0.18;
+const BOX_HEIGHT = 2.06 - BOX_BOTTOM;
 /** Width of one player with arms at rest. */
 const PLAYER_WIDTH = 0.8;
 
 export function freeRegion({ width }: Viewport): FreeRegion {
-  // Nav, matchup line and team names on top; the Predict button at the bottom.
-  if (width >= 1024) return { top: 175, bottom: 104, side: 40 };
-  if (width >= 640) return { top: 165, bottom: 100, side: 24 };
-  return { top: 150, bottom: 96, side: 10 };
+  // Nav, matchup line and the (small) team names on top; a one-line hint at the bottom.
+  if (width >= 1024) return { top: 132, bottom: 44, side: 40 };
+  if (width >= 640) return { top: 124, bottom: 44, side: 24 };
+  return { top: 112, bottom: 44, side: 18 };
 }
 
 /**

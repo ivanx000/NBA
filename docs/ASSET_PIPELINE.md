@@ -114,10 +114,12 @@ cd web && pnpm assets:player   # -> public/models/player.glb (≤ 4 MB, checked)
 ```
 `scripts/assets/prepare-player.mts` renames clips (Text to Motion clips are exported under their task id, so new ones must be added to its `CLIP_NAMES`), checks every clip is in place (hips drift ≤ 0.15 m), prints the height, the hand bone and the jump peak, then optimizes: dedup, prune, resample, WebP textures (1024, roughness/metal 512) and meshopt.
 
+`player.glb` also takes eight subtle, in-place clips from the motion library batches (`FROM_LIBRARY` in `prepare-player.mts`): `BounceLoose`, `ArmSwings`, `ShoulderStretch`, `NeckRoll`, `FocusBreath`, `AdjustJersey` and `LookUpScoreboard` for idle variety, and `HeadShake` after a missed pick. It's 2.46 MB with them (budget 4 MB, checked by `lib/asset-budget.test.ts`). Rebuilding needs the batches in `assets-src/motions/`.
+
 `Idle_03` is trimmed in `prepare-player.mts` (`TRIMS`): the original leans back into a full-body stretch first; the kept part starts at 2.5 s (the arm and shoulder stretch) with a 0.8 s ease in from the clip's first pose, so loops still blend. `trimWithLeadIn` in `scripts/assets/clips.mts` does this for any clip.
 
 ### Motion library (for later)
-Extra clips live in `web/public/models/motion-library.glb` (skeleton and animations only, no mesh; about 3.3 MB) with an index in `motion-library.json` (name, seconds, hips drift, in place or not, source). They target bones by name, so they play on `player.glb` (`<Player extraClips={...}>`). Browse them in `/dev/jerseys` under **Library**. The home page doesn't load this file.
+Extra clips live in `web/public/models/motion-library.glb` (skeleton and animations only, no mesh; about 3.3 MB) with an index in `motion-library.json` (name, seconds, hips drift, in place or not, source). They target bones by name, so they play on `player.glb` (`<Player extraClips={...}>`). Browse them in `/dev/jerseys` under **Library**. The home page doesn't load this file; the clips it uses are copied into `player.glb`.
 
 63 clips: 28 made with Text to Motion (280 credits, prompts asked for subtle, natural, in-place motion) and 35 free library presets.
 

@@ -26,7 +26,7 @@ describe("frameCamera", () => {
       const f = frameCamera(vp, FOV);
       const r = freeRegion(vp);
       const head = project(f, vp, 0, 2.05);
-      const feet = project(f, vp, 0, 0);
+      const feet = project(f, vp, 0, -0.16); // bottom of the platform
       expect(head.top).toBeGreaterThanOrEqual(r.top - 1);
       expect(feet.top).toBeLessThanOrEqual(vp.height - r.bottom + 1);
       expect(project(f, vp, -f.playerX - 0.4, 1).left).toBeGreaterThanOrEqual(r.side - 1);
@@ -41,7 +41,7 @@ describe("frameCamera", () => {
     for (const vp of VIEWPORTS.slice(0, 3)) {
       const f = frameCamera(vp, FOV);
       const height = project(f, vp, 0, 0).top - project(f, vp, 0, 1.98).top;
-      expect(height / vp.height).toBeGreaterThan(0.55);
+      expect(height / vp.height).toBeGreaterThan(0.65);
     }
   });
 });

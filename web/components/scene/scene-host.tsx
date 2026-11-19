@@ -45,7 +45,7 @@ class SceneErrorBoundary extends Component<{ fallback: ReactNode; children: Reac
 /** The 3D arena, or 2D team panels when WebGL is unavailable or the scene crashes (PRD F8). */
 export function SceneHost(props: ArenaSceneProps) {
   const webgl = useSyncExternalStore<boolean | null>(noop, detectWebGL, () => null);
-  const fallback = <Fallback2D game={props.game} winner={props.phase === "idle" ? null : props.winner} />;
+  const fallback = <Fallback2D game={props.game} winner={props.phase === "idle" ? null : props.pick} />;
   if (webgl === null) return <Loader />;
   if (!webgl) return fallback;
   return (

@@ -40,7 +40,7 @@ export function pointsMaterial(size: number, twinkle: number): THREE.ShaderMater
         float tw = 1.0 - uTwinkle * (0.5 + 0.5 * sin(uTime * (0.6 + aSeed * 2.2) + aSeed * 40.0));
         gl_PointSize = uSize * aSize * uPixelRatio / max(-mv.z, 0.5);
         vColor = color * tw;
-        vFade = 1.0 - smoothstep(14.0, 40.0, -mv.z);
+        vFade = 1.0 - smoothstep(24.0, 60.0, -mv.z);
       }`,
     fragmentShader: /* glsl */ `
       uniform float uOpacity;

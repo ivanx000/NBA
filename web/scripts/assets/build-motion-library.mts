@@ -20,7 +20,7 @@ import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import { clipReports, findNode, MAX_DRIFT_M } from "./clips.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const BATCH_DIR = path.join(repoRoot, "assets-src/motions");
+export const BATCH_DIR = path.join(repoRoot, "assets-src/motions");
 const OUTPUT = path.join(repoRoot, "web/public/models/motion-library.glb");
 /** Index of the library (name, seconds, drift), read by /dev/jerseys. */
 const INDEX = path.join(repoRoot, "web/public/models/motion-library.json");
@@ -82,7 +82,7 @@ export function libraryName(meshyName: string): string | null {
 }
 
 /** Copy ``anim`` from another document into ``target``, matching bones by name. */
-function copyAnimation(anim: Animation, target: Document, name: string) {
+export function copyAnimation(anim: Animation, target: Document, name: string) {
   const nodes = new Map(target.getRoot().listNodes().map((n) => [n.getName(), n]));
   const buffer = target.getRoot().listBuffers()[0];
   const copy = target.createAnimation(name);

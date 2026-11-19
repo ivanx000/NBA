@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SceneHost } from "@/components/scene/scene-host";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useScene } from "@/lib/scene-store";
 import { dayLabel } from "@/lib/dates";
-import { defaultGame, predictBlocker, predictedWinner, type Slate } from "@/lib/slate";
+import { defaultGame, pickBlocker, type Slate } from "@/lib/slate";
 
 import { GameDrawer } from "./game-drawer";
 import { MatchupHeader } from "./matchup-header";
-import { ResultPanel } from "./result-panel";
+import { ResultsView } from "./results-view";
 import { TeamLabel } from "./team-label";
 import "./home.css";
 
@@ -40,15 +40,13 @@ export function HomeExperience({
   syncUrl: boolean;
 }) {
   const reducedMotion = useReducedMotion();
-  const { phase, gameId, send, reset, setInstantResults, cinematic } = useScene();
+  const { phase, gameId, pick, viewing, send, reset, setInstantResults, cinematic } = useScene();
   // No games today: the visitor can ask for the next game day instead.
   const [showNext, setShowNext] = useState(false);
   const day = showNext && slate.next ? slate.next.day : slate.today;
   const shown = showNext && slate.next ? slate.next.games : slate.games;
   const selectedId = gameId ?? initialGameId;
   const game = shown.find((g) => g.gameId === selectedId) ?? null;
-  const winner = game ? predictedWinner(game) : null;
-  const predictRef = useRef<HTMLButtonElement>(null);
 
   // First load: select the server's pick and make the URL shareable.
   useEffect(() => {
@@ -76,11 +74,6 @@ export function HomeExperience({
     return () => window.removeEventListener("keydown", onKey);
   }, [send]);
 
-  // Return focus to Predict after going back.
-  useEffect(() => {
-    if (phase === "idle") predictRef.current?.focus({ preventScroll: true });
-  }, [phase]);
-
   const selectGame = (id: string) => {
     send({ type: "select", gameId: id });
     window.history.replaceState(null, "", urlFor(id));
@@ -94,61 +87,55 @@ export function HomeExperience({
     if (first) window.history.replaceState(null, "", urlFor(first.gameId));
   };
 
-  const blocker = game ? predictBlocker(game) : null;
+  const blocker = game ? pickBlocker(game) : null;
   const animating = phase === "revealing" || phase === "shooting";
   const dayName = dayLabel(day, slate.today);
   const heading = dayName === "Tonight" ? "Today's games" : `${dayName} games`;
-
-  const predictArea =
-    game && (phase === "results" || phase === "returning") ? (
-      <ResultPanel game={game} onBack={() => send({ type: "back" })} />
-    ) : game && animating ? (
-      // The button becomes a thin line running while the shot plays.
-      <div className="cinematic-progress" role="progressbar" aria-label="Playing the prediction" />
-    ) : game ? (
-      <button
-        ref={predictRef}
-        type="button"
-        disabled={Boolean(blocker)}
-        aria-describedby={blocker ? "predict-blocker" : undefined}
-        onClick={() => send({ type: "predict" })}
-        className="predict-button"
-      >
-        Predict who wins
-      </button>
-    ) : null;
+  const onPick = blocker ? undefined : (side: "home" | "away") => send({ type: "predict", pick: side });
 
   return (
     <main id="main" className="relative h-svh min-h-[560px] overflow-hidden bg-background">
       <div className="absolute inset-0">
-        <SceneHost game={game} phase={phase} winner={winner} reducedMotion={reducedMotion} />
+        <SceneHost
+          game={game}
+          phase={phase}
+          pick={pick}
+          viewing={viewing}
+          pickable={Boolean(onPick) && phase === "idle"}
+          reducedMotion={reducedMotion}
+        />
       </div>
 
       {game ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col pt-16 pb-6 sm:pb-8">
-          {/* The loser's name dims at the reveal, then both fade as the camera moves in; they come back with the home shot. */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col pt-14 pb-5">
+          {/* The names fade as the camera moves in and come back with the home shot. */}
           <div className={`transition-opacity duration-500 ${phase === "idle" ? "" : "opacity-0 delay-300"}`}>
             <MatchupHeader game={game} today={slate.today} />
           </div>
-          {/* Team names over each player; the players are centered, so the columns are too. */}
+          {/* Team names over each player (centered, so the columns are too). They're also the
+              keyboard and touch way to pick: focusing one highlights its player. */}
           <div
-            className={`mx-auto mt-3 grid w-full max-w-[1100px] grid-cols-2 gap-4 px-4 transition-opacity duration-500 sm:mt-5 sm:px-10 ${
-              phase === "idle" ? "" : "opacity-0 delay-300"
+            className={`mx-auto mt-2 grid w-full max-w-[1100px] grid-cols-2 gap-4 px-4 transition-opacity duration-500 sm:px-10 ${
+              phase === "idle" ? "" : "invisible opacity-0 delay-300"
             }`}
           >
-            <TeamLabel team={game.away} side="away" neutral={game.isNeutral}
-                       dimmed={phase !== "idle" && winner === "home"} />
-            <TeamLabel team={game.home} side="home" neutral={game.isNeutral}
-                       dimmed={phase !== "idle" && winner === "away"} />
+            <TeamLabel team={game.away} side="away" neutral={game.isNeutral} onPick={onPick} />
+            <TeamLabel team={game.home} side="home" neutral={game.isNeutral} onPick={onPick} />
           </div>
           <div className="flex-1" />
-          <div className="pointer-events-auto flex flex-col items-center gap-2 px-4">
-            {predictArea}
-            {blocker && (
-              <p id="predict-blocker" className="max-w-xs text-center text-xs text-muted-foreground">
-                {blocker}
+          <div className="flex flex-col items-center gap-2 px-4">
+            {animating ? (
+              <div className="cinematic-progress" role="progressbar" aria-label="Playing your pick" />
+            ) : phase === "idle" ? (
+              <p className="pick-hint">
+                {blocker ?? (
+                  <>
+                    <span className="pick-hint__mouse">Click a player to pick who wins</span>
+                    <span className="pick-hint__touch">Tap a player to pick who wins</span>
+                  </>
+                )}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       ) : (
@@ -174,6 +161,16 @@ export function HomeExperience({
         </div>
       )}
 
+      {game && pick && viewing && phase === "results" && (
+        <ResultsView
+          game={game}
+          pick={pick}
+          viewing={viewing}
+          onView={(side) => send({ type: "view", side })}
+          onHome={() => send({ type: "back" })}
+        />
+      )}
+
       {animating && (
         <button
           type="button"
@@ -184,7 +181,7 @@ export function HomeExperience({
         </button>
       )}
 
-      {shown.length > 0 && (
+      {shown.length > 0 && phase !== "results" && (
         <GameDrawer
           games={shown}
           heading={heading}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { APEX_ABOVE_M, FLIGHT_S, shotOutcome, shotPath, type Vec3 } from "@/lib/shot-path";
+import { APEX_ABOVE_M, FLIGHT_S, pickShot, shotOutcome, shotPath, type Vec3 } from "@/lib/shot-path";
 
 const release: Vec3 = { x: 0.6, y: 2.6, z: -0.2 };
 const rim: Vec3 = { x: 0.6, y: 3.05, z: -6.8 };
@@ -17,22 +17,47 @@ describe("shotOutcome", () => {
   });
 });
 
+describe("pickShot", () => {
+  it("goes in when the pick is right and misses when it's wrong", () => {
+    expect(pickShot(true, 0.75)).toBe("swish");
+    expect(pickShot(true, 0.45)).toBe("rattle"); // right against the model (final score)
+    expect(pickShot(false, 0.45)).toBe("rimOut");
+    expect(pickShot(false, 0.25)).toBe("brick");
+  });
+});
+
 describe("shotPath", () => {
   for (const outcome of ["swish", "backIron", "rattle"] as const) {
     it(`${outcome}: starts in the hand, goes in, ends under the rim`, () => {
       const path = shotPath(release, rim, outcome);
       expect(dist(path.at(0), release)).toBeLessThan(1e-9);
-      // Through the rim at makeAt: inside the ring, at rim height.
-      const make = path.at(path.makeAt);
+      // Through the rim when it is decided: inside the ring, at rim height.
+      expect(path.made).toBe(true);
+      const make = path.at(path.decidedAt);
       expect(Math.hypot(make.x - rim.x, make.z - rim.z)).toBeLessThan(0.23);
       expect(Math.abs(make.y - rim.y)).toBeLessThan(0.1);
       const end = path.at(path.duration);
       expect(end.y).toBeLessThan(rim.y - 0.5);
       expect(Math.hypot(end.x - rim.x, end.z - rim.z)).toBeLessThan(0.23);
-      expect(path.makeAt).toBeGreaterThanOrEqual(FLIGHT_S);
+      expect(path.decidedAt).toBeGreaterThanOrEqual(FLIGHT_S);
       expect(path.at(path.duration + 5)).toEqual(end);
     });
 
+  }
+
+  for (const outcome of ["rimOut", "brick"] as const) {
+    it(`${outcome}: touches the rim, then ends outside it and below`, () => {
+      const path = shotPath(release, rim, outcome);
+      expect(path.made).toBe(false);
+      const touch = path.at(path.decidedAt);
+      expect(Math.abs(Math.hypot(touch.x - rim.x, touch.z - rim.z) - 0.17)).toBeLessThan(0.03);
+      const end = path.at(path.duration);
+      expect(Math.hypot(end.x - rim.x, end.z - rim.z)).toBeGreaterThan(0.5);
+      expect(end.y).toBeLessThan(rim.y - 1);
+    });
+  }
+
+  for (const outcome of ["swish", "backIron", "rattle", "rimOut", "brick"] as const) {
     it(`${outcome}: moves smoothly (no jumps between samples)`, () => {
       const path = shotPath(release, rim, outcome);
       let prev = path.at(0);
@@ -52,7 +77,7 @@ describe("shotPath", () => {
   });
 
   it("takes longer to go in the closer the game is", () => {
-    const [a, b, c] = (["swish", "backIron", "rattle"] as const).map((o) => shotPath(release, rim, o).makeAt);
+    const [a, b, c] = (["swish", "backIron", "rattle"] as const).map((o) => shotPath(release, rim, o).decidedAt);
     expect(a).toBeLessThan(b);
     expect(b).toBeLessThan(c);
   });

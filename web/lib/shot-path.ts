@@ -10,7 +10,7 @@ export interface Vec3 {
   z: number;
 }
 
-export type ShotOutcome = "swish" | "backIron" | "rattle";
+export type ShotOutcome = "swish" | "backIron" | "rattle" | "rimOut" | "brick";
 
 /** Clean swish when confident, back iron in the middle, a rattle in when it's close to a coin flip. */
 export function shotOutcome(winnerProb: number): ShotOutcome {
@@ -19,12 +19,28 @@ export function shotOutcome(winnerProb: number): ShotOutcome {
   return "rattle";
 }
 
+/**
+ * The shot for a user's pick: it goes in when the pick is right (by how confident the model is in
+ * that team), and misses when it's wrong: around the rim and out when the picked team had a fair
+ * chance (40%+), off the front of the rim when it didn't.
+ */
+export function pickShot(right: boolean, pickProb: number): ShotOutcome {
+  if (right) return shotOutcome(pickProb);
+  return pickProb >= 0.4 ? "rimOut" : "brick";
+}
+
+export const isMake = (o: ShotOutcome) => o === "swish" || o === "backIron" || o === "rattle";
+
 export interface ShotPath {
   outcome: ShotOutcome;
-  /** Seconds from release to the end of the path (the ball has dropped through the net). */
+  made: boolean;
+  /** Seconds from release to the end of the path (through the net, or off the rim and down). */
   duration: number;
-  /** Seconds from release until the ball goes through the rim (flash, sparks, net wobble). */
-  makeAt: number;
+  /**
+   * Seconds from release to the moment that decides it: through the rim for a make (flash, sparks,
+   * net swing), off the rim for a miss.
+   */
+  decidedAt: number;
   /** Ball center at ``t`` seconds after release (clamped to the path). */
   at(t: number): Vec3;
 }
@@ -40,6 +56,16 @@ const DROP_S = 0.35;
 const DROP_M = 0.9;
 
 type Segment = { duration: number; at: (u: number) => Vec3 };
+
+/** Rolling around the rim from its far side: ``turns`` laps, at radius ``radius(u)``, settling a little. */
+function roll(rim: Vec3, dir: Vec3, turns: number, radius: (u: number) => number): (u: number) => Vec3 {
+  const start = Math.atan2(dir.z, dir.x);
+  return (u) => {
+    const angle = start + u * Math.PI * 2 * turns;
+    const r = radius(u);
+    return { x: rim.x + Math.cos(angle) * r, y: rim.y + 0.05 * (1 - u) + 0.015 * Math.sin(u * 18), z: rim.z + Math.sin(angle) * r };
+  };
+}
 
 const add = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
 const scale = (a: Vec3, k: number): Vec3 => ({ x: a.x * k, y: a.y * k, z: a.z * k });
@@ -66,11 +92,14 @@ export function shotPath(release: Vec3, rim: Vec3, outcome: ShotOutcome): ShotPa
   const dir = { x: dx / len, y: 0, z: dz / len };
   const front = add(add(rim, scale(dir, -RIM_TOUCH)), up(0.06));
   const back = add(add(rim, scale(dir, RIM_TOUCH)), up(0.06));
-  const end = outcome === "swish" ? add(rim, up(0.02)) : outcome === "backIron" ? back : front;
 
+  const end =
+    outcome === "swish" ? add(rim, up(0.02)) : outcome === "backIron" || outcome === "rimOut" ? back : front;
   const flight = arc(release, end, Math.max(release.y, end.y) + APEX_ABOVE_M);
   // A slight acceleration over the flight (between linear and GSAP's power1.in).
   const segments: Segment[] = [{ duration: FLIGHT_S, at: (u) => flight(0.55 * u + 0.45 * u * u) }];
+  const made = isMake(outcome);
+  let decidedAt = FLIGHT_S;
   if (outcome === "backIron") {
     // Off the back iron, up a little, and down through the middle.
     const bounce = arc(back, add(rim, up(0.02)), rim.y + 0.4);
@@ -78,27 +107,34 @@ export function shotPath(release: Vec3, rim: Vec3, outcome: ShotOutcome): ShotPa
   } else if (outcome === "rattle") {
     // Off the front rim, up and over to the back, then around the rim before it drops.
     const toBack = add(add(rim, scale(dir, RIM_TOUCH)), up(0.05));
-    const bounce = arc(front, toBack, rim.y + 0.55);
-    segments.push({ duration: 0.5, at: bounce });
-    const start = Math.atan2(dir.z, dir.x);
-    segments.push({
-      duration: 0.7,
-      at: (u) => {
-        const angle = start + u * Math.PI * 2 * 1.25;
-        const r = RIM_TOUCH * (1 - u);
-        return { x: rim.x + Math.cos(angle) * r, y: rim.y + 0.05 * (1 - u) + 0.015 * Math.sin(u * 18), z: rim.z + Math.sin(angle) * r };
-      },
-    });
+    segments.push({ duration: 0.5, at: arc(front, toBack, rim.y + 0.55) });
+    segments.push({ duration: 0.7, at: roll(rim, dir, 1.25, (u) => RIM_TOUCH * (1 - u)) });
+  } else if (outcome === "rimOut") {
+    // Off the back iron, around the rim, and out the side.
+    segments.push({ duration: 0.75, at: roll(rim, dir, 0.85, () => RIM_TOUCH) });
+    const out = segments.at(-1)!.at(1);
+    const away = { x: out.x - rim.x, y: 0, z: out.z - rim.z };
+    const k = Math.hypot(away.x, away.z) || 1;
+    const landing = { x: rim.x + (away.x / k) * 0.9, y: rim.y - 1.6, z: rim.z + (away.z / k) * 0.9 };
+    segments.push({ duration: 0.6, at: arc(out, landing, rim.y + 0.12) });
+    decidedAt = FLIGHT_S + 0.75;
+  } else if (outcome === "brick") {
+    // Off the front of the rim and back toward the shooter.
+    const landing = add(add(rim, scale(dir, -1.8)), up(-1.8));
+    segments.push({ duration: 0.7, at: arc(front, landing, rim.y + 0.4) });
   }
-  const makeAt = segments.reduce((s, seg) => s + seg.duration, 0);
-  const entry = segments.at(-1)!.at(1);
-  segments.push({ duration: DROP_S, at: (u) => add(entry, up(-DROP_M * u * u)) });
-  const duration = makeAt + DROP_S;
+  if (made) {
+    decidedAt = segments.reduce((s, seg) => s + seg.duration, 0);
+    const entry = segments.at(-1)!.at(1);
+    segments.push({ duration: DROP_S, at: (u) => add(entry, up(-DROP_M * u * u)) });
+  }
+  const duration = segments.reduce((s, seg) => s + seg.duration, 0);
 
   return {
     outcome,
+    made,
     duration,
-    makeAt,
+    decidedAt,
     at(t) {
       let rest = Math.min(Math.max(t, 0), duration);
       for (const seg of segments) {

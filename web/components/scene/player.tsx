@@ -6,7 +6,14 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 
-import { CLIPS, type ClipName, PLAYER_HEIGHT_M, PLAYER_MODEL_URL, UNIFORM_MASK_URL } from "@/lib/scene-config";
+import {
+  CLIPS,
+  type ClipName,
+  IDLE_EXTRA_CHANCE,
+  PLAYER_HEIGHT_M,
+  PLAYER_MODEL_URL,
+  UNIFORM_MASK_URL,
+} from "@/lib/scene-config";
 import type { JerseyColorway } from "@/lib/teams";
 
 import { makeTintMaterial } from "./tint-material";
@@ -49,6 +56,7 @@ export function Player({
   idleVariety = true,
   timeOffset = 0,
   speed = 1,
+  lookAt = false,
   ...group
 }: {
   colors: JerseyColorway;
@@ -71,6 +79,8 @@ export function Player({
   timeOffset?: number;
   /** Playback speed of one-shot clips (1 = as captured). */
   speed?: number;
+  /** Turn the head a little toward the cursor (DESIGN.md section 3, idle). */
+  lookAt?: boolean;
 } & Omit<React.ComponentProps<"group">, "children">) {
   const gltf = useGLTF(PLAYER_MODEL_URL);
   // One clone per player: its own skeleton, so two players can animate independently.
@@ -181,10 +191,15 @@ export function Player({
       const playing = current;
       return () => void playing.fadeOut(0.3);
     }
-    // Idle variety: after each loop, cross-fade to another idle clip.
+    // Idle variety: after each loop, cross-fade to another idle. Mostly plain idles, with a livelier
+    // one (a bounce, a stretch, a look up at the scoreboard) now and then, never two in a row.
+    const extras: readonly string[] = CLIPS.idleExtras;
     const onLoop = (e: { action: THREE.AnimationAction }) => {
       if (e.action !== current) return;
-      const options = CLIPS.idle.filter((c) => c !== current!.getClip().name && actions[c]);
+      const now = current!.getClip().name;
+      const pool: readonly string[] =
+        !extras.includes(now) && Math.random() < IDLE_EXTRA_CHANCE ? extras : CLIPS.idle;
+      const options = pool.filter((c) => c !== now && actions[c]);
       const next = actions[options[Math.floor(Math.random() * options.length)]];
       if (!next) return;
       next.reset().play();
@@ -197,6 +212,45 @@ export function Player({
       current?.fadeOut(0.3);
     };
   }, [actions, mixer, clip, idleVariety, timeOffset, speed, paused]);
+
+  // Look-at: after the mixer has posed him (useAnimations' frame runs first), turn the head and
+  // neck toward where the cursor points, a little, eased and clamped.
+  const look = useRef({ yaw: 0, pitch: 0, head: null as THREE.Object3D | null, neck: null as THREE.Object3D | null });
+  const tmp = useRef({ ray: new THREE.Raycaster(), plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), -2.5), hit: new THREE.Vector3(), head: new THREE.Vector3(), q: new THREE.Quaternion(), e: new THREE.Euler() });
+  useFrame(({ pointer, camera }, dt) => {
+    const l = look.current;
+    if (!l.head && root.current) {
+      l.head = root.current.getObjectByName("mixamorigHead") ?? null;
+      l.neck = root.current.getObjectByName("mixamorigNeck") ?? null;
+    }
+    if (!l.head) return;
+    let yaw = 0;
+    let pitch = 0;
+    if (lookAt) {
+      const t = tmp.current;
+      // Where the cursor points, on a plane in front of the players.
+      t.ray.setFromCamera(pointer, camera);
+      if (t.ray.ray.intersectPlane(t.plane, t.hit)) {
+        l.head.getWorldPosition(t.head);
+        const d = t.hit.sub(t.head);
+        // Relative to the way his body faces.
+        root.current!.getWorldQuaternion(t.q);
+        const facing = t.e.setFromQuaternion(t.q, "YXZ").y;
+        yaw = THREE.MathUtils.clamp(Math.atan2(d.x, d.z) - facing, -0.45, 0.45);
+        pitch = THREE.MathUtils.clamp(-Math.atan2(d.y, Math.hypot(d.x, d.z)), -0.25, 0.2);
+      }
+    }
+    const k = Math.min(1, dt * 3);
+    l.yaw += (yaw - l.yaw) * k;
+    l.pitch += (pitch - l.pitch) * k;
+    if (Math.abs(l.yaw) < 1e-4 && Math.abs(l.pitch) < 1e-4) return;
+    // Split between neck and head so it reads as a natural turn.
+    for (const [bone, share] of [[l.neck, 0.4], [l.head, 0.6]] as const) {
+      if (!bone) continue;
+      bone.rotateY(l.yaw * share);
+      bone.rotateX(l.pitch * share);
+    }
+  });
 
   return (
     <group {...group}>
