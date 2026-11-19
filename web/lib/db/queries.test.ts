@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { teams } from "@/lib/teams";
 
-import { fetchGameDetail, fetchSlate } from "./queries";
+import { fetchGameDetail, fetchGradedSeasons, fetchSlate } from "./queries";
 import * as schema from "./schema";
 
 const URL =
@@ -108,5 +108,26 @@ describe("fetchGameDetail", () => {
     expect(detail?.series.map((g) => g.gameDate)).toEqual(["2026-11-10", "2026-11-12"]);
     expect(detail?.form.away.map((g) => g.won)).toEqual([true, true]);
     expect(await fetchGameDetail(db, "nope")).toBeNull();
+  });
+});
+
+describe("fetchGradedSeasons", () => {
+  it("returns finished games with their pregame prediction, by season", async () => {
+    if (!available) return;
+    const db = drizzle(pool, { schema });
+    // Only 0022600003 has a prediction, and it isn't final yet: nothing to grade.
+    expect(await fetchGradedSeasons(db)).toEqual([]);
+    await pool.query("update games set status = 'final', home_score = 100, away_score = 90 where game_id = '0022600003'");
+    try {
+      const [season] = await fetchGradedSeasons(db);
+      expect(season.season).toBe("2026-27");
+      // The live prediction (0.64) wins over the backfill one (0.40).
+      expect(season.games).toEqual([
+        expect.objectContaining({ gameId: "0022600003", homeAbbr: "NYK", awayAbbr: "BOS", homeWinProb: expect.closeTo(0.64, 5),
+                                  eloHomeWinProb: expect.closeTo(0.58, 5), source: "live" }), // prettier-ignore
+      ]);
+    } finally {
+      await pool.query("update games set status = 'scheduled', home_score = null, away_score = null where game_id = '0022600003'");
+    }
   });
 });

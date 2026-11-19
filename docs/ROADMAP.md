@@ -173,7 +173,7 @@ Notes:
 ## Phase 8: Results + content pages
 - [x] Results overlay: win prob bar, factor bars, Final-game ✓/✗ (player lines placeholder until Phase 9)
 - [x] `/game/[id]` + OG image
-- [ ] `/performance`: tiles, rolling accuracy, calibration, recent table
+- [x] `/performance`: tiles, rolling accuracy, calibration, recent table
 - [ ] `/docs` MDX setup with sidebar + TOC. Write the pages listed in ML_PLAN §8 and an architecture page.
 - [ ] `/how-it-works` scroll story
 
@@ -181,6 +181,11 @@ Notes:
 - Part 1 done: the results screen's reasons are bars in the favored team's color, finished games get a "Final · … · ✓ Model correct" badge, and "Full breakdown" links to `/game/[id]`. That page works for any game (past ones too, for `/performance`): win chance with the Elo baseline and where the prediction came from (live or walk-forward backtest), the reasons, both teams' numbers and last-10 strips, the season series game by game, and a placeholder for player lines. Its link preview (`opengraph-image.tsx`) shows the matchup and both win chances in the teams' glow colors.
 - Win bars use the teams' glow colors (`hologramMatchup`), not jersey colors: a black jersey (Heat) disappears on the dark background.
 - Inner pages scroll under the fixed nav, so it now has a dark glass backing there (not on home).
+- Part 2 done: `/performance` grades every finished regular-season game that had a pregame prediction (the `current_game_predictions` view: live beats backfill). This season mixes live picks and walk-forward backtest picks, labeled; a toggle shows last season's full backtest. Tiles (accuracy, log loss, Brier, games) show Elo and the home-team baseline under the model, the headline says plainly whether the model is ahead of or behind Elo, then the rolling 50-game accuracy, calibration from the favorite's side (50–60% … 90–100%, with a table), the most confident hits and misses, and the last 150 picks with filters (right/missed, live/backtest) linking to `/game/[id]`.
+- Last season reads 67.0% vs Elo 69.2% on 1,230 games, matching the one-time test report (`ml/reports/test_2025-26.json`), so the page and the pipeline agree.
+- The home-team baseline uses a constant 56.8% (the training home win rate), as `tipoff` does; home teams are only 49.5% this season so far.
+- Recharts is pinned to 3.10.1: 3.11.0 was two days old.
+- After adding a new `'use cache'` export to `lib/db/queries.ts`, the dev server served the old module ("… is not a function") until restarted with `web/.next` cleared.
 
 ## Phase 9: Player stat projections
 - [ ] Minutes model + per-minute rate models + quantile intervals, compared against the last-10 baseline
