@@ -1,0 +1,47 @@
+Leakage is when a model learns from information it wouldn't have had at prediction time. For game
+prediction it's easy to do by accident (one rolling average that includes tonight's game is enough)
+and it makes a model look far better on paper than it is. Tip-Off guards against it by rule and by test.
+
+## The rules
+
+1. A feature row for a game on date `D` may only use games with `game_date < D`. Same-day games are
+   excluded too: they're simultaneous.
+2. Every rolling or expanding statistic is computed on a team's sorted series and then shifted by one
+   game (`.shift(1)`), so a game never sees itself.
+3. Season-to-date stats reset at season boundaries and lean on last season's prior early on.
+4. Elo is updated **after** each game and read **before** it.
+5. Scaling and encoding are fit inside the training data only (scikit-learn `Pipeline`).
+6. Splits are by time, never random: train 2015-16 to 2023-24, validate on 2024-25, test on 2025-26.
+   The data loader can't return the test season during training at all.
+
+## The test
+
+`ml/tests/test_no_leakage.py` runs on a synthetic league in CI. It checks three things:
+
+- **Perturbation:** change every result on a date `D`. The rows for `D`'s games must not change at
+  all, while later rows must (so the test can't pass by accident).
+- **Truncation:** delete everything after `D` and blank `D`'s results, as on game day. The rows for
+  `D`'s games must equal the full build exactly. This also proves the upcoming-game path matches
+  training.
+- **Provenance:** every row's latest source game is strictly before its game date.
+
+```python
+def test_perturbing_a_days_results_never_changes_that_days_rows(league, full):
+    for day in _check_dates(league):
+        perturbed = _build(_perturb(league, day))
+        ids = full.index[full["game_date"] == day]
+        pd.testing.assert_frame_equal(full.loc[ids, FEATURE_COLUMNS],
+                                      perturbed.loc[ids, FEATURE_COLUMNS])
+        later = full.index[full["game_date"] > day]
+        assert not np.allclose(...)  # later rows do change
+```
+
+## In production
+
+The same discipline holds on the live site:
+
+- A prediction is written before its game starts and can't be replaced after tip-off (the database
+  write itself requires `tipoff_utc > now()`).
+- Each prediction stores the `features_hash` it was made from.
+- Backtest predictions come from models trained only on games before that week, and are labelled
+  as backtests on the [performance page](/performance).

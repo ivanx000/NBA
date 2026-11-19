@@ -1,0 +1,27 @@
+A probability is only useful if it means what it says: of all the games the model gives 70%, the
+favorite should win about 70%. That's calibration, and it matters more here than raw accuracy,
+because the site shows the number.
+
+## How it's done
+
+- The raw logistic regression is passed through **Platt scaling** (a one-variable logistic fit on
+  its log-odds).
+- Calibrators are fit **out of time**: on one season's predictions from a model trained only on
+  earlier seasons, the way the model is used live.
+- Platt beat isotonic regression for every candidate model; isotonic was the worst every time. The
+  fitted map is close to identity (slope about 1.01), so the logistic regression was already nearly
+  calibrated.
+
+## On the test season
+
+![Reliability diagram for 2025-26: predicted probability on the x axis, observed home win rate on the y axis; the model's points follow the diagonal closely.](/docs/figures/calibration_test.webp)
+
+Expected calibration error on 2025-26 was 0.033 for the champion and 0.045 for Elo (lower is
+better): the model's probabilities were slightly better calibrated, even though Elo's picks were
+right a little more often.
+
+## Live
+
+The [performance page](/performance) draws the same chart from live and backtest predictions,
+grouped from the favorite's side (50–60%, 60–70%, … 90–100%), with how often that favorite won.
+Last season's backtest reads 52%, 66%, 76%, 80% and 89% for those groups.

@@ -1,0 +1,23 @@
+> Coming in Phase 9. This page describes the plan; projected lines will appear on game pages and
+> the results screen once they're built and beat their baseline.
+
+## What it will predict
+
+For each team's top 8 players by projected minutes (players averaging 10+ minutes over their last
+10 games): **points, rebounds and assists**, each with an 80% range.
+
+## Two stages
+
+1. **Minutes:** from recent minutes, whether the player starts, rest, which teammates are out (more
+   minutes for the rest), and blowout risk (the size of the Elo gap).
+2. **Per-minute rates:** from rolling per-36 numbers, usage, the opponent's defensive rating and
+   pace, and home or away.
+
+Projection = minutes × rate. One LightGBM regressor per stat, plus quantile models (10th and 90th
+percentiles) for the range.
+
+## The bar
+
+The baseline is each player's last-10 average. Projections ship only if they beat it on mean
+absolute error for each stat, on a season the models never saw, with the same
+[leakage rules](/docs/leakage) as the game model.

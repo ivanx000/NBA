@@ -1,0 +1,45 @@
+Predictions are made every morning, published before tip-off, and graded when games end, without
+anyone at a keyboard.
+
+<Diagram
+  label="The daily jobs: schedule sync early morning, prediction hourly until today's games are published, a freshness check, and results sync through the night."
+  chart={`flowchart LR
+  A["06:07 ET<br/>schedule-sync"] --> B["09:07–18:07 hourly<br/>daily: predict + publish"]
+  B --> C["10:37<br/>freshness-check"]
+  C --> D["18:17–02:17 hourly<br/>results-sync"]
+  D -. "next morning" .-> A`}
+/>
+
+## The jobs (GitHub Actions)
+
+| Time (ET) | Job | What it does |
+| --- | --- | --- |
+| ~06:07 | `schedule-sync` | Updates the season's games (dates, times, final scores) from the cdn schedule |
+| Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion model, adds box scores for newly finished games, builds features, predicts today, publishes. Stops once today is published |
+| ~10:37 | `freshness-check` | Fails (and emails) if any of today's games lacks a live prediction |
+| Hourly ~18:17–02:17 | `results-sync` | Live status and final scores, which grade the predictions |
+
+GitHub's cron runs in UTC and can start late, so times drift by an hour with daylight saving. A
+weekly retrain, promoting a challenger only if it beats the champion on the latest window, is
+planned (Phase 10); until then the champion is refit by hand.
+
+## State between runs
+
+The cloud job has no disk, so the staged history (about 5 MB of parquet) and the champion model live
+in a `pipeline_state` table. Each run pulls both (checking a SHA-256), adds the new games, and pushes
+the history back.
+
+## Keeping it honest
+
+- `publish` refuses to write a prediction for a game that has started, and the database upsert also
+  requires the tip-off time to be in the future, so a slow run can't sneak in a "prediction" after
+  the fact.
+- Every prediction stores its model version and `features_hash`.
+- The [performance page](/performance) is the monitor: every finished game is graded against Elo and
+  the home team.
+
+## Tests and CI
+
+Every push runs `pytest` (including the [leakage test](/docs/leakage)) and `ruff` for the pipeline,
+and lint, type checks, Vitest and a production build for the website. The same checks run locally
+through a `pipeline.yaml` file.

@@ -174,7 +174,7 @@ Notes:
 - [x] Results overlay: win prob bar, factor bars, Final-game ✓/✗ (player lines placeholder until Phase 9)
 - [x] `/game/[id]` + OG image
 - [x] `/performance`: tiles, rolling accuracy, calibration, recent table
-- [ ] `/docs` MDX setup with sidebar + TOC. Write the pages listed in ML_PLAN §8 and an architecture page.
+- [x] `/docs` MDX setup with sidebar + TOC. Write the pages listed in ML_PLAN §8 and an architecture page.
 - [ ] `/how-it-works` scroll story
 
 Notes:
@@ -186,6 +186,9 @@ Notes:
 - The home-team baseline uses a constant 56.8% (the training home win rate), as `tipoff` does; home teams are only 49.5% this season so far.
 - Recharts is pinned to 3.10.1: 3.11.0 was two days old.
 - After adding a new `'use cache'` export to `lib/db/queries.ts`, the dev server served the old module ("… is not a function") until restarted with `web/.next` cleared.
+- Part 3 done: `/docs` is `@next/mdx` (versions pinned; plugins named by string for Turbopack: remark-gfm, rehype-slug, rehype-pretty-code with Shiki's github-dark-dimmed) with our own layout: sections on the left, the page, "On this page" on the right (built from the MDX source's headings with github-slugger, the same slugs rehype-slug gives; the heading in view is marked). Eleven pages in `web/content/docs/`, written from ML_PLAN, ARCHITECTURE, the reports and the code; four report figures copied to `public/docs/figures` as WebP; two Mermaid diagrams (architecture, daily jobs), with Mermaid loaded only on pages that use one.
+- Cache Components gotchas: reading the MDX files counts as uncached data, so the TOC read is `'use cache'` + `cacheLife('max')`; the page reads `params` inside `<Suspense>` (partial prefetching's instant-navigation check), yet all pages still prerender from `generateStaticParams`; `dynamicParams` doesn't exist with Cache Components (unknown slugs hit `notFound()`); a static property on a client component (`DocsSidebar.Fallback`) is `undefined` across the server boundary, so the fallback is its own export.
+- The weekly retrain isn't built yet (Phase 10), so the docs say it's planned rather than describing it.
 
 ## Phase 9: Player stat projections
 - [ ] Minutes model + per-minute rate models + quantile intervals, compared against the last-10 baseline

@@ -1,0 +1,60 @@
+Each game becomes one row of **56 features**, almost all of them **home minus away** differences.
+Every value is computed only from games before that game's date ([Preventing leakage](/docs/leakage)).
+They're built in `ml/src/tipoff/features/` and listed in `columns.py`.
+
+## The groups
+
+| Group | Features |
+| --- | --- |
+| Strength | Elo difference (with the home-court edge), Elo's own home probability, season-to-date net rating and point margin |
+| Form | Last-5 and last-10 net rating and margin, last-10 win rate, exponentially weighted net rating (half-life about 7 games) |
+| Style and efficiency | Offensive and defensive rating, pace, and the four factors (eFG%, turnover %, offensive rebound %, free-throw rate) for and against, season-to-date and last 10 |
+| Schedule | Rest days, back-to-backs, 3 games in 4 nights, games in the last 7 days, travel distance, time zones crossed |
+| Availability | Share of season minutes from rotation players who are out, and a flag for a top-2 scorer out |
+| Context | Point in the season, the home team's home record, the away team's road record, neutral site |
+
+## Four factors
+
+Computed from the base box score, each with an offensive (own) and defensive (opponents') version:
+
+```text
+eFG%   = (FGM + 0.5 × 3PM) / FGA
+TOV%   = TOV / (FGA + 0.44 × FTA + TOV)
+OREB%  = OREB / (OREB + opponent DREB)
+FT rate = FTM / FGA
+```
+
+## Early-season priors
+
+A team's season-to-date numbers are noisy in November. Every season-to-date and windowed stat is
+blended with a prior:
+
+```text
+value = (n × current + k × prior) / (n + k)
+```
+
+where `n` is games played so far and the prior is the team's previous-season average, pulled a
+third of the way toward that season's league average. `k` is 10 for season-to-date, 3 for last 10,
+2 for last 5 and 5 for the weighted average. Early rows lean on the prior; late ones on this season.
+
+## Elo
+
+Elo is tuned on the training seasons only (a 300-combination grid, scored by Elo's own log loss):
+**K = 15**, 60% of the rating carried into a new season, a margin-of-victory multiplier, and a
+home-court edge that follows the league's home win rate over the previous two seasons (about 47 Elo
+points on average, 0 at neutral sites). The rolling home edge beat every fixed value, matching the
+drop in home-court advantage since 2019.
+
+## Rest, travel and who's out
+
+![Two charts. Left: home win rate rises with more rest than the opponent (about 47% at three fewer days, 64% at two more). Right: teams on the second night of a back-to-back won 44.6% of games, against 51.2% rested.](/docs/figures/rest_effects.webp)
+
+- Travel is measured arena to arena. Time zones crossed compares both arenas' UTC offsets on the
+  same date, so a daylight-saving change isn't counted as travel.
+- "Out" means a rotation player (20+ minutes a game over the team's last 10) who didn't play in the
+  team's previous game, unless his latest game was for another team (traded). That's exactly what's
+  known on the morning of the game.
+- Upcoming games go through the same code as past ones, so training and prediction can't drift apart.
+
+Changing any definition bumps `FEATURES_VERSION`, which changes the `features_hash` stored with
+every prediction.

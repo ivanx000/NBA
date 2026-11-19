@@ -1,0 +1,50 @@
+## Sources
+
+| Data | Source | Granularity |
+| --- | --- | --- |
+| Team game logs | stats.nba.com (`LeagueGameLog`), one call per season and season type | Team-game |
+| Player game logs | stats.nba.com (`LeagueGameLog`) | Player-game |
+| Schedule and final scores | cdn.nba.com (`scheduleLeagueV2.json`) | Game |
+| Live scores | cdn.nba.com (today's scoreboard) | Game |
+| Box scores for new games | cdn.nba.com | Team-game and player-game |
+| Arena locations (for travel) | `shared/teams.json` | Team |
+
+Seasons from **2015-16** to now. 2014-15 is loaded only to seed the first season's priors and Elo
+ratings.
+
+## Caching and politeness
+
+- Every raw response is saved as parquet with a manifest. Finished seasons are fetched once; the
+  current season is refreshed from its last cached date, at most every 3 hours.
+- All requests go through one rate limiter (about 0.6 seconds apart) with retries and backoff.
+- cdn.nba.com returns 403 to bare requests, so it gets a full browser-like header set.
+- `tipoff ingest` writes validated tables (`games`, `team_games`, `player_games`) that the
+  features read. Validation uses pandera schemas: no nulls in keys, sane ranges, unique rows.
+
+## Pace and ratings from the box score
+
+Pace and offensive and defensive ratings are computed from the box score with the standard
+possession estimate (averaged over both teams), not taken from stats.nba.com. Against
+stats.nba.com's own numbers: possessions r = 0.97, offensive rating r = 0.991, net rating r = 0.997.
+That lets the cloud job, which only has cdn.nba.com box scores, add new games with no seam between
+history and today.
+
+## What's included
+
+- Regular-season games only. Preseason, All-Star, play-in and playoff games are dropped (they're
+  ingested, so playoffs could be added later).
+- NBA Cup group and knockout games count (they're regular-season games); the Cup final doesn't.
+- The game ID's prefix decides the type: `002` regular season, `004` playoffs, `005` play-in, and so on.
+
+## Limitations
+
+- **Neutral-site games** (international games, Cup semifinals in Las Vegas) list both teams as away.
+  For the current season the designated home team comes from the schedule; for past seasons it's
+  the lower team id, a rule that never looks at the result. Home-court features are zero for them.
+- **Unusual seasons:** 2019-20 (suspension, then the bubble) and 2020-21 (shortened, mostly empty
+  arenas). Home teams won 58–59% of games before 2019 and 54–55% in most seasons since.
+
+![Home win rate by season, 2015-16 onward: around 58–59% before 2019, lower since.](/docs/figures/home_win_rate_by_season.webp)
+
+- **Injuries:** there's no injury report in the data. "Who's out" is inferred from who didn't play
+  in the team's previous game (see [Limitations](/docs/limitations)).

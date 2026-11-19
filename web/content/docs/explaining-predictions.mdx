@@ -1,0 +1,62 @@
+Every prediction on the site comes with its reasons: "Celtics better rested", "Knicks in better
+recent form", with how much each one moved the probability. These aren't guesses made after the
+fact; they're an exact split of the model's own calculation.
+
+## An exact split
+
+The champion is a logistic regression, which adds up its inputs in log-odds:
+
+```text
+logit(p) = base + Σ coefficient × standardized feature
+```
+
+So each feature's contribution is just its term in that sum, and the contributions plus the base
+equal the prediction exactly. (For LightGBM the same split comes from TreeSHAP, the algorithm in
+`shap.TreeExplainer`; Platt scaling multiplies every term by its slope.) Tests check that the parts
+add up to the whole.
+
+## From 56 features to 11 reasons
+
+The 56 contributions are summed into **11 factors** defined in `shared/factors.json`, each with
+plain-language copy:
+
+| Factor | Copy (for the team it favors) |
+| --- | --- |
+| Team rating | Celtics rated higher overall (Elo) |
+| Home court | Home court and home/road records favor Celtics |
+| Season-long strength | Celtics stronger over the season |
+| Recent form | Celtics in better recent form |
+| Shooting | Celtics have the shooting edge |
+| Turnovers and rebounding | Celtics win the turnover and rebounding battle |
+| Pace | The expected tempo suits Celtics |
+| Rest and schedule | Celtics better rested |
+| Travel | Knicks on a tougher trip |
+| Missing players | Knicks missing key players |
+| Point in the season | The point in the season favors Celtics |
+
+(Travel and missing players name the opponent: the Knicks' tougher trip favors the Celtics.)
+
+Each game stores its top 5 factors (those worth at least half a point).
+
+## From log-odds to percentage points
+
+Log-odds aren't intuitive, so each factor is shown in **win-probability points**:
+
+```text
+pp = contribution × (p − p_base) / (logit p − logit p_base)
+```
+
+where `p_base` is the model's prediction for an average game. This keeps every sign, and the
+factors add up to `p − p_base`. It's an approximation (probability isn't linear in log-odds), but a
+faithful one.
+
+## What moves the predictions
+
+![Average effect of each factor on win probability in 2025-26: team rating about 10 points, recent form about 4, shooting about 3, rest about 2.6, home court about 2, turnovers and rebounding and missing players about 1.8 each, then season-long strength, travel, point in the season and pace below 1.](/docs/figures/factor_importance.webp)
+
+## A known quirk
+
+The Elo difference includes the home-court edge, so part of home advantage shows up as "Team
+rating" rather than "Home court". Correlated groups (Elo, season strength, recent form) also share
+credit in ways that can look arbitrary. Splitting Elo into a pure rating gap and a home edge would
+make the reasons cleaner; it's on the list.

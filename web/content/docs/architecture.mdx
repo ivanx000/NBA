@@ -1,0 +1,63 @@
+Three pieces: a Python pipeline that makes predictions, a Postgres database that stores them, and a
+Next.js website that only reads them.
+
+<Diagram
+  label="Data flows from NBA.com through the Python pipeline into Postgres, which the website reads."
+  chart={`flowchart LR
+  subgraph NBA["NBA.com"]
+    S["stats.nba.com<br/>history"]
+    C["cdn.nba.com<br/>schedule, scores, box scores"]
+  end
+  subgraph Local["Developer machine"]
+    I["ingest + features"] --> T["train<br/>MLflow"]
+  end
+  subgraph Cloud["GitHub Actions"]
+    D["daily job<br/>predict + publish"]
+    R["results sync"]
+  end
+  S --> I
+  C --> D
+  C --> R
+  T -- "champion model" --> DB[("Neon Postgres")]
+  D --> DB
+  R --> DB
+  DB --> W["Next.js on Vercel<br/>reads only"]
+  W --> V(("Visitors"))`}
+/>
+
+## Why it's split this way
+
+- **stats.nba.com blocks cloud IP ranges.** Anything that needs it (the full game-log history,
+  advanced stats) runs on a developer machine. cdn.nba.com, which serves schedules, live scores and
+  box scores, works from anywhere, so the daily job runs in GitHub Actions.
+- **Predictions change at most once a day**, so the website never runs the model. It reads
+  precomputed rows, which keeps it fast, cheap and simple: no Python on Vercel.
+- **One schema.** The tables are defined once, in TypeScript (`web/lib/db/schema.ts`, Drizzle). The
+  Python side reflects them instead of defining them again.
+
+## The pieces
+
+| Piece | Stack | What it does |
+| --- | --- | --- |
+| `ml/` | Python 3.12, pandas, scikit-learn, LightGBM, MLflow, typer | Ingests data, builds features, trains, predicts, publishes |
+| Database | Neon Postgres (main branch = production) | Games, predictions with their reasons, model versions, pipeline state |
+| `web/` | Next.js, React Three Fiber, GSAP, Recharts, MDX | The 3D pick experience, game pages, the report card, these docs |
+| Jobs | GitHub Actions | Schedule sync, daily predictions, results sync, freshness check, CI |
+
+## The tables
+
+- `games`: one row per game (date, teams, status, scores, neutral site, event label).
+- `game_predictions`: one row per game and model version, with the home win probability, the
+  top reasons, a `features_hash`, Elo's own probability, and a `source` of `live` (published before
+  tip-off) or `backfill` (walk-forward backtest).
+- `current_game_predictions`: a view with one prediction per game, live beating backfill. The site
+  reads this.
+- `model_versions`, `pipeline_state` (the staged history and champion model for the cloud job),
+  and `player_projections` (Phase 9).
+
+## Rules the system keeps
+
+- The website never runs inference.
+- A live prediction can't be written once its game has started: `publish` checks the clock, and
+  the database upsert also requires `tipoff_utc > now()`.
+- Backtest rows are labelled and never replace live ones, so the report card can say which is which.
