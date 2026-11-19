@@ -1,0 +1,594 @@
+/*
+ * /how-it-works: a five-chapter scroll story. On wide, tall screens each chapter pins (text left,
+ * visual right) while its visual plays with the scroll; elsewhere chapters flow and play as they
+ * pass. The visuals are drawn from progress (chapter.tsx), so there are no CSS entrances here.
+ */
+.story {
+  width: 100%;
+  flex: 1;
+}
+
+/* --- Hero ---------------------------------------------------------------------------------- */
+.story-hero {
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: 8rem 1rem 3rem;
+}
+@media (min-width: 640px) {
+  .story-hero {
+    padding-inline: 1.5rem;
+  }
+}
+.story-hero__title {
+  font-size: clamp(3.2rem, 10vw, 8rem);
+  line-height: 0.88;
+  font-weight: 850;
+  font-stretch: 125%;
+  text-transform: uppercase;
+}
+.story-hero__lede {
+  max-width: 40rem;
+  margin-top: 1.5rem;
+  font-size: 1.15rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.story-rail ol {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.story-rail a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition: border-color 0.15s ease;
+}
+.story-rail a:hover {
+  border-color: rgba(91, 140, 255, 0.6);
+}
+.story-rail a span {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: rgba(91, 140, 255, 0.14);
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--blue-hi);
+}
+
+/* --- Chapters ------------------------------------------------------------------------------ */
+.story-chapter {
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 4.5rem;
+}
+.story-chapter__stage {
+  display: grid;
+  gap: 2rem;
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+}
+@media (min-width: 640px) {
+  .story-chapter__stage {
+    padding-inline: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .story-chapter__stage {
+    grid-template-columns: minmax(0, 27rem) minmax(0, 36rem);
+    justify-content: space-between;
+    align-items: center;
+    gap: 4rem;
+  }
+}
+/* Pinned: the chapter is taller than the screen and its stage sticks while it scrolls by. */
+@media (min-width: 1024px) and (min-height: 640px) {
+  .story-chapter {
+    height: 190vh;
+    scroll-margin-top: 0;
+  }
+  .story-chapter__stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    padding-top: 5rem;
+    padding-bottom: 2rem;
+  }
+}
+.story-chapter__visual {
+  min-width: 0;
+}
+
+.story-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red-hi);
+}
+.story-step__n {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid rgba(255, 77, 94, 0.5);
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+.story-title {
+  margin-top: 0.9rem;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 0.98;
+  font-weight: 820;
+  font-stretch: 112%;
+  text-transform: uppercase;
+}
+.story-figure {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1.6rem;
+}
+.story-figure__n {
+  font-size: clamp(3.4rem, 7vw, 5.6rem);
+  line-height: 0.9;
+  font-weight: 850;
+  font-stretch: 112%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.story-figure__label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.story-body {
+  margin-top: 1.5rem;
+  max-width: 34rem;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(243, 246, 252, 0.8);
+}
+.story-body > * + * {
+  margin-top: 0.9rem;
+}
+.story-link {
+  color: var(--blue-hi);
+  text-decoration: underline;
+  text-decoration-color: rgba(91, 140, 255, 0.4);
+  text-underline-offset: 3px;
+}
+.story-link:hover {
+  text-decoration-color: var(--blue-hi);
+}
+.story-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding-top: 0.6rem;
+}
+.story-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.3rem;
+  border-radius: 999px;
+  background: var(--nba-red);
+  box-shadow: 0 0 24px rgba(200, 16, 46, 0.45);
+  font-weight: 750;
+  color: #fff;
+  transition: background 0.15s ease;
+}
+.story-cta:hover {
+  background: #e0193a;
+}
+.story a:focus-visible,
+.story button:focus-visible {
+  outline: 2px solid var(--blue-hi);
+  outline-offset: 3px;
+}
+
+/* --- Panels -------------------------------------------------------------------------------- */
+.story-panel {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background:
+    repeating-linear-gradient(0deg, rgba(91, 140, 255, 0.04) 0 1px, transparent 1px 4px),
+    var(--panel);
+}
+.story-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.story-track {
+  position: relative;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: rgba(243, 246, 252, 0.06);
+}
+.story-track__fill,
+.story-track__step {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+}
+.story-track__fill {
+  left: 0;
+}
+
+/* 1. Dots: one per game, a block per season. */
+.story-dots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem 0.8rem;
+}
+.story-dots li {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+}
+.story-dots__canvas {
+  display: block;
+  width: 100%;
+}
+.story-dots__label {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+.story-dots li[data-test] .story-dots__label {
+  color: var(--red-hi);
+}
+.story-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.story-legend i {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.4rem;
+  border-radius: 2px;
+}
+
+/* 2. Features: what's used, then the example's numbers. */
+.story-timeline__ticks {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  padding-top: 1.1rem;
+}
+.story-timeline__ticks span {
+  flex: 1;
+  height: 1rem;
+  border-radius: 2px;
+  background: rgba(243, 246, 252, 0.1);
+}
+.story-timeline__ticks span[data-state="used"] {
+  background: var(--blue-hi);
+  box-shadow: 0 0 8px rgba(91, 140, 255, 0.6);
+}
+.story-timeline__ticks span[data-state="future"] {
+  background: transparent;
+  border: 1px dashed rgba(243, 246, 252, 0.18);
+}
+.story-timeline__ticks b {
+  position: absolute;
+  top: 0;
+  bottom: -0.3rem;
+  margin-left: -1.5px;
+  padding-left: 0.4rem;
+  border-left: 2px solid var(--red-hi);
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--red-hi);
+}
+.story-timeline__note {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.story-axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.story-features {
+  list-style: none;
+  margin: -0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.story-features__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.story-features__values {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.15rem 0 0.35rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.story-diverge {
+  position: relative;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(243, 246, 252, 0.06);
+}
+.story-diverge::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -0.2rem;
+  bottom: -0.2rem;
+  width: 1px;
+  background: rgba(243, 246, 252, 0.35);
+}
+.story-diverge span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+}
+
+/* 3. Waterfall: the reasons stack up from the starting point to the prediction. */
+.story-waterfall {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.story-waterfall li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.2rem;
+  align-items: center;
+  gap: 0.3rem 0.8rem;
+}
+.story-waterfall li > p {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+@media (min-width: 640px) {
+  .story-waterfall li {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) 3.2rem;
+  }
+  .story-waterfall li > p {
+    grid-column: auto;
+    display: grid;
+  }
+}
+.story-waterfall__note {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.story-waterfall b {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.story-waterfall li[data-kind="base"],
+.story-waterfall li[data-kind="total"] {
+  padding: 0.35rem 0;
+}
+.story-waterfall li[data-kind="total"] {
+  margin-top: 0.2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.story-waterfall li[data-kind="total"] b {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* 4. The day of a prediction, then the test season's scores. */
+.story-day {
+  list-style: none;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.story-day li {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  padding-top: 1.1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.story-day li::before {
+  content: "";
+  position: absolute;
+  top: 0.2rem;
+  left: 0;
+  right: -0.75rem;
+  height: 1px;
+  background: var(--line);
+}
+.story-day li:last-child::before {
+  right: 0;
+}
+.story-day li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(243, 246, 252, 0.25);
+}
+.story-day li[data-on] {
+  color: var(--text);
+}
+.story-day li[data-on]::after {
+  background: var(--blue-hi);
+  box-shadow: 0 0 10px var(--blue-hi);
+}
+.story-day b {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.story-bars {
+  list-style: none;
+  margin: -0.3rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+.story-bars li,
+.story-scale {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.6rem;
+  align-items: center;
+  gap: 0.3rem 0.8rem;
+}
+.story-bars li > span {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+@media (min-width: 640px) {
+  .story-bars li,
+  .story-scale {
+    grid-template-columns: 11rem minmax(0, 1fr) 3.6rem;
+  }
+  .story-bars li > span {
+    grid-column: auto;
+  }
+}
+.story-bars b {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.story-scale {
+  margin-top: -0.6rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: var(--ink-faint);
+}
+.story-scale span:first-child {
+  grid-column: 1;
+}
+.story-scale span:last-child {
+  text-align: right;
+}
+@media (min-width: 640px) {
+  .story-scale span:first-child {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .story-scale span:last-child {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+
+/* 5. The hologram. */
+.story-holo__canvas {
+  position: relative;
+  height: min(32rem, 62vh);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #040815;
+}
+@media (min-width: 1024px) and (min-height: 640px) {
+  .story-holo__canvas {
+    height: min(34rem, calc(100vh - 13rem));
+  }
+}
+.story-holo__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.story-holo__flat {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  height: 100%;
+  gap: 0.2rem;
+  font-family: var(--font-jersey), var(--font-archivo), sans-serif;
+  text-shadow: 0 0 18px currentColor;
+}
+.story-holo__flat span {
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+}
+.story-holo__flat b {
+  font-size: 7rem;
+  line-height: 0.9;
+}
+.story-holo__again {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba(91, 140, 255, 0.5);
+  border-radius: 999px;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blue-hi);
+  transition: background 0.15s ease;
+}
+.story-holo__again:hover {
+  background: rgba(91, 140, 255, 0.12);
+}

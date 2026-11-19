@@ -92,13 +92,14 @@ GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for E
 ├── web/
 │   ├── app/
 │   │   ├── page.tsx                      # home (server: fetch slate) → <HomeExperience/>
-│   │   ├── how-it-works/page.tsx
+│   │   ├── how-it-works/page.tsx         # static scroll story (content in lib/story.ts)
 │   │   ├── performance/page.tsx
 │   │   ├── docs/[[...slug]]/page.tsx     # MDX
 │   │   ├── game/[id]/page.tsx (+ opengraph-image.tsx)
 │   ├── components/
 │   │   ├── scene/                # Canvas, Player, Hoop, Ball, Lights, CameraRig, Cinematic
 │   │   ├── home/                 # GameDrawer (today's cards), MatchupHeader, TeamLabel (pick buttons), ResultsView
+│   │   ├── how-it-works/         # Chapter (ScrollTrigger progress), the chapter visuals, the chapter 5 hologram
 │   │   ├── charts/               # WinProbBar, FactorBars, CalibrationChart, RollingAccuracy
 │   │   └── ui/                   # shadcn components
 │   ├── lib/

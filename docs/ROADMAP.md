@@ -175,7 +175,7 @@ Notes:
 - [x] `/game/[id]` + OG image
 - [x] `/performance`: tiles, rolling accuracy, calibration, recent table
 - [x] `/docs` MDX setup with sidebar + TOC. Write the pages listed in ML_PLAN §8 and an architecture page.
-- [ ] `/how-it-works` scroll story
+- [x] `/how-it-works` scroll story
 
 Notes:
 - Part 1 done: the results screen's reasons are bars in the favored team's color, finished games get a "Final · … · ✓ Model correct" badge, and "Full breakdown" links to `/game/[id]`. That page works for any game (past ones too, for `/performance`): win chance with the Elo baseline and where the prediction came from (live or walk-forward backtest), the reasons, both teams' numbers and last-10 strips, the season series game by game, and a placeholder for player lines. Its link preview (`opengraph-image.tsx`) shows the matchup and both win chances in the teams' glow colors.
@@ -189,6 +189,10 @@ Notes:
 - Part 3 done: `/docs` is `@next/mdx` (versions pinned; plugins named by string for Turbopack: remark-gfm, rehype-slug, rehype-pretty-code with Shiki's github-dark-dimmed) with our own layout: sections on the left, the page, "On this page" on the right (built from the MDX source's headings with github-slugger, the same slugs rehype-slug gives; the heading in view is marked). Eleven pages in `web/content/docs/`, written from ML_PLAN, ARCHITECTURE, the reports and the code; four report figures copied to `public/docs/figures` as WebP; two Mermaid diagrams (architecture, daily jobs), with Mermaid loaded only on pages that use one.
 - Cache Components gotchas: reading the MDX files counts as uncached data, so the TOC read is `'use cache'` + `cacheLife('max')`; the page reads `params` inside `<Suspense>` (partial prefetching's instant-navigation check), yet all pages still prerender from `generateStaticParams`; `dynamicParams` doesn't exist with Cache Components (unknown slugs hit `notFound()`); a static property on a client component (`DocsSidebar.Fallback`) is `undefined` across the server boundary, so the fallback is its own export.
 - The weekly retrain isn't built yet (Phase 10), so the docs say it's planned rather than describing it.
+- Part 4 done: `/how-it-works` is a static scroll story in five chapters, following one made-up example game (Celtics at Knicks) whose reasons add up to its prediction (57% → 63%) with the real factor names and copy from `shared/factors.json` (tested in `lib/story.test.ts`, with the game counts matching the model docs: 11,979 learned from, 1,230 held out). The test-season numbers are the one-time report's. On wide, tall screens each chapter pins and its visual plays with the scroll (GSAP ScrollTrigger feeding a 0–1 progress to the visuals); elsewhere chapters flow. Chapter 5 is the home page's hologram player on his platform, loaded only when the chapter comes near, with a 2D fallback.
+- `gsap.matchMedia` only runs its callback when one of its conditions matches, so the chapter adds an always-true one; without it nothing played on screens that weren't pinned.
+- A function prop can't cross from a Server Component to a client one, so the big numbers take a `unit` (`"count"`/`"percent"`) instead of a formatter.
+- The page-stub component is gone; every nav page is built.
 
 ## Phase 9: Player stat projections
 - [ ] Minutes model + per-minute rate models + quantile intervals, compared against the last-10 baseline
