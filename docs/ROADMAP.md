@@ -210,7 +210,7 @@ Notes:
 - Each game's projection set is replaced whole on republish, so a player who drops out of the candidates between morning runs doesn't linger.
 - No jersey numbers yet: the stats.nba.com logs don't carry them, so `jersey_number` stays empty and the site shows initials.
 - Staging found a feed error: stats.nba.com listed 168 team minutes for Denver in 0022600231 (Nov 14), which made its pace 142 and failed validation. Staging now uses the longer of the two teams' minutes (both play the same length) and logs it; it's the only such game since 2014.
-- Before this reaches prod: migrate the prod database, push the player champion (`tipoff state push --what player-champion --target prod`), and run the backfill with `--target prod`.
+- Prod set up on 2026-11-19: migration `0002_player_projections` applied, `player_champion` pushed to `pipeline_state` (player-v1, trained through 2026-11-13), and the 2026-27 walk-forward backfilled (3,469 lines for all 222 finished games, with real lines). Live projections start with the first daily run after this code is on `main`.
 - Part 4 done (web): the slate and game queries attach each game's projection set (`lib/players.ts`, from `current_player_projections`). The results screen lists the viewed team's top 5 (initials badge, short name, minutes, each stat with its range, the real line once final); the game page has a table per team with all 8, the real numbers marked ✓/✗ against the ranges, and a note saying whether the lines were live or a backtest. `/docs/player-projections` now describes what was built, with the test-season table and this season's backtest; the overview, architecture, pipeline and limitations pages no longer call projections upcoming.
 
 ## Phase 10: Launch polish
