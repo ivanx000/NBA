@@ -477,6 +477,43 @@ def _cloud_update(engine) -> None:
     typer.echo(f"cdn box scores: {len(todo)} new games staged {counts}; state pushed")
 
 
+@app.command()
+def retrain(
+    target: Annotated[DbTarget, typer.Option("--target")] = DbTarget.prod,
+    pull: Annotated[
+        bool, typer.Option("--pull/--no-pull", help="Pull the staged history from pipeline_state.")
+    ] = True,
+    dry_run: Annotated[bool, typer.Option(help="Evaluate only; push nothing.")] = False,
+    summary: Annotated[str | None, typer.Option(help="Write the markdown report here.")] = None,
+    decision: Annotated[str | None, typer.Option(help="Write the decisions (JSON) here.")] = None,
+) -> None:
+    """Weekly retrain: refit both models, promote each only if no worse than what was published.
+
+    Compares a weekly walk-forward of each champion's recipe over the last 4 complete weeks with
+    the stored pregame predictions and projections for the same games (models/retrain.py). Uses
+    only the staged history (cdn.nba.com in the cloud), never stats.nba.com.
+    """
+    import json
+    from pathlib import Path
+
+    from tipoff.db import get_engine
+    from tipoff.models.retrain import run_retrain
+
+    result = run_retrain(get_engine(target.value), pull=pull, dry_run=dry_run)
+    typer.echo(result.summary)
+    if summary:
+        Path(summary).write_text(result.summary)
+    if decision:
+        out = {
+            "game": {"promote": result.game.promote, "reason": result.game.reason},
+            "player": None if result.player is None
+            else {"promote": result.player.promote, "reason": result.player.reason},
+            "pushed": result.pushed,
+            "dry_run": dry_run,
+        }  # fmt: skip
+        Path(decision).write_text(json.dumps(out, indent=2))
+
+
 state_app = typer.Typer(help="Pipeline state in Postgres for the cloud daily job.")
 app.add_typer(state_app, name="state")
 

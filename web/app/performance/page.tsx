@@ -3,28 +3,23 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { PerformanceView } from "@/components/performance/performance-view";
+import { PerformanceSkeleton } from "@/components/skeleton";
 import { getGradedSeasons } from "@/lib/db/queries";
 import { seasonSummary } from "@/lib/performance";
+import { pageMeta } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "Model performance · Tip-Off",
   description:
     "How often the Tip-Off model calls NBA games right, next to Elo and the home team: accuracy, log loss, calibration and every recent pick. Unofficial fan project.",
-};
+  path: "/performance",
+});
 
 async function Report() {
   // Results land through the day; read at request time (the query itself is cached).
   await connection();
   const seasons = await getGradedSeasons();
   return <PerformanceView seasons={seasons.slice(0, 2).map((s) => seasonSummary(s.season, s.games))} />;
-}
-
-function Loading() {
-  return (
-    <div className="grid min-h-[40vh] place-items-center" role="status" aria-label="Loading the report card">
-      <span className="basketball-loader" aria-hidden />
-    </div>
-  );
 }
 
 export default function Page() {
@@ -38,7 +33,7 @@ export default function Page() {
         Every prediction is graded once the game ends, next to two simple baselines: Elo ratings and
         always picking the home team.
       </p>
-      <Suspense fallback={<Loading />}>
+      <Suspense fallback={<PerformanceSkeleton />}>
         <Report />
       </Suspense>
     </main>

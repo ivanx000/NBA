@@ -26,9 +26,12 @@ export function TeamLabel({
   const color = readableTeamColor(t);
   const setHover = useScene((s) => s.setHover);
   const hovered = useScene((s) => s.hover === side);
+  // The button's accessible name is its visible text wrapped in "Pick the … to win" (WCAG 2.5.3:
+  // the spoken name contains the words a voice-control user sees).
   const content = (
     <>
-      <span className="block font-mono text-[9px] tracking-[0.14em] text-muted-foreground uppercase tabular sm:text-[10px]">
+      {onPick && <span className="sr-only">Pick the </span>}
+      <span className="block font-mono text-[11px] tracking-[0.14em] text-muted-foreground uppercase tabular sm:text-[10px]">
         {team.city}
         <span className="hidden sm:inline">
           {" · "}
@@ -44,18 +47,19 @@ export function TeamLabel({
         className="mx-auto mt-1.5 block h-[2px] rounded-full transition-all duration-300"
         style={{ background: color, boxShadow: `0 0 12px ${color}`, width: hovered ? "4rem" : "2.5rem" }}
       />
-      <span className="mt-1 block font-mono text-[9px] tracking-[0.1em] text-muted-foreground uppercase tabular sm:hidden">
+      <span className="mt-1 block font-mono text-[11px] tracking-[0.1em] text-muted-foreground uppercase tabular sm:hidden">
         {team.wins}-{team.losses}
         {!neutral && ` · ${side === "home" ? "Home" : "Away"}`}
       </span>
+      {onPick && <span className="sr-only"> to win</span>}
     </>
   );
   if (!onPick) return <div className="text-center">{content}</div>;
   return (
     <button
       type="button"
+      data-pick-side={side}
       className="pointer-events-auto mx-auto rounded-lg px-3 py-1 text-center transition-transform duration-200 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-hi"
-      aria-label={`Pick the ${team.city} ${team.name} to win`}
       onClick={() => onPick(side)}
       onPointerEnter={() => setHover(side)}
       onPointerLeave={() => setHover(null)}

@@ -98,7 +98,7 @@ Notes:
 - [x] `pipeline_state` table (Drizzle) + `tipoff state push/pull`; champion v2 and staged history pushed to dev and prod
 - [x] Re-selection on validation (champion v2 = ensemble + Platt), v2 walk-forward backfill (`game-v2-wf`)
 - [x] `.github/workflows/daily.yml` (hourly 09:07–18:07 ET, `--if-needed`; manual `force` input)
-- [ ] After a week of clean cloud runs, uninstall the launchd fallback (`ml/scripts/install_launchd.sh --uninstall`)
+- [x] After a week of clean cloud runs, uninstall the launchd fallback (`ml/scripts/install_launchd.sh --uninstall`): removed 2026-11-20, after six clean days in a row (every run since 2026-11-15, including the first on the Phase 9 code)
 
 Notes:
 - The first features rebuild kept the same `features_hash` because the hash didn't cover feature definitions; added `FEATURES_VERSION` (now v2) before retraining.
@@ -214,13 +214,35 @@ Notes:
 - Part 4 done (web): the slate and game queries attach each game's projection set (`lib/players.ts`, from `current_player_projections`). The results screen lists the viewed team's top 5 (initials badge, short name, minutes, each stat with its range, the real line once final); the game page has a table per team with all 8, the real numbers marked ✓/✗ against the ranges, and a note saying whether the lines were live or a backtest. `/docs/player-projections` now describes what was built, with the test-season table and this season's backtest; the overview, architecture, pipeline and limitations pages no longer call projections upcoming.
 
 ## Phase 10: Launch polish
-- [ ] Lighthouse ≥ 80 mobile on home, a11y audit (keyboard, focus, aria-live)
-- [ ] Error and empty states, 404, loading skeletons
-- [ ] Analytics (Vercel Analytics), SEO metadata
-- [ ] Custom domain, final README with screenshots and a GIF of the cinematic
-- [ ] Weekly retrain job + champion/challenger promotion
+- [x] Lighthouse ≥ 80 mobile on home, a11y audit (keyboard, focus, aria-live)
+- [x] Error and empty states, 404, loading skeletons
+- [x] Analytics (Vercel Analytics), SEO metadata
+- [ ] Custom domain (deferred: the site stays on vercel.app for now; set `NEXT_PUBLIC_SITE_URL` when one is connected)
+- [x] Final README with screenshots and a GIF of the cinematic
+- [x] Weekly retrain job + champion/challenger promotion
 
 Notes:
+- Decisions: the weekly retrain runs on GitHub Actions from the staged history in Postgres and promotes a refit only if a 4-week walk-forward is no worse than what was published (otherwise it keeps the champion and opens an issue); the domain stays on vercel.app for now; Vercel Web Analytics and Speed Insights.
+- Part 1 done (error, empty and loading states): a shared status page for "No such page" (unknown URLs and docs pages) and "No such game", an error boundary that keeps the nav and footer ("Try again" re-fetches; the docs are static so they're offered meanwhile), a global error page for a failed root layout, and skeletons in the shape of `/game/[id]` and `/performance`. The empty states (no games today, prediction pending, no graded games, no player lines) were already in place.
+- Unknown docs pages and game IDs answer 200 rather than 404: `notFound()` runs inside a streamed Suspense boundary (params and data are read there under Cache Components), and the status can't change once streaming starts. Next adds `<meta name="robots" content="noindex">` to them, so they're never indexed. Unknown URLs get a real 404.
+- Part 2 done (speed and accessibility). Lighthouse mobile, home, local production build, median of 4: **83** (75/83/83/85), up from 74–75; the live site scored 58 and then 80 on two runs before the changes (the variance is large: Lighthouse renders WebGL in software, and the first run after a deploy is cold). Blocking time went from 0.8–10 s to 0.3–0.5 s. What it took, measured one change at a time with a CPU-sampled profile:
+  - the film grain (a fixed SVG noise filter with `mix-blend-mode: overlay` over the animated canvas) was half a second of main-thread work on its own; it's now a static noise tile (without 3D the page went from 79 to 93);
+  - `Intl.DateTimeFormat` was built on every call (90 ms across the header and game cards), and `LocalTime` built one inside a `useSyncExternalStore` snapshot; formats are now made once;
+  - the WebGL probe created a throwaway context (50 ms); it's a feature check now, and R3F still sends a failed context to the error boundary and the 2D fallback;
+  - the reflection map moved out of the first commit (idle callback), shaders go through `compileAsync` with rendering paused;
+  - phones start without bloom and add it after 8 s of smooth frames (it was being added as soon as headless Chrome saw a good frame rate, and its shader compile then landed inside the measured window: 1–1.6 s tasks).
+  - Inner pages: `/performance` 84, `/game/[id]` 95, `/docs/*` 96, `/how-it-works` 94.
+- Accessibility is 100 on every page. Fixed: the pick buttons' names now contain their visible text (WCAG 2.5.3; the visible text is wrapped in screen-reader-only "Pick the … to win" instead of an `aria-label`), the games tab's name includes its visible "N games", the smallest labels went from 9–10.4px to 11px on phones, the disclaimer is brighter (it failed contrast over the 2D fallback). Keyboard: skip link → nav → pick buttons → games tab (Enter opens the drawer, Tab moves into the cards, Escape closes); after a pick focus moves to the verdict, and Home now returns focus to the picked team's button instead of the page body; switching games is announced in a polite live region.
+- Still flagged, not changed: Lighthouse's legible-text check (60% of text at 12px or more; home has 26%, the game page 47%) because the design's mono labels are 11–11.5px; raising them site-wide is a design change. The game page's meta description is missing from what Lighthouse reads (part 3).
+- `.claude/launch.json` has a `web-prod` entry (`next start` on port 3100) for measuring production builds locally.
+- Part 3 done (SEO and analytics): `lib/site.ts` (site URL, overridable with `NEXT_PUBLIC_SITE_URL`; `pageMeta()` for title, description, canonical, Open Graph and Twitter tags on every page), a default share image (`app/opengraph-image.tsx`), `/sitemap.xml` (main pages, docs, and every graded game: about 1,460 URLs), `/robots.txt` (everything but `/dev/`, which is also `noindex`), and Vercel Web Analytics plus Speed Insights in the root layout (pinned 2.0.1 and 2.1.0). Their scripts only exist once both are switched on in the Vercel project.
+- Next merges `openGraph` shallowly, so a page that sets its own drops the inherited share image; `pageMeta` names the image every time. An explicit image also beats a file-based one, so the game pages pass their own `/game/[id]/opengraph-image`.
+- Game-page metadata depends on the request, so Next streams it into the body for browsers (Lighthouse's "no meta description" on `/game/[id]`). Checked on a production build: Slackbot gets the full set in `<head>`, so shared links unfurl with the matchup image; Googlebot reads the streamed tags (it renders the page).
+- Part 4 done (weekly retrain): `tipoff retrain` (`models/retrain.py`) and `.github/workflows/retrain.yml` (Mondays ~07:17 ET, before the daily job, in the same concurrency group). It refits both recipes on the cloud's staged history, runs a weekly walk-forward over the last 4 complete weeks, and promotes each refit only if it's no worse than what was published for the same games (game log loss within 0.005, player MAE ratio within 1%); the report goes in the job summary and a kept champion opens an issue. A dry run against prod took about 3 minutes and reproduced the stored backfill exactly (183 of the 191 games in the window were backfill made with the same recipe), which is a good check of the cloud refit; it becomes a real comparison as live picks accumulate. Details in ML_PLAN section 6.
+- `--pull` unpacks the prod history into a temporary folder, so running the retrain on the Mac never overwrites `ml/data/staged`.
+- The old plan's `retrain.sh` (local, MLflow) was dropped: the cloud champion lives in `pipeline_state`, and promoted refits are named `game-v2-r<date>` so they're never confused with the hand-trained MLflow versions.
+- Part 5 done (README): rewritten for launch, with a GIF of the cinematic, six screenshots (`docs/images/`, WebP), the test-season numbers next to their baselines, an architecture diagram, the scheduled jobs and setup. Captured from a local production build on the dev data (refreshed with `tipoff daily --target dev`) by a headless Chrome on the Mac's GPU through puppeteer: screenshots at 1440×900 (and one phone at 390×844), and the cinematic as a CDP screencast (539 frames in 9.3 s), retimed from its frame timestamps and encoded with ffmpeg at 600px and 12 fps with a 96-color palette and ordered dithering (5.3 MB; the film grain and scan lines make error-diffusion GIFs two to three times larger).
+- The launchd fallback (Phase 4) was removed on 2026-11-20: the cloud daily job had run clean every day since 2026-11-15, and the fallback only ever acted when the cloud hadn't published, so a seventh day added little. `ml/scripts/install_launchd.sh` reinstalls it.
 
 ## Later ideas
 - Predicted final score / spread (regression model)

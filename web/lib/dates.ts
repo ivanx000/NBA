@@ -3,8 +3,14 @@
 export const ET = "America/New_York";
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+// Building an Intl.DateTimeFormat is slow (milliseconds on a phone) and these run for every game
+// card, so each format is made once.
+const DAY_ET = new Intl.DateTimeFormat("en-CA", { timeZone: ET });
+const SHORT_DAY = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const CLOCK_ET = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: ET });
+
 export function todayET(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: ET }).format(now);
+  return DAY_ET.format(now);
 }
 
 export function addDays(day: string, n: number): string {
@@ -33,31 +39,16 @@ export function dayLabel(day: string, today: string): string {
   if (day === today) return "Tonight";
   if (day === addDays(today, 1)) return "Tomorrow";
   if (day === addDays(today, -1)) return "Yesterday";
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${day}T12:00:00Z`));
+  return SHORT_DAY.format(new Date(`${day}T12:00:00Z`));
 }
 
 /** "7:30 PM ET" */
 export function tipoffET(isoUtc: string | null): string | null {
   if (!isoUtc) return null;
-  const t = new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: ET,
-  }).format(new Date(isoUtc));
-  return `${t} ET`;
+  return `${CLOCK_ET.format(new Date(isoUtc))} ET`;
 }
 
 /** "Wed, Nov 19" for a YYYY-MM-DD day (no "Tonight": safe to cache and prerender). */
 export function shortDate(day: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${day}T12:00:00Z`));
+  return SHORT_DAY.format(new Date(`${day}T12:00:00Z`));
 }

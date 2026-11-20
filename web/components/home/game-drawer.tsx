@@ -163,7 +163,7 @@ export function GameDrawer({
         data-open={open || undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        aria-label={`${heading}: ${games.length}`}
+        aria-label={`${heading}: ${games.length} games`}
       >
         {/* One small tick per game in its two teams' colors; tonight's pick is longer and lit. */}
         <span className="game-drawer__ticks" aria-hidden>

@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { GameBreakdown } from "@/components/game/game-breakdown";
+import { GameSkeleton } from "@/components/skeleton";
 import { shortDate } from "@/lib/dates";
 import { getGameDetail } from "@/lib/db/queries";
+import { pageMeta } from "@/lib/site";
 
 export async function generateMetadata({ params }: PageProps<"/game/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -12,10 +14,17 @@ export async function generateMetadata({ params }: PageProps<"/game/[id]">): Pro
   if (!detail) return { title: "Game not found · Tip-Off" };
   const { game } = detail;
   const title = `${game.away.name} at ${game.home.name}, ${shortDate(game.gameDate)} · Tip-Off`;
-  return {
+  return pageMeta({
     title,
-    description: `Who wins ${game.away.city} at ${game.home.city}: the model's win chance, the reasons behind it, both teams' form and the season series. Unofficial fan project.`,
-  };
+    description: `Who wins ${game.away.city} at ${game.home.city}: the model's win chance, the reasons behind it, both teams' form, the season series and projected player lines. Unofficial fan project.`,
+    path: `/game/${game.gameId}`,
+    image: {
+      url: `/game/${game.gameId}/opengraph-image`,
+      width: 1200,
+      height: 630,
+      alt: `${game.away.name} at ${game.home.name}: the model's win chance`,
+    },
+  });
 }
 
 async function Breakdown({ id }: { id: string }) {
@@ -24,19 +33,11 @@ async function Breakdown({ id }: { id: string }) {
   return <GameBreakdown detail={detail} />;
 }
 
-function Loading() {
-  return (
-    <div className="grid min-h-[40vh] place-items-center" role="status" aria-label="Loading the game">
-      <span className="basketball-loader" aria-hidden />
-    </div>
-  );
-}
-
 /** Full breakdown of one game (any day). The game is runtime data, so it streams in. */
 export default function Page({ params }: PageProps<"/game/[id]">) {
   return (
     <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 pt-28 pb-20 sm:px-6">
-      <Suspense fallback={<Loading />}>{params.then(({ id }) => <Breakdown id={id} />)}</Suspense>
+      <Suspense fallback={<GameSkeleton />}>{params.then(({ id }) => <Breakdown id={id} />)}</Suspense>
     </main>
   );
 }

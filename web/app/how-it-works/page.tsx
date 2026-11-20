@@ -5,13 +5,15 @@ import { Chapter } from "@/components/how-it-works/chapter";
 import { HologramStage } from "@/components/how-it-works/hologram-stage";
 import { ChanceFigure, FeatureBars, Figure, GamesGrid, Scorecard, Waterfall } from "@/components/how-it-works/visuals";
 import "@/components/how-it-works/story.css";
+import { pageMeta } from "@/lib/site";
 import { FACTOR_COUNT, FEATURE_COUNT, LEARNED_GAMES, SEASON_GAMES, TEST_SEASON } from "@/lib/story";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "How it works · Tip-Off",
   description:
     "From box scores to tonight's pick in five steps: the data, the numbers, the model, the prediction and the 3D shot. Unofficial fan project.",
-};
+  path: "/how-it-works",
+});
 
 const ALL_GAMES = SEASON_GAMES.reduce((n, s) => n + s.games, 0);
 

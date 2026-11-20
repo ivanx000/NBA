@@ -12,7 +12,7 @@ export function MatchupHeader({ game, today }: { game: SlateGame; today: string 
           ? "Postponed"
           : `${dayLabel(game.gameDate, today)} · ${tipoffET(game.tipoffUtc) ?? "Time TBD"}`;
   return (
-    <p className="eyebrow text-center text-[0.65rem] tabular">
+    <p className="eyebrow text-center text-[0.69rem] tabular">
       <span className="sr-only">
         {game.away.city} {game.away.name} at {game.home.city} {game.home.name}.{" "}
       </span>

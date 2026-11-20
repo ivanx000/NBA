@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { DocsToc } from "@/components/docs/docs-toc";
 import { DOC_PAGES, docToc, findDoc } from "@/lib/docs";
+import { pageMeta } from "@/lib/site";
 
 export function generateStaticParams() {
   return DOC_PAGES.map((p) => ({ slug: p.slug ? [p.slug] : [] }));
@@ -15,7 +16,11 @@ const keyOf = (slug: string[] | undefined) => slug?.join("/") ?? "";
 export async function generateMetadata({ params }: PageProps<"/docs/[[...slug]]">): Promise<Metadata> {
   const doc = findDoc(keyOf((await params).slug));
   if (!doc) return { title: "Not found · Tip-Off docs" };
-  return { title: doc.slug ? `${doc.title} · Tip-Off docs` : "Docs · Tip-Off", description: doc.description };
+  return pageMeta({
+    title: doc.slug ? `${doc.title} · Tip-Off docs` : "Docs · Tip-Off",
+    description: doc.description,
+    path: doc.slug ? `/docs/${doc.slug}` : "/docs",
+  });
 }
 
 /**

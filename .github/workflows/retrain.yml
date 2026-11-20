@@ -1,0 +1,66 @@
+name: retrain
+
+# The weekly retrain, in the cloud: pull the staged history and both champions from Postgres,
+# refit each model's recipe on every completed game, and promote a refit only if a walk-forward
+# over the last 4 complete weeks is no worse than what was published for those games
+# (ml/src/tipoff/models/retrain.py). The report goes in the job summary; when a champion is kept,
+# an issue is opened so it gets a look. Never calls stats.nba.com.
+on:
+  schedule:
+    - cron: "17 12 * * 1" # Mondays ~07:17 ET (EST) / 08:17 ET (EDT), before the daily job
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Evaluate only; don't push a new champion or open an issue"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+# Shares the daily job's group: the two never read or write pipeline_state at the same time.
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL_PROD: ${{ secrets.DATABASE_URL }}
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    defaults:
+      run:
+        working-directory: ml
+    steps:
+      - uses: actions/checkout@v7
+      - name: Skip until the DATABASE_URL secret exists
+        id: gate
+        run: if [ -z "$DATABASE_URL_PROD" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; echo "::warning::DATABASE_URL secret not set; skipping"; fi
+      - uses: astral-sh/setup-uv@v10.3.3
+        if: steps.gate.outputs.skip != 'true'
+        with:
+          enable-cache: true
+          cache-dependency-glob: ml/uv.lock
+      - if: steps.gate.outputs.skip != 'true'
+        run: uv sync --locked
+      - name: Retrain and compare
+        id: retrain
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          flags=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then flags="--dry-run"; fi
+          uv run tipoff retrain --target prod $flags --summary "$RUNNER_TEMP/retrain.md" --decision "$RUNNER_TEMP/retrain.json"
+          cat "$RUNNER_TEMP/retrain.md" >> "$GITHUB_STEP_SUMMARY"
+          kept=$(jq -r '[.game.promote, (.player.promote // true)] | all | not' "$RUNNER_TEMP/retrain.json")
+          echo "kept=$kept" >> "$GITHUB_OUTPUT"
+      - name: Open an issue when a champion is kept
+        if: steps.retrain.outputs.kept == 'true' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Weekly retrain kept a champion ($(date -u +%Y-%m-%d))" \
+            --body-file "$RUNNER_TEMP/retrain.md"

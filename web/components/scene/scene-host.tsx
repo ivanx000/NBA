@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { Component, type ReactNode, useSyncExternalStore } from "react";
 
+import { detectWebGL } from "@/lib/webgl";
+
 import type { ArenaSceneProps } from "./arena-scene";
 import { Fallback2D } from "./fallback-2d";
 
@@ -16,20 +18,6 @@ function Loader() {
 
 const ArenaScene = dynamic(() => import("./arena-scene"), { ssr: false, loading: Loader });
 
-let webglSupport: boolean | undefined;
-function detectWebGL(): boolean {
-  if (webglSupport === undefined) {
-    // `?webgl=0` forces the 2D fallback, for checking it on any device.
-    if (new URLSearchParams(window.location.search).get("webgl") === "0") return (webglSupport = false);
-    try {
-      const canvas = document.createElement("canvas");
-      webglSupport = Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
-    } catch {
-      webglSupport = false;
-    }
-  }
-  return webglSupport;
-}
 const noop = () => () => {};
 
 class SceneErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {

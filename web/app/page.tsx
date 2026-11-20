@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { HomeExperience } from "@/components/home/home-experience";
 import { todayET } from "@/lib/dates";
 import { getSlate } from "@/lib/db/queries";
+import { pageMeta, SITE_DESCRIPTION } from "@/lib/site";
 import { defaultGame } from "@/lib/slate";
+
+export const metadata: Metadata = pageMeta({ title: "Tip-Off: who wins tonight?", description: SITE_DESCRIPTION, path: "/" });
 
 function HomeShell() {
   return (

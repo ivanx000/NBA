@@ -1,0 +1,83 @@
+/* Loading skeletons: the page's shape in faint glass, with a slow light sweep (still with reduced motion). */
+.skeleton {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.5rem;
+}
+.bone {
+  display: block;
+  max-width: 100%;
+  border-radius: 0.4rem;
+  background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(91, 140, 255, 0.12) 40%,
+      rgba(243, 246, 252, 0.08) 50%,
+      transparent 70%
+    )
+    0 0 / 300% 100%,
+    rgba(243, 246, 252, 0.06);
+  animation: bone-sweep 1.8s ease-in-out infinite;
+}
+@keyframes bone-sweep {
+  from {
+    background-position: 100% 0, 0 0;
+  }
+  to {
+    background-position: 0 0, 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bone {
+    animation: none;
+  }
+}
+
+.skeleton__title {
+  margin-top: 0.4rem;
+}
+.skeleton__panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+  padding: 1.25rem 1.4rem;
+  border-radius: 1rem;
+}
+.skeleton__split {
+  display: flex;
+  justify-content: space-between;
+}
+.skeleton__two {
+  display: grid;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) {
+  .skeleton__two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.skeleton__four {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+@media (min-width: 900px) {
+  .skeleton__four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.skeleton__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.skeleton__tile {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+}
+.skeleton__chart {
+  border-radius: 0.6rem;
+}

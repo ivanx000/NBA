@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SceneHost } from "@/components/scene/scene-host";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -67,6 +67,18 @@ export function HomeExperience({
     return () => window.clearTimeout(id);
   }, [phase, send, cinematic]);
 
+  // Back from the results (Home): return keyboard focus to the pick button of the team that was
+  // picked, rather than dropping it on the page body. The labels are hidden until idle, so wait.
+  const returningFrom = useRef<"home" | "away" | null>(null);
+  useEffect(() => {
+    if (phase === "returning" && pick) returningFrom.current = pick;
+    if (phase !== "idle" || !returningFrom.current) return;
+    const side = returningFrom.current;
+    returningFrom.current = null;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    document.querySelector<HTMLElement>(`[data-pick-side="${side}"]`)?.focus({ preventScroll: true });
+  }, [phase, pick]);
+
   // Esc skips to results (DESIGN.md section 4).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && send({ type: "skip" });
@@ -74,9 +86,17 @@ export function HomeExperience({
     return () => window.removeEventListener("keydown", onKey);
   }, [send]);
 
+  // Read out a new matchup to screen readers when the visitor switches games (not on first load).
+  const [announcement, setAnnouncement] = useState("");
+  const announce = (id: string | null, games = shown) => {
+    const g = games.find((x) => x.gameId === id);
+    if (g) setAnnouncement(`Now showing the ${g.away.city} ${g.away.name} at the ${g.home.city} ${g.home.name}.`);
+  };
+
   const selectGame = (id: string) => {
     send({ type: "select", gameId: id });
     window.history.replaceState(null, "", urlFor(id));
+    announce(id);
   };
 
   const showNextDay = () => {
@@ -84,6 +104,7 @@ export function HomeExperience({
     setShowNext(true);
     const first = defaultGame(slate.next.games, null);
     reset(first?.gameId ?? null);
+    announce(first?.gameId ?? null, slate.next.games);
     if (first) window.history.replaceState(null, "", urlFor(first.gameId));
   };
 
@@ -191,7 +212,11 @@ export function HomeExperience({
         />
       )}
 
-      <p className="pointer-events-none absolute right-3 bottom-1.5 z-20 font-mono text-[9px] tracking-wide text-white/35 uppercase">
+      <p className="sr-only" aria-live="polite">
+        {announcement}
+      </p>
+
+      <p className="pointer-events-none absolute right-3 bottom-1.5 z-20 font-mono text-[10px] tracking-wide text-white/55 uppercase">
         Unofficial fan project. Not affiliated with the NBA.
       </p>
     </main>

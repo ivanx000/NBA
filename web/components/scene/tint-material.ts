@@ -66,14 +66,30 @@ const REGION = {
   back: { x: 0.15, y0: 1.2, y1: 1.5 }, // number on the back
 };
 
+function jerseyFamily(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue("--font-jersey").trim();
+}
+
+let fontReady: Promise<void> | undefined;
+
+/**
+ * Resolves once the jersey font (Oswald) has loaded. A canvas doesn't wait for web fonts: lettering
+ * drawn before it arrives comes out in the fallback face, so the player suspends on this first.
+ */
+export function jerseyFontReady(): Promise<void> {
+  fontReady ??= (async () => {
+    const family = jerseyFamily();
+    if (family) await document.fonts.load(`700 100px ${family}`);
+  })().catch(() => {}); // fall back to Impact rather than fail the scene
+  return fontReady;
+}
+
 function lettering(text: string, number: string, color: string, withText: boolean) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext("2d")!;
-  const family =
-    getComputedStyle(document.documentElement).getPropertyValue("--font-jersey").trim() ||
-    "Impact, sans-serif";
+  const family = jerseyFamily() || "Impact, sans-serif";
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";

@@ -40,13 +40,14 @@ def test_cloud_update_uses_only_cdn(monkeypatch, tmp_path):
 
 
 def test_cloud_player_steps_never_import_stats_nba():
-    """`daily --cloud` also projects players and fills results; those modules read staged data
-    and the database only."""
+    """`daily --cloud` also projects players and fills results, and the weekly retrain refits both
+    models in the cloud; those modules read staged data and the database only."""
     import inspect
 
     from tipoff.features import players as features
+    from tipoff.models import retrain
     from tipoff.predict import players as predict
     from tipoff.publish import players as publish
 
-    for module in (features, predict, publish):
+    for module in (features, predict, publish, retrain):
         assert "nba_stats" not in inspect.getsource(module), module.__name__

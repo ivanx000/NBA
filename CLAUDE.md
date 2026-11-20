@@ -82,6 +82,7 @@ uv run tipoff freshness-check [--target prod]
 uv run tipoff daily --target prod --if-needed        # local fallback (launchd, scripts/daily.sh)
 uv run tipoff daily --cloud --target prod            # what .github/workflows/daily.yml runs (cdn only)
 uv run tipoff state push --what all --target prod    # staged history + both champions for the cloud job
+uv run tipoff retrain --target prod --dry-run        # weekly retrain (what .github/workflows/retrain.yml runs, without --dry-run)
 uv run tipoff predict --date today
 uv run tipoff publish            # writes predictions to Postgres
 uv run tipoff daily              # ingest -> features -> predict -> publish

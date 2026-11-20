@@ -2,7 +2,7 @@
 
 import { useAnimations, useGLTF, useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { use, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 
@@ -16,7 +16,7 @@ import {
 } from "@/lib/scene-config";
 import type { JerseyColorway } from "@/lib/teams";
 
-import { makeTintMaterial } from "./tint-material";
+import { jerseyFontReady, makeTintMaterial } from "./tint-material";
 
 function prepMask(tex: THREE.Texture) {
   tex.flipY = false; // glTF UV convention
@@ -82,6 +82,9 @@ export function Player({
   /** Turn the head a little toward the cursor (DESIGN.md section 3, idle). */
   lookAt?: boolean;
 } & Omit<React.ComponentProps<"group">, "children">) {
+  // Suspends (with the model) until the jersey font has loaded, so the lettering is never drawn in
+  // the fallback face.
+  use(jerseyFontReady());
   const gltf = useGLTF(PLAYER_MODEL_URL);
   // One clone per player: its own skeleton, so two players can animate independently.
   const instance = useMemo(() => {

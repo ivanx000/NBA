@@ -36,10 +36,10 @@
 |---|---|---|---|
 | ~06:07 | GitHub Actions | `schedule-sync` | `tipoff sync --target prod`: upserts the whole current season's games from the cdn schedule (which also carries final scores) |
 | hourly ~09:07–18:07 | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --if-needed` | pull staged history + champions from `pipeline_state` → cdn.nba.com box scores for newly finished games → incremental stage → push history back → sync → predict today and project its players → publish both → fill projected players' actual lines → freshness check. The player steps run after the game predictions are out and never stop the job. Exits immediately once today is published |
-| 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`), **fallback** | `tipoff daily --target prod --if-needed` | same job using stats.nba.com; only acts if the cloud run hasn't published. To be removed after a week of clean cloud runs |
+| 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`), **fallback** | `tipoff daily --target prod --if-needed` | same job using stats.nba.com; only acts if the cloud run hasn't published. **Uninstalled 2026-11-20** after six clean cloud days; `ml/scripts/install_launchd.sh` reinstalls it if the cloud job ever needs a backup |
 | ~10:37 | GitHub Actions | `freshness-check` | syncs, then fails (GitHub emails) if any of today's games lacks a live prediction |
 | hourly ~18:17–02:17 | GitHub Actions | `results-sync` | same sync, plus live status/scores from today's scoreboard |
-| Mon 05:00 | Local | `retrain.sh` | Retrains on all data to date, logs to MLflow, promotes it only if it beats the current model on the latest validation window |
+| Mon ~07:17 | GitHub Actions | `retrain` → `tipoff retrain --target prod` | pull staged history + both champions from `pipeline_state` → refit each recipe on every completed game → weekly walk-forward over the last 4 complete weeks, compared with what was published for the same games → push a refit (`game-v2-r<date>`, `player-v1-r<date>`) only if it's no worse (log loss within 0.005; player MAE ratio within 1%) → report in the job summary; an issue when a champion is kept. Shares the daily job's concurrency group |
 
 GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for EST) and can start late. The daily job no longer needs the Mac: cdn.nba.com box scores carry every counting stat the features use (verified field by field against stats.nba.com), and pace and ratings come from the box-score possession formula for every season, so history and new games match. stats.nba.com is still used locally for historical ingest and rebuilds.
 
@@ -86,7 +86,7 @@ GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for E
 │   │   ├── test_no_leakage.py
 │   │   ├── test_features.py
 │   │   └── test_publish_schema.py
-│   ├── scripts/daily.sh, retrain.sh
+│   ├── scripts/daily.sh            # local fallback for the daily job (launchd)
 │   ├── data/                     # git-ignored: raw/stats, raw/cdn, staged, features
 │   ├── reports/figures/          # PNGs from notebooks, reused by the website docs
 │   └── notebooks/                # EDA only
@@ -239,6 +239,12 @@ interface SceneState {
 ```
 As built: `lib/scene-store.ts` holds `phase`, `gameId`, `pick` and `viewing` (whose numbers the results screen shows) and `instantResults`, with a pure `transition(state, event)` (events: predict with the picked side, view, revealDone, shotDone, skip, back, returned, select), plus UI-only `hover` and a `cinematic` flag. `components/scene/matchup.tsx` watches `phase` and owns one GSAP timeline per prediction: it moves the camera (through `camera-override.ts`, which the camera rig blends toward), turns the picked player, switches his clips, flies the ball on `lib/shot-path.ts` (in or out by `verdict`), frames the viewed team on the results screen, and sends `revealDone`/`shotDone`/`returned` itself. Skip seeks the timeline to its `results` label. When the 3D scene isn't mounted (2D fallback), `cinematic` is false and the home page advances the phases on short timers.
 
+### Search and analytics
+
+- **Metadata:** every page builds its title, description, canonical URL and Open Graph/Twitter tags with `pageMeta()` (`lib/site.ts`; Next merges these objects shallowly, so each page sets them in full). The share image is `app/opengraph-image.tsx` (static), or the game's own `app/game/[id]/opengraph-image.tsx`. Metadata that depends on request data (the game pages) streams into the body for browsers; HTML-limited bots (Slackbot, X, Facebook, Bingbot and Google's crawlers among them, Next's default list) get it in `<head>` before the page streams, so link previews work. Googlebot also renders the body.
+- **`/sitemap.xml`** (`app/sitemap.ts`, per request): the main pages, the docs, and every graded game (this season and last) from the cached graded-games query; the static pages alone if the database is unreachable. **`/robots.txt`**: everything allowed except `/dev/`, which also carries `noindex`.
+- **Vercel Web Analytics** (cookieless page views) and **Speed Insights** (real-user Core Web Vitals) are in the root layout (`@vercel/analytics`, `@vercel/speed-insights`, inside `<Suspense>`). Their scripts are served by Vercel at `/_vercel/insights` and `/_vercel/speed-insights` only once each is enabled in the Vercel project; elsewhere they 404 and record nothing.
+
 ## 6. Environments and secrets
 
 | Var | Used by | Where set |
@@ -247,6 +253,7 @@ As built: `lib/scene-store.ts` holds `phase`, `gameId`, `pick` and `viewing` (wh
 | `DATABASE_URL_PROD` | ml daily job | local `.env`: Neon main branch, **direct** (non-`-pooler`) host. GitHub secret `DATABASE_URL` holds the same value (mapped to `DATABASE_URL_PROD` in workflows) |
 | `MLFLOW_TRACKING_URI` | ml | local `.env` (default `sqlite:///<repo>/ml/mlflow.db`, artifacts in `ml/mlartifacts/`) |
 | `MESHY_API_KEY` | scripts/assets | local `.env` only |
+| `NEXT_PUBLIC_SITE_URL` | web (canonical links, sitemap, share images) | optional; defaults to the production vercel.app URL (`web/lib/site.ts`). Set in Vercel when a custom domain is connected |
 
 The Neon project was created through the Vercel integration; its main branch is prod (Postgres 18). The site only reads, so Vercel previews reading prod is harmless and needs no separate setting. A Neon `dev` branch is for local web development (the Neon HTTP driver can't talk to plain Postgres). Branches in this Vercel-linked project are tied to Vercel deployments and the create dialog defaults to auto-deleting after a day, so `dev` must be created by hand with auto-delete set to Never (Branches → Create a branch manually); if it disappears, recreate it that way and copy its direct connection string into `.env`. The pipeline's dev runs and the DB tests use Postgres 18 in Docker (`docker compose up -d db`, port 5433). Migrations: `pnpm db:generate` → commit `web/drizzle/*.sql` → `pnpm db:migrate` (dev, then `DATABASE_URL=$DATABASE_URL_PROD pnpm db:migrate`) → `pnpm db:seed`.
 

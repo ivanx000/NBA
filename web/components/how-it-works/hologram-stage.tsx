@@ -6,6 +6,7 @@ import { Component, type ReactNode, useCallback, useEffect, useRef, useState, us
 import { EXAMPLE } from "@/lib/story";
 import { hologramMatchup } from "@/lib/team-colors";
 import { requireTeam } from "@/lib/teams";
+import { detectWebGL } from "@/lib/webgl";
 
 import { useChapterProgress } from "./chapter";
 
@@ -22,19 +23,6 @@ function Loading() {
 const team = requireTeam(EXAMPLE.home);
 const side = hologramMatchup(team, requireTeam(EXAMPLE.away)).home;
 
-let webglSupport: boolean | undefined;
-function detectWebGL(): boolean {
-  if (webglSupport === undefined) {
-    if (new URLSearchParams(window.location.search).get("webgl") === "0") return (webglSupport = false);
-    try {
-      const canvas = document.createElement("canvas");
-      webglSupport = Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
-    } catch {
-      webglSupport = false;
-    }
-  }
-  return webglSupport;
-}
 const reducedQuery = "(prefers-reduced-motion: reduce)";
 function subscribeReduced(cb: () => void) {
   const mq = window.matchMedia(reducedQuery);
