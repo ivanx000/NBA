@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The two players on their platforms, picking by clicking a player, and the pick's cinematic
+ * The two players at center court, picking by clicking a player, and the pick's cinematic
  * (DESIGN.md section 4), one GSAP timeline per pick:
  *
  *   push-in over the picked player's shoulder, he turns to the hoop -> hoop lights up ->
@@ -27,7 +27,7 @@ import { requireTeam } from "@/lib/teams";
 
 import { cameraOverride, resetCameraOverride } from "./camera-override";
 import { Ball, Burst, type BurstHandle, Hoop, type HoopHandle, RIM_HEIGHT_M, Trail, type TrailHandle } from "./cinematic-props";
-import { Platform } from "./platform";
+import { FloorMark } from "./floor-mark";
 import { Player } from "./player";
 
 /** Release to rim, along the floor (a long two). */
@@ -36,6 +36,9 @@ const LEFT_HAND_BONE = "mixamorigLeftHand";
 /** Timeline marks, in seconds (DESIGN.md section 4). */
 const T = { pushIn: 0.4, turn: 0.6, hoop: 1.2, shot: 1.8 };
 const HERO_FOV = 35;
+/** Hover: how much a player grows, and how far (m) he steps toward the camera. */
+const HOVER_SCALE = 0.08;
+const HOVER_STEP = 0.35;
 
 interface Run {
   timeline: gsap.core.Timeline | null;
@@ -49,7 +52,7 @@ interface Run {
   flight: { t: number };
   ball: { scale: number };
   hoop: { opacity: number };
-  /** Eased hover scale per side. */
+  /** Eased hover amount per side, 0 to 1 (he grows and steps toward the camera). */
   grow: Record<Side, number>;
 }
 
@@ -118,7 +121,7 @@ export function Matchup({
     flight: { t: 0 },
     ball: { scale: 0 },
     hoop: { opacity: 0 },
-    grow: { away: 1, home: 1 },
+    grow: { away: 0, home: 0 },
   });
 
   // While mounted, the cinematic drives the phases (the page's fallback timers stand down).
@@ -298,11 +301,15 @@ export function Matchup({
   const tmp = useRef({ a: new THREE.Vector3(), b: new THREE.Vector3() });
   useFrame((_, dt) => {
     const r = run.current;
-    // Hover: the player grows a little (eased).
+    // Hover: the player pops out, growing and stepping toward the camera (eased, with a little
+    // overshoot so it feels springy).
     for (const [side, root] of [["away", awayRoot.current], ["home", homeRoot.current]] as const) {
-      const target = pickable && hover === side ? 1.06 : 1;
-      r.grow[side] += (target - r.grow[side]) * Math.min(1, dt * 10);
-      root?.scale.setScalar(r.grow[side]);
+      const target = pickable && hover === side ? 1 : 0;
+      r.grow[side] += (target - r.grow[side]) * Math.min(1, dt * 9);
+      const g = r.grow[side];
+      const spring = g + Math.sin(g * Math.PI) * 0.08;
+      root?.scale.setScalar(1 + HOVER_SCALE * spring);
+      root?.position.set(0, 0, HOVER_STEP * spring);
     }
     const b = ball.current;
     if (!b) return;
@@ -346,10 +353,13 @@ export function Matchup({
         const focus = phase === "results" ? viewing : phase === "idle" ? null : pick;
         const dimmed = focus !== null && focus !== side;
         const hovered = pickable && hover === side;
+        // While one player is hovered, the other steps back into the shade a little.
+        const shaded = pickable && hover !== null && hover !== side;
         const clip = phase !== "idle" && side === pick ? shooterClip : dimmed ? "Idle_Look" : "Idle";
         return (
           <group key={side} position={[x * playerX, 0, 0]}>
             <group ref={side === "home" ? homeRoot : awayRoot}>
+              <FloorMark color={color} active={hovered} still={reducedMotion} />
               <group ref={side === "home" ? homeSpin : awaySpin}>
                 <Player
                   rotation={[0, turn, 0]}
@@ -357,7 +367,8 @@ export function Matchup({
                   chestText={team.jersey.chest_text}
                   number={team.jersey.number}
                   hologram={color}
-                  intensity={dimmed ? 0.3 : hovered ? 1.25 : 1}
+                  intensity={dimmed ? 0.3 : hovered ? 1.15 : shaded ? 0.6 : 1}
+                  highlight={hovered ? 1 : 0}
                   paused={reducedMotion}
                   timeOffset={offset}
                   clip={clip}
@@ -366,12 +377,6 @@ export function Matchup({
                 />
               </group>
             </group>
-            <Platform
-              color={color}
-              intensity={dimmed ? 0.3 : hovered ? 1.5 : 1}
-              still={reducedMotion}
-              radius={playerX * 0.9}
-            />
             {/* An easy-to-hit invisible column around the player, for hover and click. */}
             <mesh position={[0, 1.05, 0]} onPointerOver={onOver(side)} onPointerOut={onOut} onClick={onClick(side)}>
               <cylinderGeometry args={[0.5, 0.5, 2.2, 12]} />

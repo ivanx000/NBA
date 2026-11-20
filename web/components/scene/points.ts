@@ -40,7 +40,7 @@ export function pointsMaterial(size: number, twinkle: number): THREE.ShaderMater
         float tw = 1.0 - uTwinkle * (0.5 + 0.5 * sin(uTime * (0.6 + aSeed * 2.2) + aSeed * 40.0));
         gl_PointSize = uSize * aSize * uPixelRatio / max(-mv.z, 0.5);
         vColor = color * tw;
-        vFade = 1.0 - smoothstep(24.0, 60.0, -mv.z);
+        vFade = 1.0 - smoothstep(30.0, 75.0, -mv.z);
       }`,
     fragmentShader: /* glsl */ `
       uniform float uOpacity;
@@ -51,6 +51,32 @@ export function pointsMaterial(size: number, twinkle: number): THREE.ShaderMater
         float a = smoothstep(0.5, 0.0, d);
         a *= a;
         gl_FragColor = vec4(vColor * a * uOpacity * vFade, 1.0);
+      }`,
+  };
+}
+
+/**
+ * Camera flashes in the crowd: each point is dark nearly all the time and pops for a split second
+ * at its own moment (sharp peaks of a sine, at a per-point rate). Same uniforms as pointsMaterial.
+ */
+export function flashMaterial(size: number): THREE.ShaderMaterialParameters {
+  const base = pointsMaterial(size, 0);
+  return {
+    ...base,
+    vertexShader: /* glsl */ `
+      attribute float aSize;
+      attribute float aSeed;
+      attribute vec3 color;
+      uniform float uTime, uSize, uPixelRatio;
+      varying vec3 vColor;
+      varying float vFade;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float pop = pow(max(0.0, sin(uTime * (0.35 + aSeed * 0.6) + aSeed * 97.0)), 180.0);
+        gl_PointSize = uSize * aSize * uPixelRatio * pop / max(-mv.z, 0.5);
+        vColor = color * pop;
+        vFade = 1.0 - smoothstep(30.0, 70.0, -mv.z);
       }`,
   };
 }

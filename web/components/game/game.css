@@ -215,3 +215,56 @@
 .form-strip__score {
   color: var(--text-muted);
 }
+
+/* --- Interaction ---------------------------------------------------------------------------- */
+/* The reasons' bars grow in one after another; pointing at one dims the rest. */
+.factor-bars__track span {
+  transform-origin: left;
+  animation: factor-grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.factor-bars li:nth-child(2) .factor-bars__track span {
+  animation-delay: 0.08s;
+}
+.factor-bars li:nth-child(3) .factor-bars__track span {
+  animation-delay: 0.16s;
+}
+.factor-bars li:nth-child(4) .factor-bars__track span {
+  animation-delay: 0.24s;
+}
+.factor-bars li:nth-child(n + 5) .factor-bars__track span {
+  animation-delay: 0.32s;
+}
+@keyframes factor-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.factor-bars li {
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.factor-bars:has(li:hover) li:not(:hover) {
+  opacity: 0.45;
+}
+.factor-bars li:hover {
+  transform: translateX(3px);
+}
+.factor-bars li:hover .factor-bars__track span {
+  box-shadow: 0 0 14px var(--c);
+}
+/* The last-10 strip: each game lifts under the pointer. */
+.form-strip li {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
+}
+.form-strip li:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .factor-bars__track span {
+    animation: none;
+  }
+  .form-strip li:hover,
+  .factor-bars li:hover {
+    transform: none;
+  }
+}

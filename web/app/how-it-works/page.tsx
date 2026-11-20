@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Chapter } from "@/components/how-it-works/chapter";
 import { HologramStage } from "@/components/how-it-works/hologram-stage";
+import { StoryProgress } from "@/components/how-it-works/story-progress";
 import { ChanceFigure, FeatureBars, Figure, GamesGrid, Scorecard, Waterfall } from "@/components/how-it-works/visuals";
 import "@/components/how-it-works/story.css";
 import { pageMeta } from "@/lib/site";
@@ -18,11 +19,11 @@ export const metadata: Metadata = pageMeta({
 const ALL_GAMES = SEASON_GAMES.reduce((n, s) => n + s.games, 0);
 
 const STEPS = [
-  { id: "data", name: "Data" },
-  { id: "features", name: "Features" },
-  { id: "model", name: "Model" },
-  { id: "prediction", name: "Prediction" },
-  { id: "animation", name: "Animation" },
+  { id: "data", name: "Data", hint: "Eleven seasons of box scores" },
+  { id: "features", name: "Features", hint: "A matchup as 56 numbers" },
+  { id: "model", name: "Model", hint: "Weighing the evidence" },
+  { id: "prediction", name: "Prediction", hint: "Published, then graded" },
+  { id: "animation", name: "Animation", hint: "Your call, in 3D" },
 ];
 
 export default function Page() {
@@ -34,19 +35,27 @@ export default function Page() {
           Tip-Off picks a winner for every NBA game before tip-off. Here&apos;s how it gets there, following one
           example game, the Celtics at the Knicks, through five steps.
         </p>
-        <nav aria-label="Steps" className="story-rail">
+        <nav aria-label="Steps" className="story-index">
           <ol>
             {STEPS.map((s, i) => (
               <li key={s.id}>
                 <a href={`#${s.id}`}>
-                  <span aria-hidden>{i + 1}</span>
-                  {s.name}
+                  <span className="story-index__n" aria-hidden>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="story-index__name">{s.name}</span>
+                  <span className="story-index__hint">{s.hint}</span>
                 </a>
               </li>
             ))}
           </ol>
         </nav>
+        <a href="#data" className="story-scroll" aria-hidden tabIndex={-1}>
+          <span>Scroll</span>
+          <i />
+        </a>
       </header>
+      <StoryProgress steps={STEPS} />
 
       <Chapter
         id="data"
@@ -136,8 +145,8 @@ export default function Page() {
 
       <Chapter id="animation" step={5} name="Animation" title="Your call, in 3D" visual={<HologramStage />}>
         <p>
-          On the home page, a player from each team stands on a platform as a hologram. Click the one you think
-          wins and he takes the shot. It drops if your pick is right: by the final score once the game is over,
+          On the home page, a player from each team stands at center court as a hologram. Hover one and he steps
+          forward; click the one you think wins and he takes the shot. It drops if your pick is right: by the final score once the game is over,
           or by the model&apos;s call before then.
         </p>
         <p>

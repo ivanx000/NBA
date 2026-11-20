@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   // The /docs pages are MDX in content/docs, imported by app/docs/[[...slug]].
   pageExtensions: ["ts", "tsx", "mdx"],
   cacheComponents: true,
+  // No "N" badge in the corner during development (errors still open the overlay).
+  devIndicators: false,
   partialPrefetching: true,
   outputFileTracingRoot: repoRoot,
   turbopack: {

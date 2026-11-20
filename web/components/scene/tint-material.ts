@@ -25,8 +25,8 @@ export interface TintOptions {
   debugMask?: boolean;
   /**
    * Draw the player as a hologram with this glow color (DESIGN.md section 1): lit in his real
-   * colors, with dark see-through scan lines drifting up, a rim glow, legs fading into the pad's
-   * light, a brighter band sweeping up now and then, and a slight flicker. Null: plain shading.
+   * colors, with dark see-through scan lines drifting up, a rim glow, a brighter band sweeping up
+   * now and then, and a slight flicker. Null: plain shading.
    */
   hologram?: string | null;
 }
@@ -51,9 +51,9 @@ export const HOLO = {
   /** How strongly a glitch slice flashes (0 to 1); glitches come every 10 seconds or so. */
   glitch: 0.8,
   sweep: 0.16,
-  /** Height (m) over which the legs fade into the pad's glow, and how much. */
-  floorFade: 0.32,
-  floorGlow: 0.45,
+  /** Hover highlight: extra rim glow and a lift of the whole body at full highlight. */
+  highlightRim: 1.3,
+  highlightLift: 0.25,
 } as const;
 
 /**
@@ -136,6 +136,7 @@ export function makeTintMaterial(source: THREE.MeshStandardMaterial, opts: TintO
     uHolo: { value: new THREE.Color(opts.hologram ?? "#ffffff") },
     uTime: { value: 0 },
     uIntensity: { value: 1 },
+    uHighlight: { value: 0 },
   };
   if (opts.hologram) {
     material.defines = { ...material.defines, TIPOFF_HOLO: "" };
@@ -161,7 +162,7 @@ export function makeTintMaterial(source: THREE.MeshStandardMaterial, opts: TintO
 varying vec3 vBind;
 uniform sampler2D uMask, uFront, uBack;
 uniform vec3 uJersey, uTrim, uShorts, uOrigin;
-uniform float uScale, uTime, uIntensity;
+uniform float uScale, uTime, uIntensity, uHighlight;
 uniform vec3 uHolo;
 varying float vWorldY;
 float holoHash(vec2 p) {
@@ -204,7 +205,7 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
         `#ifdef TIPOFF_HOLO
 {
   // The hologram (DESIGN.md section 1), after the lit color: his real colors under dark,
-  // see-through scan lines drifting up, a rim glow, legs fading into the pad's light.
+  // see-through scan lines drifting up and a rim glow.
   vec3 col = outgoingLight;
   // Soft ceiling under the bloom threshold: the lit surface never blooms, only the rim does.
   float top = max(col.r, max(col.g, col.b));
@@ -225,8 +226,10 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
   col += uHolo * ${f(HOLO.sweep)} * exp(-pow((y - sweepY) * 8.0, 2.0));
   col += uHolo * fres * ${f(HOLO.rim)};
   col += mix(uHolo, vec3(1.0), 0.6) * pow(1.0 - ndv, 6.0) * ${f(HOLO.edge)};
-  float h = smoothstep(0.0, ${f(HOLO.floorFade)}, y);
-  col = mix(uHolo * (0.3 + 0.25 * bright), col, 1.0 - ${f(HOLO.floorGlow)} * (1.0 - h));
+  // Hovered: a brighter, wider rim in the team color and a lift, so he pops off the room.
+  col *= 1.0 + ${f(HOLO.highlightLift)} * uHighlight;
+  col += mix(uHolo, vec3(1.0), 0.35) * pow(1.0 - ndv, 1.6) * ${f(HOLO.highlightRim)} * uHighlight;
+  alpha = mix(alpha, 1.0, 0.35 * uHighlight);
 
   // Glitch: now and then a few thin slices flash and tint, like a signal dropping for a frame or
   // two. Done here, not by moving vertices: the surface must match its depth pre-pass exactly.
@@ -248,14 +251,15 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
       );
   };
   const variant = `${opts.debugMask ? "-debug" : ""}${opts.hologram ? "-holo" : ""}`; // same program for every color
-  material.customProgramCacheKey = () => `tipoff-tint-v7${variant}`;
+  material.customProgramCacheKey = () => `tipoff-tint-v8${variant}`;
   return {
     material,
     textures: [front, back],
-    /** Advance time-based effects (hologram sweep and flicker) and set hologram brightness. */
-    tick: (seconds: number, intensity = 1) => {
+    /** Advance time-based effects (hologram sweep and flicker) and set hologram brightness and highlight. */
+    tick: (seconds: number, intensity = 1, highlight = 0) => {
       uniforms.uTime.value = seconds;
       uniforms.uIntensity.value = intensity;
+      uniforms.uHighlight.value = highlight;
     },
   };
 }

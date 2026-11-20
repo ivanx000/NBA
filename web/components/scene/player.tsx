@@ -50,6 +50,7 @@ export function Player({
   debugMask = false,
   hologram = null,
   intensity = 1,
+  highlight = 0,
   paused = false,
   clip = "Idle",
   extraClips,
@@ -68,6 +69,8 @@ export function Player({
   hologram?: string | null;
   /** Hologram brightness, 0 to 1 (eased toward this value, e.g. to dim the loser). */
   intensity?: number;
+  /** Hover highlight, 0 to 1 (eased): a brighter rim in the hologram color. */
+  highlight?: number;
   /** Freeze animation and effects (prefers-reduced-motion). */
   paused?: boolean;
   /** Clip to play; idle clips rotate among the idle variants when ``idleVariety`` is on. */
@@ -117,12 +120,13 @@ export function Player({
       }),
     [instance, mask, base, trim, text, shorts, chestText, number, debugMask, hologram],
   );
-  const shown = useRef({ intensity, time: 0 });
+  const shown = useRef({ intensity, highlight, time: 0 });
   useFrame((_, dt) => {
     const state = shown.current;
     state.intensity += (intensity - state.intensity) * Math.min(1, dt * 6);
+    state.highlight += (highlight - state.highlight) * Math.min(1, dt * 8);
     if (!paused) state.time += dt;
-    material.tick(state.time, state.intensity);
+    material.tick(state.time, state.intensity, state.highlight);
   });
 
   const root = useRef<THREE.Group>(null);

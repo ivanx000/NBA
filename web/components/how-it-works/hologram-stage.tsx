@@ -65,6 +65,7 @@ export function HologramStage() {
   const still = useSyncExternalStore(subscribeReduced, () => window.matchMedia(reducedQuery).matches, () => true);
   // The first shot starts from the scroll; the button asks for another.
   const [asked, setAsked] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const shooting = asked || (!still && p > 0.35);
 
   useEffect(() => {
@@ -87,12 +88,24 @@ export function HologramStage() {
 
   return (
     <figure className="story-panel story-holo">
-      <div ref={box} className="story-holo__canvas">
+      <div
+        ref={box}
+        className="story-holo__canvas"
+        onPointerEnter={(e) => e.pointerType !== "touch" && setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      >
         {webgl === false ? (
           <Flat />
         ) : near && webgl ? (
           <Boundary fallback={<Flat />}>
-            <HologramCanvas team={team} side={side} shooting={shooting && !idleFrame} still={still} onReady={onReady} />
+            <HologramCanvas
+              team={team}
+              side={side}
+              shooting={shooting && !idleFrame}
+              still={still}
+              hovered={hovered}
+              onReady={onReady}
+            />
           </Boundary>
         ) : null}
         {webgl !== false && !ready && <Loading />}

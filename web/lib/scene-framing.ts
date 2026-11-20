@@ -1,7 +1,7 @@
 /**
  * Camera framing for the home scene: the two players centered on screen and as big as possible
- * between the team names (top) and the pick hint (bottom), each standing on its platform under
- * its team name, with both fully visible.
+ * between the team names (top) and the pick hint (bottom), each standing on the court under its
+ * team name, with both fully visible and a strip of floor showing under their feet.
  */
 
 export interface Viewport {
@@ -27,8 +27,8 @@ export interface Framing {
   playerX: number;
 }
 
-/** From the bottom of the platform (0.16 m) to just over the head (1.98 m model). */
-const BOX_BOTTOM = -0.18;
+/** From a little floor below the feet (so they stand on something) to just over the head (1.98 m model). */
+const BOX_BOTTOM = -0.24;
 const BOX_HEIGHT = 2.06 - BOX_BOTTOM;
 /** Width of one player with arms at rest. */
 const PLAYER_WIDTH = 0.8;

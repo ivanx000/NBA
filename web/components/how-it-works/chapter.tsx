@@ -2,7 +2,7 @@
 
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, type CSSProperties, type PointerEvent, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 
 /** How far the reader has scrolled through the current chapter, 0 to 1 (1 with reduced motion). */
 const ProgressContext = createContext(0);
@@ -13,6 +13,10 @@ export const useChapterProgress = () => useContext(ProgressContext);
  * reader scrolls through it, and the visual plays forward and back with the scroll. On narrow
  * screens it scrolls normally and the visual plays as it passes. Reduced motion shows every
  * visual in its finished state.
+ *
+ * No boxes: a huge outlined step number drifts behind the text with the scroll, and the visual
+ * sits straight on the page over a soft glow that follows the pointer (and tilts a little toward
+ * it, except with reduced motion).
  */
 export function Chapter({
   id,
@@ -35,6 +39,26 @@ export function Chapter({
 }) {
   const ref = useRef<HTMLElement>(null);
   const [progress, setProgress] = useState(0);
+  const visualBox = useRef<HTMLDivElement>(null);
+
+  // The glow under the visual follows the pointer; CSS reads the position (and the tilt) from vars.
+  const onPointer = (e: PointerEvent<HTMLDivElement>) => {
+    const el = visualBox.current;
+    if (!el || e.pointerType === "touch") return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
+    el.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
+    el.style.setProperty("--tx", `${((e.clientX - r.left) / r.width - 0.5).toFixed(3)}`);
+    el.style.setProperty("--ty", `${((e.clientY - r.top) / r.height - 0.5).toFixed(3)}`);
+    el.dataset.hot = "";
+  };
+  const onLeave = () => {
+    const el = visualBox.current;
+    if (!el) return;
+    el.style.setProperty("--tx", "0");
+    el.style.setProperty("--ty", "0");
+    delete el.dataset.hot;
+  };
 
   useEffect(() => {
     const el = ref.current;
@@ -71,8 +95,18 @@ export function Chapter({
   }, []);
 
   return (
-    <section ref={ref} id={id} className="story-chapter" aria-labelledby={`${id}-title`}>
+    <section
+      ref={ref}
+      id={id}
+      className="story-chapter"
+      aria-labelledby={`${id}-title`}
+      data-accent={step % 2 ? "blue" : "red"}
+      style={{ "--p": progress.toFixed(3) } as CSSProperties}
+    >
       <div className="story-chapter__stage">
+        <span className="story-chapter__ghost" aria-hidden>
+          {String(step).padStart(2, "0")}
+        </span>
         <div className="story-chapter__text">
           <p className="story-step">
             <span className="story-step__n" aria-hidden>
@@ -89,8 +123,10 @@ export function Chapter({
             <div className="story-body">{children}</div>
           </ProgressContext>
         </div>
-        <div className="story-chapter__visual">
-          <ProgressContext value={progress}>{visual}</ProgressContext>
+        <div ref={visualBox} className="story-chapter__visual" onPointerMove={onPointer} onPointerLeave={onLeave}>
+          <div className="story-chapter__tilt">
+            <ProgressContext value={progress}>{visual}</ProgressContext>
+          </div>
         </div>
       </div>
     </section>

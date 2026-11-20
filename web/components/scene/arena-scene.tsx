@@ -9,11 +9,13 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 import { frameCamera } from "@/lib/scene-framing";
+import { hologramMatchup } from "@/lib/team-colors";
+import { requireTeam } from "@/lib/teams";
 import type { Phase } from "@/lib/scene-store";
 import type { Side, SlateGame } from "@/lib/slate";
 
 import { cameraOverride } from "./camera-override";
-import { Arena } from "./arena";
+import { Arena, type ArenaTeams } from "./arena";
 import { Matchup } from "./matchup";
 import { geometryFrom, pointsMaterial, rng, tickPoints } from "./points";
 
@@ -31,7 +33,8 @@ export interface ArenaSceneProps {
 }
 
 const FOV = 35;
-const BG = "#02040a";
+/** Deep navy rather than black, so the room reads behind the players. */
+const BG = "#060b1f";
 /** NBA blue and red, brightened for light (DESIGN.md section 1). */
 const BLUE = "#5b8cff";
 const RED = "#ff4d5e";
@@ -74,7 +77,7 @@ function whenIdle(work: () => void): () => void {
 }
 
 /**
- * A soft room reflected in the platforms and players (no network fetch, unlike drei's presets).
+ * A soft room reflected in the floor and players (no network fetch, unlike drei's presets).
  * Building it renders a small room six times and blurs it, so it waits until the browser is idle
  * after the scene first appears: on a phone that keeps it out of the first, already long, task.
  */
@@ -181,19 +184,30 @@ type PostState = "on" | "fade-in" | "off";
 function Stage({ game, phase, pick, viewing, pickable, reducedMotion, post }: ArenaSceneProps & { post: PostState }) {
   const size = useThree((s) => s.size);
   const framing = useMemo(() => frameCamera({ width: size.width, height: size.height }, FOV), [size]);
+  // The room takes on the matchup's colors (crowd, court paint, ribbon boards, scoreboard).
+  const teams = useMemo<ArenaTeams | null>(() => {
+    if (!game) return null;
+    const home = requireTeam(game.home.teamId);
+    const away = requireTeam(game.away.teamId);
+    const holo = hologramMatchup(home, away);
+    const team = (t: typeof home, glow: string) => ({ glow, paint: t.colors.primary, name: t.name, city: t.city });
+    return { away: team(away, holo.away.color), home: team(home, holo.home.color) };
+  }, [game]);
 
   return (
     <>
       <color attach="background" args={[BG]} />
-      <fog attach="fog" args={[BG, 16, 60]} />
+      <fog attach="fog" args={[BG, 14, 58]} />
       <Reflections />
-      {/* Key from the upper left in front, a cooler fill from the right, a back light for the outline. */}
+      {/* Key from the upper left in front, a cooler fill from the right, a back light for the outline,
+          and a sky/floor fill so the court reads. */}
       <ambientLight intensity={0.25} />
+      <hemisphereLight args={["#8fa8ff", "#3a2614", 0.55]} />
       <directionalLight position={[-3, 4, 5]} intensity={2.1} color="#fff6ee" />
       <directionalLight position={[4, 2, 3]} intensity={0.55} color="#dbe6ff" />
       <directionalLight position={[0, 3, -4]} intensity={1.2} color="#cfdcff" />
       <CameraRig parallax={!reducedMotion} />
-      <Arena still={reducedMotion} />
+      <Arena teams={teams} still={reducedMotion} />
       <StarField still={reducedMotion} />
       <CompileFirst />
 

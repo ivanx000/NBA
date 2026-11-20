@@ -33,46 +33,212 @@
   line-height: 1.55;
   color: var(--text-muted);
 }
-.story-rail ol {
+/* The five steps as a typographic index: number, name and a one-line hint, lit on hover. */
+.story-index ol {
   list-style: none;
-  margin: 2.5rem 0 0;
+  margin: 3rem 0 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.story-rail a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.4rem 0.9rem 0.4rem 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 650;
-  transition: border-color 0.15s ease;
-}
-.story-rail a:hover {
-  border-color: rgba(91, 140, 255, 0.6);
-}
-.story-rail a span {
   display: grid;
-  place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 999px;
-  background: rgba(91, 140, 255, 0.14);
+  gap: 0;
+}
+@media (min-width: 900px) {
+  .story-index ol {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+.story-index a {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.15rem 0.8rem;
+  padding: 0.9rem 0;
+}
+@media (min-width: 900px) {
+  .story-index a {
+    grid-template-columns: 1fr;
+    padding: 1rem 0 0;
+  }
+}
+/* A hairline that draws across on hover. */
+.story-index a::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--blue-hi), var(--red-hi));
+  transform: scaleX(0.12);
+  transform-origin: left;
+  opacity: 0.6;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+}
+.story-index a:hover::before,
+.story-index a:focus-visible::before {
+  transform: scaleX(1);
+  opacity: 1;
+}
+.story-index__n {
   font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
+  color: var(--red-hi);
+  transition: color 0.3s ease;
+}
+.story-index__name {
+  font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+  font-weight: 800;
+  font-stretch: 118%;
+  text-transform: uppercase;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.3s ease;
+}
+.story-index__hint {
+  grid-column: 2;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+@media (min-width: 900px) {
+  .story-index__hint {
+    grid-column: 1;
+  }
+}
+.story-index a:hover .story-index__name,
+.story-index a:focus-visible .story-index__name {
+  transform: translateX(0.3rem);
   color: var(--blue-hi);
+}
+.story-index a:hover .story-index__n {
+  color: var(--text);
+}
+.story-scroll {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 4rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.story-scroll i {
+  position: relative;
+  width: 1px;
+  height: 3.5rem;
+  overflow: hidden;
+  background: var(--line);
+}
+.story-scroll i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent, var(--blue-hi));
+  animation: story-drip 2s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+}
+@keyframes story-drip {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* --- Progress bar under the nav ----------------------------------------------------------- */
+.story-progress {
+  position: fixed;
+  inset: 3.5rem 0 auto;
+  z-index: 30;
+  padding: 0 1rem;
+  background: linear-gradient(var(--bg), rgba(2, 4, 10, 0));
+  transform: translateY(-120%);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+  pointer-events: none;
+}
+.story-progress[data-shown] {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+.story-progress ol {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: 0.45rem 0 0.9rem;
+}
+@media (min-width: 640px) {
+  .story-progress {
+    padding-inline: 1.5rem;
+  }
+}
+.story-progress a {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  transition: color 0.25s ease;
+}
+.story-progress a:hover,
+.story-progress a[aria-current] {
+  color: var(--text);
+}
+.story-progress__n {
+  color: var(--red-hi);
+}
+.story-progress__name {
+  display: none;
+}
+@media (min-width: 640px) {
+  .story-progress__name {
+    display: inline;
+  }
+}
+.story-progress a i {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(243, 246, 252, 0.12);
+  overflow: hidden;
+}
+.story-progress a i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--blue-hi), var(--red-hi));
+  transform: scaleX(var(--f, 0));
+  transform-origin: left;
+}
+.story-progress a[aria-current] i::after {
+  box-shadow: 0 0 10px var(--blue-hi);
+}
+.story-progress a:hover i {
+  background: rgba(243, 246, 252, 0.25);
 }
 
 /* --- Chapters ------------------------------------------------------------------------------ */
 .story-chapter {
-  border-top: 1px solid var(--line);
+  --accent: var(--blue-hi);
+  --accent-rgb: 91, 140, 255;
   scroll-margin-top: 4.5rem;
 }
+.story-chapter[data-accent="red"] {
+  --accent: var(--red-hi);
+  --accent-rgb: 255, 77, 94;
+}
 .story-chapter__stage {
+  position: relative;
+  isolation: isolate;
   display: grid;
   gap: 2rem;
   max-width: 82rem;
@@ -106,8 +272,68 @@
     padding-bottom: 2rem;
   }
 }
+/* The step number, huge and outlined, drifting up behind the text as the chapter plays. */
+.story-chapter__ghost {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: -0.04em;
+  font-size: clamp(9rem, 26vw, 24rem);
+  line-height: 0.8;
+  font-weight: 900;
+  font-stretch: 125%;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(var(--accent-rgb), 0.3);
+  transform: translateY(calc(-50% + (0.5 - var(--p, 0)) * 12vh));
+  pointer-events: none;
+  user-select: none;
+}
+@media (max-width: 1023px) {
+  .story-chapter__ghost {
+    top: 2rem;
+    transform: none;
+  }
+}
 .story-chapter__visual {
+  --mx: 50%;
+  --my: 45%;
+  position: relative;
+  isolation: isolate;
   min-width: 0;
+  perspective: 1200px;
+}
+/* A soft glow in the chapter's color under the visual; it follows the pointer. */
+.story-chapter__visual::before {
+  content: "";
+  position: absolute;
+  inset: -12% -10%;
+  z-index: -1;
+  background:
+    radial-gradient(circle at var(--mx) var(--my), rgba(var(--accent-rgb), 0.2), transparent 42%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(29, 66, 138, 0.25), transparent 70%);
+  filter: blur(8px);
+  opacity: 0.75;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.story-chapter__visual[data-hot]::before {
+  opacity: 1;
+}
+.story-chapter__tilt {
+  transform: rotateX(calc(var(--ty, 0) * -5deg)) rotateY(calc(var(--tx, 0) * 6deg));
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-chapter__tilt {
+    transform: none;
+  }
+  .story-scroll i::after {
+    animation: none;
+  }
+  .story-chapter__ghost {
+    transform: translateY(-50%);
+  }
 }
 
 .story-step {
@@ -121,13 +347,17 @@
   color: var(--red-hi);
 }
 .story-step__n {
-  display: grid;
-  place-items: center;
-  width: 1.9rem;
-  height: 1.9rem;
-  border: 1px solid rgba(255, 77, 94, 0.5);
-  border-radius: 999px;
   font-size: 0.8rem;
+}
+.story-step__n::after {
+  content: "";
+  display: inline-block;
+  width: 2rem;
+  height: 1px;
+  margin: 0 0 0.25rem 0.6rem;
+  vertical-align: middle;
+  background: currentColor;
+  opacity: 0.6;
 }
 .story-title {
   margin-top: 0.9rem;
@@ -200,16 +430,41 @@
   outline-offset: 3px;
 }
 
-/* --- Panels -------------------------------------------------------------------------------- */
+/* --- Visuals ------------------------------------------------------------------------------- */
+/* Straight on the page: no frame, no fill. Items that can be pointed at dim the rest. */
 .story-panel {
   display: grid;
   gap: 1.1rem;
-  padding: 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  background:
-    repeating-linear-gradient(0deg, rgba(91, 140, 255, 0.04) 0 1px, transparent 1px 4px),
-    var(--panel);
+}
+.story-panel [tabindex] {
+  outline: none;
+  cursor: default;
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.story-panel [tabindex]:focus-visible {
+  outline: 1px solid var(--blue-hi);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.story-panel [data-dim] {
+  opacity: 0.3 !important;
+}
+.story-readout {
+  min-height: 1.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.story-readout b {
+  margin-right: 0.35rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-weight: 600;
+}
+.story-readout__hint {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 .story-panel__head {
   display: flex;
@@ -264,6 +519,15 @@
 }
 .story-dots li[data-test] .story-dots__label {
   color: var(--red-hi);
+}
+.story-dots li[data-active] {
+  transform: translateY(-3px) scale(1.04);
+}
+.story-dots li[data-active] .story-dots__canvas {
+  filter: drop-shadow(0 0 6px rgba(91, 140, 255, 0.7));
+}
+.story-dots li[data-test][data-active] .story-dots__canvas {
+  filter: drop-shadow(0 0 6px rgba(255, 77, 94, 0.7));
 }
 .story-legend {
   display: flex;
@@ -339,8 +603,45 @@
   gap: 0.75rem;
 }
 .story-features__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   font-size: 0.85rem;
   font-weight: 600;
+}
+.story-lean {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateX(-0.4rem);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.story-features li[data-active] .story-lean {
+  opacity: 1;
+  transform: none;
+}
+.story-features li[data-active] .story-diverge span,
+.story-bars li[data-active] .story-track__fill,
+.story-waterfall li[data-active] .story-track__step {
+  filter: brightness(1.25) saturate(1.2);
+  box-shadow: 0 0 16px currentColor;
+}
+.story-features li[data-active] .story-diverge,
+.story-bars li[data-active] .story-track,
+.story-waterfall li[data-active] .story-track {
+  height: 0.75rem;
+  transition: height 0.2s ease;
+}
+.story-waterfall li[data-active],
+.story-bars li[data-active] {
+  transform: translateX(4px);
+}
+.story-waterfall__run {
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 .story-features__values {
   display: flex;
@@ -546,9 +847,9 @@
 .story-holo__canvas {
   position: relative;
   height: min(32rem, 62vh);
-  border-radius: 0.75rem;
-  overflow: hidden;
-  background: #040815;
+  /* No frame: the scene fades out into the page at its edges. */
+  -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 55%, transparent 100%);
 }
 @media (min-width: 1024px) and (min-height: 640px) {
   .story-holo__canvas {
@@ -579,7 +880,7 @@
   line-height: 0.9;
 }
 .story-holo__again {
-  padding: 0.35rem 0.8rem;
+  padding: 0.45rem 1rem;
   border: 1px solid rgba(91, 140, 255, 0.5);
   border-radius: 999px;
   font-family: var(--font-jetbrains), ui-monospace, monospace;
@@ -591,4 +892,13 @@
 }
 .story-holo__again:hover {
   background: rgba(91, 140, 255, 0.12);
+}
+
+html:has(.story) {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.story) {
+    scroll-behavior: auto;
+  }
 }

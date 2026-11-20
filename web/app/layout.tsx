@@ -5,6 +5,7 @@ import { Archivo, JetBrains_Mono, Oswald } from "next/font/google";
 import { Suspense } from "react";
 
 import { HideOnHome } from "@/components/hide-on-home";
+import { Interactions } from "@/components/interactions";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav, SiteNavFallback } from "@/components/site-nav";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
@@ -56,7 +57,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={<SiteNavFallback />}>
           <SiteNav />
         </Suspense>
-        <div className="flex flex-1 flex-col">{children}</div>
+        <Interactions />
+        {/* Above the pointer glow (components/interactions.tsx), which sits at z-index 0. */}
+        <div className="relative z-[1] flex flex-1 flex-col">{children}</div>
         {/* The home page shows a one-line disclaimer inside the room instead (CLAUDE.md). */}
         <Suspense fallback={null}>
           <HideOnHome>

@@ -15,7 +15,8 @@
   line-height: 1.2;
   font-weight: 650;
 }
-.perf-headline b {
+.perf-headline b,
+.perf-headline > .tabular {
   font-weight: 850;
   color: #fff;
   text-shadow: 0 0 22px rgba(91, 140, 255, 0.55);
@@ -252,4 +253,33 @@
   font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Interaction: rows light up and slide a touch under the pointer. */
+.perf-calls a {
+  transition: color 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.2s ease;
+}
+.perf-calls a:hover {
+  transform: translateX(4px);
+}
+.perf-table tbody tr {
+  transition: background 0.2s ease;
+}
+.perf-table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(91, 140, 255, 0.12), transparent 70%);
+}
+.perf-table tbody tr:hover td:first-child {
+  box-shadow: inset 2px 0 0 var(--blue-hi);
+}
+.perf-table tbody tr td:first-child {
+  padding-left: 0.5rem;
+}
+.perf-seg button {
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.perf-tile__value {
+  transition: text-shadow 0.3s ease;
+}
+.perf-tile[data-lit] .perf-tile__value {
+  text-shadow: 0 0 24px rgba(91, 140, 255, 0.55);
 }

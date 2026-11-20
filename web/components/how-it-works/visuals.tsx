@@ -33,6 +33,26 @@ export const CELTICS = glow.away.color;
 const ease = (t: number) => 1 - (1 - t) ** 3;
 const pct = (p: number, digits = 0) => `${(p * 100).toFixed(digits)}%`;
 
+/**
+ * Which item of a visual is being pointed at or focused (null: none). Each item spreads
+ * ``bind(key)`` onto itself; the visual dims the rest and shows the item's details.
+ */
+function useActive<K>() {
+  const [active, setActive] = useState<K | null>(null);
+  const bind = (key: K) => ({
+    tabIndex: 0,
+    onPointerEnter: () => setActive(key),
+    onPointerLeave: () => setActive((a) => (a === key ? null : a)),
+    onFocus: () => setActive(key),
+    onBlur: () => setActive((a) => (a === key ? null : a)),
+    // Touch: a tap toggles.
+    onClick: () => setActive((a) => (a === key ? null : key)),
+    "data-active": active === key || undefined,
+    "data-dim": (active !== null && active !== key) || undefined,
+  });
+  return [active, bind] as const;
+}
+
 /** A number that counts up as the chapter plays, with a caption. */
 export function Figure({
   value,
@@ -102,14 +122,23 @@ function SeasonBlock({ games, lit, color }: { games: number; lit: number; color:
   return <canvas ref={canvas} className="story-dots__canvas" style={{ aspectRatio: `${COLS} / ${rows}` }} />;
 }
 
+/** What's notable about a season, for the readout. */
+const SEASON_NOTES: Record<string, string> = {
+  "2019-20": "cut short by the pandemic",
+  "2020-21": "shortened to 72 games a team",
+  "2025-26": "kept back for one final test",
+};
+
 export function GamesGrid() {
   const p = useChapterProgress();
   const per = 0.8 / SEASON_GAMES.length;
+  const [active, bind] = useActive<string>();
+  const season = SEASON_GAMES.find((s) => s.season === active);
   return (
     <figure className="story-panel">
       <ol className="story-dots" aria-label="Games per season, one dot per game">
         {SEASON_GAMES.map((s, i) => (
-          <li key={s.season} data-test={s.test || undefined}>
+          <li key={s.season} data-test={s.test || undefined} {...bind(s.season)}>
             <SeasonBlock
               games={s.games}
               // Seasons fill in order; quantized so the canvas only redraws in small steps.
@@ -130,6 +159,16 @@ export function GamesGrid() {
           <i style={{ background: RED }} aria-hidden /> Kept back for one final test: {TEST_GAMES.toLocaleString("en-US")}
         </span>
       </figcaption>
+      <p className="story-readout" aria-live="polite">
+        {season ? (
+          <>
+            <b style={{ color: season.test ? RED : BLUE }}>{season.season}</b> {season.games.toLocaleString("en-US")}{" "}
+            games{SEASON_NOTES[season.season] ? `, ${SEASON_NOTES[season.season]}` : ""}
+          </>
+        ) : (
+          <span className="story-readout__hint">Point at a season to see its games</span>
+        )}
+      </p>
     </figure>
   );
 }
@@ -142,6 +181,7 @@ const TIPOFF_AT = 12;
 export function FeatureBars() {
   const p = useChapterProgress();
   const past = stage(p, 0, 0.2);
+  const [, bind] = useActive<string>();
   return (
     <figure className="story-panel">
       <figcaption className="story-panel__head">
@@ -177,8 +217,13 @@ export function FeatureBars() {
           const grow = ease(stage(p, 0.2 + i * 0.09, 0.38 + i * 0.09));
           const knicks = f.lean > 0;
           return (
-            <li key={f.label}>
-              <p className="story-features__label">{f.label}</p>
+            <li key={f.label} {...bind(f.label)}>
+              <p className="story-features__label">
+                {f.label}
+                <span className="story-lean" style={{ color: knicks ? KNICKS : CELTICS }}>
+                  Leans {knicks ? "Knicks" : "Celtics"}
+                </span>
+              </p>
               <p className="story-features__values">
                 <span style={{ color: CELTICS }}>BOS {f.away}</span>
                 <span style={{ color: KNICKS }}>NYK {f.home}</span>
@@ -234,6 +279,7 @@ export function ChanceFigure() {
 export function Waterfall() {
   const p = useChapterProgress();
   const totals = runningTotals();
+  const [active, bind] = useActive<string>();
   const final = totals.at(-1)!.to;
   const done = stage(p, ...REVEAL(totals.length));
   return (
@@ -260,7 +306,7 @@ export function Waterfall() {
           const color = r.factor === "Everything else" ? "rgba(243,246,252,0.45)" : knicks ? KNICKS : CELTICS;
           const lo = Math.min(t.from, t.to);
           return (
-            <li key={r.factor} style={{ opacity: 0.25 + 0.75 * shown }}>
+            <li key={r.factor} style={{ opacity: 0.25 + 0.75 * shown }} {...bind(r.factor)}>
               <p>
                 <span>{r.factor}</span>
                 <span className="story-waterfall__note">{r.copy}</span>
@@ -278,8 +324,16 @@ export function Waterfall() {
                 />
               </div>
               <b style={{ color }}>
-                {r.points > 0 ? "+" : "−"}
-                {Math.abs(r.points).toFixed(1)}
+                {active === r.factor ? (
+                  <span className="story-waterfall__run">
+                    {pct(t.from)}→{pct(t.to)}
+                  </span>
+                ) : (
+                  <>
+                    {r.points > 0 ? "+" : "−"}
+                    {Math.abs(r.points).toFixed(1)}
+                  </>
+                )}
               </b>
             </li>
           );
@@ -312,6 +366,7 @@ const DAY = [
 
 export function Scorecard() {
   const p = useChapterProgress();
+  const [active, bind] = useActive<string>();
   const rows = [
     { label: "Tip-Off model", value: TEST_SEASON.accuracy.model, color: BLUE },
     { label: "Elo ratings", value: TEST_SEASON.accuracy.elo, color: "rgba(243,246,252,0.7)" },
@@ -335,7 +390,7 @@ export function Scorecard() {
         {rows.map((r, i) => {
           const grow = ease(stage(p, 0.4 + i * 0.1, 0.62 + i * 0.1));
           return (
-            <li key={r.label}>
+            <li key={r.label} {...bind(r.label)}>
               <span>{r.label}</span>
               <div className="story-track">
                 {/* The scale starts at 50%, a coin flip. */}
@@ -352,6 +407,19 @@ export function Scorecard() {
       <p className="story-scale" aria-hidden>
         <span>50% (a coin flip)</span>
         <span>75%</span>
+      </p>
+      <p className="story-readout" aria-live="polite">
+        {(() => {
+          const row = rows.find((r) => r.label === active);
+          if (!row) return <span className="story-readout__hint">Point at a bar to count the games</span>;
+          const right = Math.round(row.value * TEST_SEASON.games);
+          return (
+            <>
+              <b>{row.label}</b> called {right.toLocaleString("en-US")} of {TEST_SEASON.games.toLocaleString("en-US")}{" "}
+              games right, {(TEST_SEASON.games - right).toLocaleString("en-US")} wrong
+            </>
+          );
+        })()}
       </p>
     </figure>
   );

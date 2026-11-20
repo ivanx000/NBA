@@ -159,3 +159,11 @@
 .player-table tr[data-dnp] {
   opacity: 0.55;
 }
+
+/* Rows light up under the pointer. */
+.player-table tbody tr {
+  transition: background 0.2s ease;
+}
+.player-table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(91, 140, 255, 0.12), transparent 75%);
+}

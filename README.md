@@ -119,7 +119,7 @@ A local fallback for the daily job can be installed on a Mac (`ml/scripts/instal
 
 ## Credits
 
-The 3D player was generated for this project with Meshy; the arena, platforms, hoop and effects are drawn in code. Team names and colors only: no league or team logos, wordmarks or real player likenesses. Data from NBA.com's public endpoints. Full credits in [`web/public/CREDITS.md`](web/public/CREDITS.md).
+The 3D player was generated for this project with Meshy; the arena, court, crowd, hoop and effects are drawn in code. Team names and colors only: no league or team logos, wordmarks or real player likenesses. Data from NBA.com's public endpoints. Full credits in [`web/public/CREDITS.md`](web/public/CREDITS.md).
 
 ## License
 

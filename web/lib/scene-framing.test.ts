@@ -26,7 +26,7 @@ describe("frameCamera", () => {
       const f = frameCamera(vp, FOV);
       const r = freeRegion(vp);
       const head = project(f, vp, 0, 2.05);
-      const feet = project(f, vp, 0, -0.16); // bottom of the platform
+      const feet = project(f, vp, 0, -0.2); // the floor under the feet
       expect(head.top).toBeGreaterThanOrEqual(r.top - 1);
       expect(feet.top).toBeLessThanOrEqual(vp.height - r.bottom + 1);
       expect(project(f, vp, -f.playerX - 0.4, 1).left).toBeGreaterThanOrEqual(r.side - 1);

@@ -115,7 +115,7 @@ export function HomeExperience({
   const onPick = blocker ? undefined : (side: "home" | "away") => send({ type: "predict", pick: side });
 
   return (
-    <main id="main" className="relative h-svh min-h-[560px] overflow-hidden bg-background">
+    <main id="main" data-room className="relative h-svh min-h-[560px] overflow-hidden bg-background">
       <div className="absolute inset-0">
         <SceneHost
           game={game}

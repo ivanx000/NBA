@@ -9,7 +9,7 @@ export function SiteFooter() {
           Data: NBA.com public stats ·{" "}
           <a
             href={GITHUB_URL}
-            className="text-blue-hi underline-offset-4 hover:underline"
+            className="ink-link text-blue-hi"
             target="_blank"
             rel="noreferrer"
           >

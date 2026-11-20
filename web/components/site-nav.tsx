@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -38,7 +39,16 @@ function NavBar({ pathname }: { pathname: string | null }) {
       >
         {/* No wordmark on the home page (or while the path streams in): the room is the brand. */}
         {pathname !== null && pathname !== "/" ? (
-          <Link href="/" className="font-display text-lg font-extrabold uppercase">
+          <Link href="/" className="group flex items-center gap-2 font-display text-lg font-extrabold uppercase">
+            {/* The site's mark (app/icon.svg); it spins up like a ball on hover. */}
+            <Image
+              src="/icon.svg"
+              alt=""
+              width={22}
+              height={22}
+              unoptimized
+              className="transition-transform duration-500 ease-out group-hover:-translate-y-0.5 group-hover:rotate-[200deg]"
+            />
             Tip-Off
           </Link>
         ) : (
@@ -63,7 +73,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
                 href={l.href}
                 onClick={() => setOpen(false)}
                 aria-current={isActive(l.href) ? "page" : undefined}
-                className={`block py-1.5 font-mono text-xs tracking-[0.08em] uppercase transition-colors hover:text-foreground ${
+                className={`ink-link block py-1.5 font-mono text-xs tracking-[0.08em] uppercase transition-colors hover:text-foreground ${
                   isActive(l.href) ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -76,7 +86,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
               href={GITHUB_URL}
               target="_blank"
               rel="noreferrer"
-              className="block py-1.5 font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase hover:text-foreground"
+              className="ink-link block py-1.5 font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-foreground"
             >
               GitHub
             </a>

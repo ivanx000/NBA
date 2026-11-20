@@ -38,7 +38,7 @@ Land on home
 ### 3.1 Home page (`/`)
 
 **Scene (center)**
-- Two generic, identical-build 3D players in their team's colors, standing on raised platforms in an arena drawn in light. Home team on the right, away team on the left (a broadcast convention; keep it consistent).
+- Two generic, identical-build 3D players in their team's colors, standing at center court in an arena dressed in the two teams' colors. Home team on the right, away team on the left (a broadcast convention; keep it consistent).
 - Both loop idle animations, with livelier ones now and then (a bounce, a stretch, a look up at the scoreboard). Their loops are offset so they don't move in sync. Their heads follow the cursor a little.
 - Above each player, small: team city, record (W-L) and "HOME"/"AWAY", then the nickname. Players are centered and as large as fits with both fully visible.
 - Top center: a small matchup line, e.g. `TONIGHT · 7:30 PM ET`.

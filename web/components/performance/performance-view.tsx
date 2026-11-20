@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+
+import { CountUp } from "@/components/count-up";
+import { tiltHandlers } from "@/lib/tilt";
 import {
   CartesianGrid,
   ComposedChart,
@@ -50,9 +53,11 @@ function Tile({
 }) {
   const beatsElo = lowerIsBetter ? model < elo : model > elo;
   return (
-    <div className="perf-tile holo-panel">
+    <div className="perf-tile holo-panel" data-tilt {...tiltHandlers()}>
       <p className="perf-tile__label">{label}</p>
-      <p className="perf-tile__value tabular">{format(model)}</p>
+      <p className="perf-tile__value tabular">
+        <CountUp value={model} format={format} />
+      </p>
       <dl className="perf-tile__base tabular">
         <div data-beaten={beatsElo || undefined}>
           <dt>Elo</dt>
@@ -218,7 +223,8 @@ export function PerformanceView({ seasons }: { seasons: SeasonSummary[] }) {
       )}
 
       <p className="perf-headline">
-        Right on <b className="tabular">{pct(model.accuracy)}</b> of {model.n.toLocaleString()} games,{" "}
+        Right on <CountUp className="tabular font-bold" value={model.accuracy} format={(n) => pct(n)} /> of{" "}
+        {model.n.toLocaleString()} games,{" "}
         {verdict(model, elo)}.
       </p>
       <p className="perf-muted perf-small">
@@ -236,9 +242,11 @@ export function PerformanceView({ seasons }: { seasons: SeasonSummary[] }) {
               note="Penalizes confident misses. Lower is better; 0.693 is a coin flip." /> {/* prettier-ignore */}
         <Tile label="Brier score" model={model.brier} elo={elo.brier} home={home.brier} format={(n) => n.toFixed(3)} lowerIsBetter
               note="Squared error of the probability. Lower is better; 0.250 is a coin flip." /> {/* prettier-ignore */}
-        <div className="perf-tile holo-panel">
+        <div className="perf-tile holo-panel" data-tilt {...tiltHandlers()}>
           <p className="perf-tile__label">Games graded</p>
-          <p className="perf-tile__value tabular">{model.n.toLocaleString()}</p>
+          <p className="perf-tile__value tabular">
+            <CountUp value={model.n} format={(n) => Math.round(n).toLocaleString()} />
+          </p>
           <p className="perf-tile__note">
             Regular-season games that finished, each with a probability set before tip-off.
           </p>

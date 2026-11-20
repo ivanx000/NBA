@@ -316,3 +316,59 @@
   text-transform: uppercase;
   color: var(--text-muted);
 }
+
+/* --- Interaction ---------------------------------------------------------------------------- */
+/* Nav links slide in a little and their edge lights under the pointer. */
+.docs-sidebar a,
+.docs-toc a {
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    padding-left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.docs-sidebar a:hover,
+.docs-toc a:hover {
+  padding-left: 1.05rem;
+  border-left-color: rgba(91, 140, 255, 0.6);
+}
+/* Section headings show a # to their left on hover (they're link targets). */
+.docs-prose h2,
+.docs-prose h3 {
+  position: relative;
+}
+.docs-prose h2::before,
+.docs-prose h3::before {
+  content: "#";
+  position: absolute;
+  left: -1.1em;
+  color: var(--blue-hi);
+  opacity: 0;
+  transform: translateX(0.3em);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.docs-prose h2:hover::before,
+.docs-prose h3:hover::before {
+  opacity: 0.8;
+  transform: none;
+}
+.docs-prose table tbody tr {
+  transition: background 0.2s ease;
+}
+.docs-prose table tbody tr:hover {
+  background: rgba(91, 140, 255, 0.08);
+}
+.docs-pager a {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease;
+}
+.docs-pager a:hover {
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-sidebar a:hover,
+  .docs-toc a:hover {
+    padding-left: 0.75rem;
+  }
+  .docs-pager a:hover {
+    transform: none;
+  }
+}
