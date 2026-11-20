@@ -2,7 +2,6 @@ import { type CSSProperties } from "react";
 
 import {
   didNotPlay,
-  initials,
   inRange,
   type PlayerLine,
   rangeText,
@@ -13,15 +12,6 @@ import {
 } from "@/lib/players";
 
 import "./players.css";
-
-/** Jersey number when we have it, otherwise initials (no photos: CLAUDE.md). */
-function Badge({ line }: { line: PlayerLine }) {
-  return (
-    <span className="player-badge" aria-hidden>
-      {line.number ?? initials(line.name)}
-    </span>
-  );
-}
 
 function Real({ line }: { line: PlayerLine }) {
   if (!line.actual) return null;
@@ -40,7 +30,6 @@ export function PlayerList({ lines, color, limit = 5 }: { lines: PlayerLine[]; c
     <ol className="player-list" style={{ "--team": color } as CSSProperties}>
       {lines.slice(0, limit).map((line) => (
         <li key={line.playerId}>
-          <Badge line={line} />
           <div className="player-list__body">
             <p className="player-list__head">
               <span className="player-list__name">{shortName(line.name)}</span>
@@ -104,7 +93,6 @@ export function PlayerTable({
           {lines.map((line) => (
             <tr key={line.playerId} data-dnp={didNotPlay(line) || undefined}>
               <th scope="row">
-                <Badge line={line} />
                 <span>{line.name}</span>
               </th>
               <td className="tabular">

@@ -7,7 +7,7 @@ import { useEffect } from "react";
  * across the page, and the spotlight inside every glass panel. It only writes two CSS variables
  * (and a flag) on <html>, never on page content, so it can't disturb hydration of streamed parts.
  *
- * Touch screens and reduced motion get neither. (Scroll reveals are pure CSS; tilt is lib/tilt.ts.)
+ * Touch screens and reduced motion get neither. (Scroll reveals are pure CSS.)
  */
 export function Interactions() {
   useEffect(() => {

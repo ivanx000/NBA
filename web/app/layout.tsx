@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono, Oswald } from "next/font/google";
 import { Suspense } from "react";
 
+import { Cursor } from "@/components/cursor";
 import { HideOnHome } from "@/components/hide-on-home";
 import { Interactions } from "@/components/interactions";
 import { SiteFooter } from "@/components/site-footer";
@@ -38,7 +39,7 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_NAME,
-  title: "Tip-Off: who wins tonight?",
+  title: "NBA Game Predictor",
   description: SITE_DESCRIPTION,
   openGraph: { type: "website", siteName: SITE_NAME, locale: "en_US" },
   twitter: { card: "summary_large_image" },
@@ -58,9 +59,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SiteNav />
         </Suspense>
         <Interactions />
+        <Cursor />
         {/* Above the pointer glow (components/interactions.tsx), which sits at z-index 0. */}
         <div className="relative z-[1] flex flex-1 flex-col">{children}</div>
-        {/* The home page shows a one-line disclaimer inside the room instead (CLAUDE.md). */}
+        {/* No footer bar on the home page: the room fills the screen. */}
         <Suspense fallback={null}>
           <HideOnHome>
             <SiteFooter />

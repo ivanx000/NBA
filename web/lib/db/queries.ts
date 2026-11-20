@@ -5,7 +5,7 @@ import { seasonFor } from "@/lib/dates";
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GradedGame } from "@/lib/performance";
 import { type GamePlayers, NO_PLAYERS, type PlayerLine } from "@/lib/players";
-import type { GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
+import type { GameExtras, GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
 import { headToHead, type PastGame, type RecentGame, recentGames, seriesGames, teamStats } from "@/lib/team-stats";
 import { requireTeam } from "@/lib/teams";
 
@@ -147,10 +147,25 @@ function toSlateGame(row: GameRow, past: PastGame[], day: string, players: GameP
   };
 }
 
-async function withRecords(db: Db, rowsIn: GameRow[], day: string): Promise<SlateGame[]> {
+async function withRecords(
+  db: Db,
+  rowsIn: GameRow[],
+  day: string,
+): Promise<{ games: SlateGame[]; details: Record<string, GameExtras> }> {
   // Records and stats are as of the games' day (games before it only).
   const [past, players] = await Promise.all([pastGames(db, day), playersFor(db, rowsIn)]);
-  return rowsIn.map((r) => toSlateGame(r, past, day, players.get(r.gameId)));
+  const games = rowsIn.map((r) => toSlateGame(r, past, day, players.get(r.gameId)));
+  // Each game's last 10s and season series, for the results screen's full breakdown.
+  const details = Object.fromEntries(
+    games.map((g) => [
+      g.gameId,
+      {
+        form: { home: recentGames(past, g.home.teamId, day), away: recentGames(past, g.away.teamId, day) },
+        series: seriesGames(past, g.home.teamId, g.away.teamId, day),
+      },
+    ]),
+  );
+  return { games, details };
 }
 
 /**
@@ -159,11 +174,15 @@ async function withRecords(db: Db, rowsIn: GameRow[], day: string): Promise<Slat
  */
 export async function fetchSlate(db: Db, today: string): Promise<Slate> {
   const todays = await gamesBetween(db, today, today);
-  if (todays.length) return { today, games: await withRecords(db, todays, today), next: null };
+  if (todays.length) {
+    const { games: g, details } = await withRecords(db, todays, today);
+    return { today, games: g, next: null, details };
+  }
   const result = await db.execute(sql`select min(game_date)::text as day from games where game_date > ${today}`);
   const day = rows<{ day: string | null }>(result)[0]?.day ?? null;
   if (!day) return { today, games: [], next: null };
-  return { today, games: [], next: { day, games: await withRecords(db, await gamesBetween(db, day, day), day) } };
+  const { games: g, details } = await withRecords(db, await gamesBetween(db, day, day), day);
+  return { today, games: [], next: { day, games: g }, details };
 }
 
 /** Cached slate (predictions change about once a day; scores every few minutes). */

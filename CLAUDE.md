@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository. Read this first, every
 
 ## What this project is
 
-**Tip-Off** (working name) is an NBA game outcome and player stat forecaster with an interactive 3D website.
+An NBA game outcome and player stat forecaster with an interactive 3D website. The site has **no brand name** (the user's decision, Nov 2026): its title is **NBA Game Predictor** (`SITE_NAME` in `web/lib/site.ts`) and its mark is a plain basketball (`web/components/ball-mark.tsx`). "Tip-Off" was the old working name; it survives only in code identifiers (the `tipoff` Python package and CLI) and older docs headings.
 
 - A **Python ML pipeline** (`ml/`) ingests NBA data, builds features, trains models, and writes daily predictions to Postgres.
 - A **Next.js website** (`web/`) hosted on Vercel reads those predictions and presents them through a 3D scene: two players in team jerseys, a "Predict who wins" button, and a cinematic where the winning team's player hits a shot, after which the stats appear.
@@ -131,8 +131,8 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 - Keep the initial JS and 3D payload small. Compress models (meshopt or Draco) and use compressed textures. See `docs/ASSET_PIPELINE.md`.
 
 **Brand and IP**
-- Use team **city and nickname text and colors** only. Do **not** add official NBA or team logos, wordmark artwork, or real player likenesses or headshots. Players are shown as name, number and initials.
-- The site must say it's an unofficial fan project, not affiliated with the NBA: in the footer on every page, and as a small line in a corner of the home page (which has no footer bar).
+- Use team **city and nickname text and colors**. The one exception (the user's decision, Nov 2026, risk accepted): each team's **official primary logo** at center court of the 3D court, from NBA.com's CDN, cleaned of scripts and stored in `web/public/logos/{ABBR}.svg`. Don't use logos anywhere else, and never the NBA's league logo, team wordmark artwork, or real player likenesses or headshots. Players are shown as name, number and initials.
+- The site says it's an unofficial fan project, not affiliated with the NBA, once: on the Docs → Limitations page (`web/content/docs/limitations.mdx`). The user's decision (Nov 2026): don't put it in the footer, on the home page, or in page descriptions.
 
 **Database**
 - The schema lives only in `web/lib/db/schema.ts` (Drizzle). Python reflects tables; never define them twice.

@@ -84,7 +84,14 @@ function arc(p0: Vec3, p1: Vec3, apexY: number): (u: number) => Vec3 {
   return (u) => bezier(p0, c, p1, u);
 }
 
-export function shotPath(release: Vec3, rim: Vec3, outcome: ShotOutcome): ShotPath {
+export function shotPath(
+  release: Vec3,
+  rim: Vec3,
+  outcome: ShotOutcome,
+  /** Seconds in the air to the rim, and the apex's height over the higher end (a long shot wants more of both). */
+  flightS = FLIGHT_S,
+  apexM = APEX_ABOVE_M,
+): ShotPath {
   // Horizontal direction of travel, shooter to rim.
   const dx = rim.x - release.x;
   const dz = rim.z - release.z;
@@ -95,11 +102,11 @@ export function shotPath(release: Vec3, rim: Vec3, outcome: ShotOutcome): ShotPa
 
   const end =
     outcome === "swish" ? add(rim, up(0.02)) : outcome === "backIron" || outcome === "rimOut" ? back : front;
-  const flight = arc(release, end, Math.max(release.y, end.y) + APEX_ABOVE_M);
+  const flight = arc(release, end, Math.max(release.y, end.y) + apexM);
   // A slight acceleration over the flight (between linear and GSAP's power1.in).
-  const segments: Segment[] = [{ duration: FLIGHT_S, at: (u) => flight(0.55 * u + 0.45 * u * u) }];
+  const segments: Segment[] = [{ duration: flightS, at: (u) => flight(0.55 * u + 0.45 * u * u) }];
   const made = isMake(outcome);
-  let decidedAt = FLIGHT_S;
+  let decidedAt = flightS;
   if (outcome === "backIron") {
     // Off the back iron, up a little, and down through the middle.
     const bounce = arc(back, add(rim, up(0.02)), rim.y + 0.4);
@@ -117,7 +124,7 @@ export function shotPath(release: Vec3, rim: Vec3, outcome: ShotOutcome): ShotPa
     const k = Math.hypot(away.x, away.z) || 1;
     const landing = { x: rim.x + (away.x / k) * 0.9, y: rim.y - 1.6, z: rim.z + (away.z / k) * 0.9 };
     segments.push({ duration: 0.6, at: arc(out, landing, rim.y + 0.12) });
-    decidedAt = FLIGHT_S + 0.75;
+    decidedAt = flightS + 0.75;
   } else if (outcome === "brick") {
     // Off the front of the rim and back toward the shooter.
     const landing = add(add(rim, scale(dir, -1.8)), up(-1.8));

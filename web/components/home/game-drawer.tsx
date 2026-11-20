@@ -158,6 +158,7 @@ export function GameDrawer({
       <button
         type="button"
         className="game-drawer__tab"
+        data-lens
         aria-expanded={open}
         aria-controls="game-drawer"
         data-open={open || undefined}
@@ -189,6 +190,7 @@ export function GameDrawer({
         ref={panel}
         id="game-drawer"
         className="game-drawer"
+        data-lens
         data-open={open || undefined}
         onFocus={() => setOpen(true)}
         role="region"

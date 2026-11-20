@@ -1,6 +1,7 @@
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GamePlayers } from "@/lib/players";
 import type { TeamStats } from "@/lib/team-stats";
+import type { PastGame, RecentGame } from "./team-stats";
 
 export type GameStatus = "scheduled" | "live" | "final" | "postponed";
 
@@ -52,6 +53,17 @@ export interface Slate {
   games: SlateGame[];
   /** Only when today has no games: the closest later day with games, and its games. */
   next: { day: string; games: SlateGame[] } | null;
+  /**
+   * For each game above, by game id: each team's last 10 and the season series so far (the results
+   * screen's full breakdown). Optional so hand-built slates (tests) needn't carry it.
+   */
+  details?: Record<string, GameExtras>;
+}
+
+/** The parts of a game's full breakdown that aren't on SlateGame itself. */
+export interface GameExtras {
+  form: { home: RecentGame[]; away: RecentGame[] };
+  series: PastGame[];
 }
 
 /**

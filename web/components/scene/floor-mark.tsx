@@ -14,8 +14,10 @@ function shadowTexture() {
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext("2d")!;
   const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0, "rgba(0,0,0,0.75)");
-  g.addColorStop(0.45, "rgba(0,0,0,0.4)");
+  // Dark right under him, falling off fast: the contact shadow where his feet meet the floor.
+  g.addColorStop(0, "rgba(0,0,0,0.85)");
+  g.addColorStop(0.35, "rgba(0,0,0,0.55)");
+  g.addColorStop(0.7, "rgba(0,0,0,0.12)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 128, 128);
@@ -26,7 +28,20 @@ function shadowTexture() {
  * What's on the floor under a player: his shadow, and when he's hovered a ring in his team's color
  * that pulses outward with a soft pool of light inside it (the "this one?" highlight).
  */
-export function FloorMark({ color, active, still }: { color: string; active: boolean; still: boolean }) {
+export function FloorMark({
+  color,
+  active,
+  still,
+  presence = 1,
+}: {
+  color: string;
+  active: boolean;
+  still: boolean;
+  /** 0 to 1 (eased): the shadow fades with its player. */
+  presence?: number;
+}) {
+  const shadowMat = useRef<THREE.MeshBasicMaterial>(null);
+  const here = useRef(presence);
   const ring = useRef<THREE.Mesh>(null);
   const ringMat = useRef<THREE.MeshBasicMaterial>(null);
   const pulseMat = useRef<THREE.MeshBasicMaterial>(null);
@@ -36,6 +51,8 @@ export function FloorMark({ color, active, still }: { color: string; active: boo
   const tint = useMemo(() => new THREE.Color(color).multiplyScalar(1.6), [color]);
 
   useFrame(({ clock }, dt) => {
+    here.current += (presence - here.current) * Math.min(1, dt * 5);
+    if (shadowMat.current) shadowMat.current.opacity = here.current;
     shown.current += ((active ? 1 : 0) - shown.current) * Math.min(1, dt * 8);
     const k = shown.current;
     if (ring.current) ring.current.scale.setScalar(0.8 + 0.2 * k);
@@ -51,8 +68,8 @@ export function FloorMark({ color, active, still }: { color: string; active: boo
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, 0]}>
       <mesh renderOrder={-2}>
-        <planeGeometry args={[1.5, 1.1]} />
-        <meshBasicMaterial map={shadowTexture()} transparent depthWrite={false} />
+        <planeGeometry args={[0.95, 0.6]} />
+        <meshBasicMaterial ref={shadowMat} map={shadowTexture()} transparent depthWrite={false} />
       </mesh>
       <mesh>
         <circleGeometry args={[0.6, 48]} />

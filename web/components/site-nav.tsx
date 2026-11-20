@@ -1,9 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+
+import { BallMark } from "@/components/ball-mark";
 
 const LINKS = [
   { href: "/", label: "Predict" },
@@ -31,25 +32,22 @@ function NavBar({ pathname }: { pathname: string | null }) {
   return (
     // Other pages scroll under the nav, so it gets a dark glass backing there; the home page doesn't scroll.
     <header
-      className={`fixed inset-x-0 top-0 z-40 ${pathname !== null && pathname !== "/" ? "bg-background/75 backdrop-blur-md" : ""}`}
+      className={`fixed inset-x-0 top-0 z-40 ${
+        pathname !== null && pathname !== "/"
+          ? "bg-background/75 backdrop-blur-md"
+          // Home: only the links take clicks, so the results screen's Home button can share the row.
+          : "pointer-events-none [&_nav>*]:pointer-events-auto"
+      }`}
     >
       <nav
         aria-label="Main"
         className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-4 sm:px-6"
       >
-        {/* No wordmark on the home page (or while the path streams in): the room is the brand. */}
+        {/* The mark on other pages; none on the home page (or while the path streams in). */}
         {pathname !== null && pathname !== "/" ? (
-          <Link href="/" className="group flex items-center gap-2 font-display text-lg font-extrabold uppercase">
-            {/* The site's mark (app/icon.svg); it spins up like a ball on hover. */}
-            <Image
-              src="/icon.svg"
-              alt=""
-              width={22}
-              height={22}
-              unoptimized
-              className="transition-transform duration-500 ease-out group-hover:-translate-y-0.5 group-hover:rotate-[200deg]"
-            />
-            Tip-Off
+          <Link href="/" aria-label="NBA Game Predictor, home" className="group flex items-center">
+            {/* The site's mark, no name; it spins up like a ball on hover. */}
+            <BallMark className="size-6 text-foreground transition-transform duration-500 ease-out group-hover:-translate-y-0.5 group-hover:rotate-[200deg]" />
           </Link>
         ) : (
           <span />

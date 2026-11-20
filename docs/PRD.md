@@ -13,7 +13,7 @@ A website that makes an ML model fun to use. A visitor lands on an arena drawn i
 - Betting odds, betting advice, or any gambling features.
 - User accounts, logins, saved picks.
 - Live in-game win probability (possible v2).
-- Real player likenesses, official logos, or official uniforms.
+- Real player likenesses, official uniforms, or official logos anywhere but the home team's logo at center court (decided Nov 2026).
 
 ## 2. Users
 
@@ -65,13 +65,13 @@ Full storyboard and timings: `docs/DESIGN.md §4`. Requirements:
 
 ### 3.3 Results screen
 
-A panel beside the player being viewed; the camera frames that player.
+No panel: the camera holds the viewed player close (upper body), and the stats sit straight on the scene on the other half, in a column that scrolls down through the whole breakdown (the game, the reasons, the series, the opponent, every projected player). The other player stays gone until Home or the switch.
 - **Verdict:** "You're right." or "Not this time.", with why: the model's chance for the pick (and which team it likes), or the final score.
 - **Team numbers** (the picked team first): record, home and away records, last 10, streak, rest (days off, back-to-back), points scored and allowed per game, average margin. Worked out from the season's finished games before this one (`lib/team-stats.ts`).
 - **The game:** the model's win probability for both teams (split bar), the simple Elo baseline, the model's top reasons (factor copy), the season series, the tip-off time.
-- **Corner button** ("NYK stats →") switches to the other team's numbers and frames that player.
+- **Corner button** ("See the Knicks →") switches to the other team: its player appears as if he'd been picked from the start, and every number changes, in one smooth move.
 - **Home** (top left) goes back to the matchup, where the drawer offers today's other games.
-- **Projected lines** for the viewed team: its top 5 players by projected minutes, each with minutes, points, rebounds and assists and an 80% range for each stat ("if he plays"); the real line once the game is final.
+- **Projected lines** for the viewed team: its top 8 players by projected minutes, each with minutes, points, rebounds and assists and an 80% range for each stat ("if he plays"); the real line once the game is final.
 
 ### 3.4 Other pages (nav bar)
 
@@ -86,7 +86,7 @@ Top nav: **Predict** (home) · **How it works** · **Model performance** · **Do
 | `/teams/[abbr]` | (v1.1, optional) | A team's predicted vs actual results this season, and how the model rates them over time. |
 
 ### 3.5 Footer
-On every page except home: "Unofficial fan project. Not affiliated with the NBA." · data source credit · GitHub link. The home page is a full-screen 3D room with no footer bar; it shows the disclaimer as one small line in a corner.
+On every page except home: data source credit · GitHub link. The home page is a full-screen 3D room with no footer bar. The "unofficial fan project, not affiliated with the NBA" disclaimer appears once, on Docs → Limitations, not on every screen (the user's decision, Nov 2026).
 
 ## 4. Functional requirements
 
@@ -116,6 +116,6 @@ On every page except home: "Unofficial fan project. Not affiliated with the NBA.
 - Model: beats the home-team baseline on accuracy **and** log loss on the held-out season.
 
 ## 7. Open questions
-- Project name and domain (placeholder: Tip-Off).
+- ~~Project name~~: no brand name; the site is titled "NBA Game Predictor" (decided Nov 2026). Domain still open.
 - Whether to include predicted final score/spread in v1 (it needs a separate regression model; suggested for v1.1).
 - ~~Whether player stat projections ship at launch~~: they shipped in Phase 9, after beating the last-10 baseline on the held-out season.

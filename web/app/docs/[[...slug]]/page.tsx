@@ -15,9 +15,9 @@ const keyOf = (slug: string[] | undefined) => slug?.join("/") ?? "";
 
 export async function generateMetadata({ params }: PageProps<"/docs/[[...slug]]">): Promise<Metadata> {
   const doc = findDoc(keyOf((await params).slug));
-  if (!doc) return { title: "Not found · Tip-Off docs" };
+  if (!doc) return { title: "Not found · NBA Game Predictor" };
   return pageMeta({
-    title: doc.slug ? `${doc.title} · Tip-Off docs` : "Docs · Tip-Off",
+    title: doc.slug ? `${doc.title} · Docs · NBA Game Predictor` : "Docs · NBA Game Predictor",
     description: doc.description,
     path: doc.slug ? `/docs/${doc.slug}` : "/docs",
   });

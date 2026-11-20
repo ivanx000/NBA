@@ -9,9 +9,9 @@ import { seasonSummary } from "@/lib/performance";
 import { pageMeta } from "@/lib/site";
 
 export const metadata: Metadata = pageMeta({
-  title: "Model performance · Tip-Off",
+  title: "Model performance · NBA Game Predictor",
   description:
-    "How often the Tip-Off model calls NBA games right, next to Elo and the home team: accuracy, log loss, calibration and every recent pick. Unofficial fan project.",
+    "How often the model calls NBA games right, next to Elo and the home team: accuracy, log loss, calibration and every recent pick.",
   path: "/performance",
 });
 

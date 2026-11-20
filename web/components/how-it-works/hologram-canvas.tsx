@@ -25,8 +25,8 @@ function Pop({ on, children }: { on: boolean; children: ReactNode }) {
     k.current += ((on ? 1 : 0) - k.current) * Math.min(1, dt * 9);
     const g = ref.current;
     if (!g) return;
-    g.scale.setScalar(1 + 0.08 * k.current);
-    g.position.z = 0.35 * k.current;
+    g.scale.setScalar(1 + 0.035 * k.current);
+    g.position.z = 0.15 * k.current;
   });
   return <group ref={ref}>{children}</group>;
 }
@@ -72,7 +72,7 @@ export default function HologramCanvas({
             hologram={side.color}
             paused={still}
             clip={shooting ? CLIPS.shot : "Idle"}
-            idleVariety={!shooting}
+            idleVariety={false}
             lookAt={!still}
             highlight={hovered ? 1 : 0}
           />

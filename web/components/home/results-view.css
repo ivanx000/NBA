@@ -1,37 +1,52 @@
-/* The results screen after a pick (DESIGN.md section 5): a panel beside the viewed player. */
+/*
+ * The results screen after a pick (DESIGN.md section 5). No panel: the stats sit straight on the
+ * scene over a soft shade on their half of the screen, in a column that scrolls through the whole
+ * breakdown. The camera holds the viewed player close on the other half.
+ */
 .results {
   position: absolute;
   inset: 0;
   z-index: 25;
   pointer-events: none;
+  --col: min(34rem, 46vw);
+}
+
+/* A shade from the screen's edge across the stats' half, fading out toward the player. */
+.results__shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: results-fade 0.8s ease both;
+}
+.results[data-side="right"] .results__shade {
+  background: linear-gradient(to left, rgba(2, 4, 10, 0.88) 0%, rgba(2, 4, 10, 0.7) 38%, rgba(2, 4, 10, 0) 62%);
+}
+.results[data-side="left"] .results__shade {
+  background: linear-gradient(to right, rgba(2, 4, 10, 0.88) 0%, rgba(2, 4, 10, 0.7) 38%, rgba(2, 4, 10, 0) 62%);
 }
 
 .results__home {
   pointer-events: auto;
   position: absolute;
-  top: 4.25rem;
-  left: 1.25rem;
+  z-index: 2;
+  /* In the nav's row, top left (the nav lets clicks through its empty middle on home). */
+  top: 0.8rem;
+  left: 1.5rem;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.95rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(6, 10, 24, 0.7);
-  backdrop-filter: blur(8px);
+  padding: 0.4rem 0;
   color: var(--text);
   font-family: var(--font-jetbrains), ui-monospace, monospace;
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: color 0.2s ease, transform 0.25s ease;
 }
 .results__home:hover {
-  border-color: rgba(91, 140, 255, 0.7);
-  box-shadow: 0 0 24px -8px rgba(91, 140, 255, 0.8);
+  color: var(--blue-hi);
+  transform: translateX(-3px);
 }
 .results__home:focus-visible,
 .results__switch:focus-visible {
@@ -39,184 +54,280 @@
   outline-offset: 3px;
 }
 
-.results__panel {
+/* The column: full height, scrolling on its own, its top and bottom fading into the scene. */
+.results__scroll {
   pointer-events: auto;
   position: absolute;
-  top: 4.25rem;
-  bottom: 1.5rem;
-  width: min(25rem, calc(100vw - 2.5rem));
+  top: 3.5rem;
+  bottom: 0;
+  width: var(--col);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 1.4rem 1.5rem 1.25rem;
-  border-radius: 1rem;
-  animation: results-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* No scrollbar (a bar over the scene); the "Scroll for the full breakdown" cue says it scrolls. */
+  scrollbar-width: none;
+  /* Text fades in at the top and out at the bottom edge. */
+  -webkit-mask-image: linear-gradient(transparent 0, #000 2.5rem, #000 calc(100% - 4rem), transparent 100%);
+  mask-image: linear-gradient(transparent 0, #000 2.5rem, #000 calc(100% - 4rem), transparent 100%);
 }
-.results[data-side="right"] .results__panel {
-  right: 1.5rem;
+.results__scroll::-webkit-scrollbar {
+  display: none;
 }
-.results[data-side="left"] .results__panel {
-  left: 1.5rem;
-  top: 7.25rem; /* clear of the Home button */
+.results[data-side="right"] .results__scroll {
+  right: 2.5rem;
+}
+.results[data-side="left"] .results__scroll {
+  left: 2.5rem;
+}
+.results__content {
+  padding: 3.25rem 0.25rem 5rem;
+}
+
+/* Each block rises in a beat after the one above, when the screen opens and on a team switch. */
+.results__block {
+  animation: results-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(0.25s + var(--i, 0) * 0.07s);
+}
+.results__block + .results__block {
+  margin-top: 1.9rem;
+}
+.results__section {
+  padding-top: 0.5rem;
 }
 
 .results__verdict {
-  margin-top: 0.4rem;
-  font-size: 2.1rem;
-  line-height: 1;
+  margin-top: 0.5rem;
+  font-size: clamp(2.4rem, 4.2vw, 3.6rem);
+  line-height: 0.95;
   font-weight: 850;
   text-transform: uppercase;
   outline: none;
 }
 .results__verdict[data-right="true"] {
   color: #fff;
-  text-shadow: 0 0 22px rgba(91, 140, 255, 0.55);
+  text-shadow: 0 0 26px rgba(91, 140, 255, 0.55);
 }
 .results__verdict[data-right="false"] {
   color: var(--red-hi);
 }
 .results__detail {
-  margin-top: 0.6rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-.results__team {
-  margin-top: 1.25rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--line);
-}
-.results__team-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.results__team-name {
-  font-size: 1.6rem;
-  line-height: 1;
-  font-weight: 850;
-  text-transform: uppercase;
-  border-bottom: 3px solid var(--team);
-  padding-bottom: 0.35rem;
-  display: inline-block;
-}
-.results__switch {
-  flex: none;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-.results__switch:hover {
-  border-color: rgba(91, 140, 255, 0.7);
-}
-
-.results__team .team-numbers {
-  margin-top: 0.9rem;
+  margin-top: 0.75rem;
+  max-width: 30rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: rgba(243, 246, 252, 0.8);
 }
 .results__badge:has(.final-badge) {
   margin-top: 0.7rem;
 }
 
-.results__game {
-  margin-top: 1.25rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--line);
+.results__team-name {
+  display: inline-block;
+  margin: 0.3rem 0 1rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 3px solid var(--team);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  line-height: 1;
+  font-weight: 850;
+  text-transform: uppercase;
 }
-.results__bar {
-  margin-top: 0.7rem;
-  display: flex;
-  gap: 2px;
-  height: 0.5rem;
-  border-radius: 999px;
-  overflow: hidden;
+.results__h {
+  margin: 1.4rem 0 0.7rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red-hi);
 }
-.results__bar-labels {
-  margin-top: 0.4rem;
+.results__block > .results__h:first-child {
+  margin-top: 0;
+}
+
+.results__more {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 0.5rem;
   font-family: var(--font-jetbrains), ui-monospace, monospace;
   font-size: 0.66rem;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.results__more span {
+  display: inline-block;
+  animation: results-nudge 1.8s ease-in-out infinite;
+}
+
+.results__split {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.95rem;
   color: var(--text-muted);
 }
-.results__factors {
-  margin-top: 1rem;
+.results__big {
+  font-size: 2rem;
+  font-weight: 850;
+  color: var(--text);
 }
-.results__more {
-  display: inline-flex;
-  gap: 0.4rem;
-  margin-top: 1rem;
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--blue-hi);
+.results__bar {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 2px;
+  height: 0.55rem;
+  border-radius: 999px;
+  overflow: hidden;
 }
-.results__more:hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
+.results__bar span {
+  transform-origin: left;
+  animation: results-grow 1s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.5s;
 }
-.results__more:focus-visible {
-  outline: 2px solid var(--blue-hi);
-  outline-offset: 3px;
+
+.results__series {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+}
+.results__series li {
+  display: flex;
+  gap: 1rem;
+  transition: transform 0.2s ease;
+}
+.results__series li:hover {
+  transform: translateX(4px);
+}
+
+.results__tables {
+  display: grid;
+  gap: 1.6rem;
 }
 .results__muted {
   color: var(--text-muted);
 }
 .results__small {
-  margin-top: 0.9rem;
-  font-size: 0.78rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* The switch: the other team's name in its color, in the bottom corner of the player's side
+   (never over the stats). */
+.results__switch {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 2;
+  bottom: 1.6rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.35rem 0;
+  font-size: 1.15rem;
+  font-weight: 850;
+  font-stretch: 118%;
+  text-transform: uppercase;
+  color: var(--text);
+  cursor: pointer;
+  /* Readable over the bright floor and the player. */
+  text-shadow: 0 1px 10px rgba(2, 4, 10, 0.95), 0 0 2px rgba(2, 4, 10, 0.8);
+  animation: results-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.9s;
+  transition: color 0.2s ease;
+}
+.results__switch::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--other);
+  box-shadow: 0 0 12px var(--other);
+  transform: scaleX(0.35);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.results__switch:hover {
+  color: var(--other);
+}
+.results__switch:hover::after {
+  transform: scaleX(1);
+}
+.results__switch-label {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+.results[data-side="right"] .results__switch {
+  left: 2.75rem;
+}
+.results[data-side="left"] .results__switch {
+  right: 2.75rem;
 }
 
 @keyframes results-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px);
   }
-  to {
-    opacity: 1;
-    transform: none;
+}
+@keyframes results-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes results-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes results-nudge {
+  50% {
+    transform: translateY(4px);
   }
 }
 
-/* Phones: the panel is a sheet over the lower part of the screen; the player stays visible above. */
+/* Phones: the player in the top part, the column scrolling over the lower part, full width. */
 @media (max-width: 767px) {
-  .results__home {
-    top: 3.75rem;
-    left: 0.75rem;
+  .results {
+    --col: auto;
   }
-  .results[data-side] .results__panel {
-    left: 0.75rem;
-    right: 0.75rem;
-    top: auto;
-    bottom: 0.75rem;
+  .results[data-side] .results__shade {
+    background: linear-gradient(to top, rgba(2, 4, 10, 0.92) 0%, rgba(2, 4, 10, 0.75) 48%, rgba(2, 4, 10, 0) 62%);
+  }
+  .results__home {
+    left: 1rem;
+  }
+  .results[data-side] .results__scroll {
+    top: 42svh;
+    left: 1rem;
+    right: 1rem;
     width: auto;
-    max-height: 58svh;
-    padding: 1.1rem 1.1rem 1rem;
+  }
+  .results[data-side] .results__content {
+    padding-top: 1.5rem;
+  }
+  /* Top right, under Menu: above the player's head, clear of him and of the stats. */
+  .results[data-side] .results__switch {
+    left: auto;
+    right: 1rem;
+    top: 3.4rem;
+    bottom: auto;
   }
   .results__verdict {
-    font-size: 1.7rem;
+    font-size: 2.1rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .results__panel {
+  .results__shade,
+  .results__block,
+  .results__switch,
+  .results__bar span,
+  .results__more span {
     animation: none;
   }
-}
-
-.results__players {
-  margin-top: 1.1rem;
-  display: grid;
-  gap: 0.6rem;
 }

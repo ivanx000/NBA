@@ -16,8 +16,8 @@ import "./game.css";
 
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
-/** Last 10 as chips, most recent first: W/L, opponent, score. */
-function Form({ games }: { games: RecentGame[] }) {
+/** Last 10, most recent first: W/L, opponent, score. Shared with the home page's results screen. */
+export function Form({ games }: { games: RecentGame[] }) {
   if (!games.length) return <p className="breakdown__muted">No games yet this season.</p>;
   return (
     <ol className="form-strip" aria-label="Last 10 games, most recent first">
@@ -43,7 +43,7 @@ function Form({ games }: { games: RecentGame[] }) {
 function TeamColumn({ team, side, form, picked }: { team: SlateTeam; side: Side; form: RecentGame[]; picked: boolean }) {
   const color = readableTeamColor(requireTeam(team.teamId));
   return (
-    <section className="breakdown__team holo-panel" style={{ "--team": color } as CSSProperties} aria-label={team.name}>
+    <section className="breakdown__team" style={{ "--team": color } as CSSProperties} aria-label={team.name}>
       <p className="eyebrow breakdown__muted">
         {team.city} · {side === "home" ? "Home" : "Away"}
         {picked && " · Model's pick"}
@@ -87,7 +87,7 @@ export function GameBreakdown({ detail }: { detail: GameDetail }) {
         <FinalBadge game={game} />
       </div>
 
-      <section className="breakdown__chance holo-panel" aria-labelledby="chance">
+      <section className="breakdown__chance" aria-labelledby="chance">
         <h2 id="chance" className="eyebrow">
           Win chance
         </h2>
@@ -130,7 +130,7 @@ export function GameBreakdown({ detail }: { detail: GameDetail }) {
         <TeamColumn team={game.home} side="home" form={form.home} picked={model === "home"} />
       </div>
 
-      <section className="breakdown__series holo-panel" aria-labelledby="series">
+      <section className="breakdown__series" aria-labelledby="series">
         <h2 id="series" className="eyebrow">
           Season series · {game.away.abbr} {game.headToHead.away}–{game.headToHead.home} {game.home.abbr}
         </h2>
@@ -154,7 +154,7 @@ export function GameBreakdown({ detail }: { detail: GameDetail }) {
         )}
       </section>
 
-      <section className="breakdown__players holo-panel" aria-labelledby="players">
+      <section className="breakdown__players" aria-labelledby="players">
         <h2 id="players" className="eyebrow">
           {game.status === "final" ? "Player lines: projected and real" : "Projected player lines"}
         </h2>

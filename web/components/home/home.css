@@ -100,3 +100,77 @@
     display: inline;
   }
 }
+
+/* Skip during the cinematic: a quiet mono label, like the rest of the room's text, not a box. */
+.skip-button {
+  position: absolute;
+  z-index: 10;
+  right: 1.5rem;
+  bottom: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  cursor: pointer;
+  /* Readable over the bright floor and the player. */
+  text-shadow: 0 1px 10px rgba(2, 4, 10, 0.95), 0 0 2px rgba(2, 4, 10, 0.8);
+  animation: skip-in 0.5s ease both 0.4s;
+  transition: color 0.2s ease;
+}
+.skip-button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--red-hi);
+  box-shadow: 0 0 10px rgba(255, 77, 94, 0.8);
+  transform: scaleX(0.3);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.skip-button:hover {
+  color: var(--red-hi);
+}
+.skip-button:hover::after {
+  transform: scaleX(1);
+}
+.skip-button:focus-visible {
+  outline: 2px solid var(--blue-hi);
+  outline-offset: 3px;
+}
+.skip-button kbd {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid rgba(243, 246, 252, 0.22);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+@media (hover: none) {
+  .skip-button kbd {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .skip-button {
+    right: 1rem;
+    bottom: 1rem;
+  }
+}
+@keyframes skip-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skip-button {
+    animation: none;
+  }
+}

@@ -4,10 +4,11 @@ import type { Metadata } from "next";
  * Site identity for metadata, the sitemap and robots.txt. `NEXT_PUBLIC_SITE_URL` overrides the URL
  * (set it in Vercel when a custom domain is connected); otherwise it's the production vercel.app URL.
  */
-export const SITE_NAME = "Tip-Off";
+/** The site has no brand name (the user's decision, Nov 2026); this is its title. */
+export const SITE_NAME = "NBA Game Predictor";
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://nba-alpha-olive.vercel.app").replace(/\/$/, "");
 export const SITE_DESCRIPTION =
-  "Who wins tonight? Pick the winner of every NBA game and see what the model thinks: win chances, the reasons behind them, projected player lines and an honest report card. Unofficial fan project.";
+  "Who wins tonight? Pick the winner of every NBA game and see what the model thinks: win chances, the reasons behind them, projected player lines and an honest report card.";
 
 /** Absolute URL for a site path ("/docs" -> "https://…/docs"). */
 export function absoluteUrl(path: string): string {
@@ -19,7 +20,7 @@ const DEFAULT_IMAGE = {
   url: "/opengraph-image",
   width: 1200,
   height: 630,
-  alt: "Tip-Off: who wins tonight? NBA game predictions in 3D. Unofficial fan project.",
+  alt: "NBA Game Predictor: who wins tonight? NBA game predictions in 3D.",
 };
 
 /**

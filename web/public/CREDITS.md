@@ -1,7 +1,9 @@
 # Credits
 
-Tip-Off is an unofficial fan project, not affiliated with the NBA or any team. It uses team city
-and nickname text and colors only: no league or team logos, wordmarks, or real player likenesses.
+This site is an unofficial fan project, not affiliated with the NBA or any team. It uses team city
+and nickname text and colors, and each team's primary logo at center court of the 3D court
+(from NBA.com, `public/logos/`). Team names and logos are trademarks of their teams and the NBA,
+shown only to identify the home team. No league logo, wordmarks or real player likenesses.
 
 ## 3D player and animations
 - Player model, rig and animations: generated for this project with [Meshy](https://www.meshy.ai)

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Component, type ReactNode, useSyncExternalStore } from "react";
 
+import { ArenaLoader } from "@/components/arena-loader";
 import { detectWebGL } from "@/lib/webgl";
 
 import type { ArenaSceneProps } from "./arena-scene";
@@ -10,9 +11,7 @@ import { Fallback2D } from "./fallback-2d";
 
 function Loader() {
   return (
-    <div className="grid h-full place-items-center" role="status" aria-label="Loading the arena">
-      <span className="basketball-loader" aria-hidden />
-    </div>
+    <ArenaLoader label="Setting up the arena" />
   );
 }
 

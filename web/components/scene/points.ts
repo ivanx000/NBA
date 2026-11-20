@@ -81,6 +81,49 @@ export function flashMaterial(size: number): THREE.ShaderMaterialParameters {
   };
 }
 
+/**
+ * The fans: like pointsMaterial, but the fans near the cursor hop and brighten, as if cheering
+ * (after the crowd in the lions-share site, which reacts to the cursor). Each point carries its
+ * fan's seed (``aFan``), so a fan's head and shoulders hop together. ``uPointer`` is the cursor in
+ * normalized device coordinates, ``uActive`` 0..1 (eased in while the cursor is over the scene).
+ */
+export function fanMaterial(size: number, twinkle: number): THREE.ShaderMaterialParameters {
+  const base = pointsMaterial(size, twinkle);
+  return {
+    ...base,
+    uniforms: {
+      ...base.uniforms,
+      uPointer: { value: new THREE.Vector2(9, 9) },
+      uAspect: { value: 1.6 },
+      uReach: { value: 0.22 },
+      uActive: { value: 0 },
+    },
+    vertexShader: /* glsl */ `
+      attribute float aSize;
+      attribute float aSeed;
+      attribute float aFan;
+      attribute vec3 color;
+      uniform float uTime, uSize, uTwinkle, uPixelRatio, uAspect, uReach, uActive;
+      uniform vec2 uPointer;
+      varying vec3 vColor;
+      varying float vFade;
+      void main() {
+        vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vec2 d = (clip.xy / clip.w - uPointer) * vec2(uAspect, 1.0);
+        float k = uActive * (1.0 - smoothstep(0.0, uReach, length(d)));
+        // Each fan hops at its own pace: a little bob at the edge of the reach, full jumps at its middle.
+        float hop = abs(sin(uTime * (5.5 + aFan * 3.0) + aFan * 40.0));
+        vec3 p = position + vec3(0.0, k * (0.06 + 0.32 * hop), 0.0);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float tw = 1.0 - uTwinkle * (0.5 + 0.5 * sin(uTime * (0.6 + aSeed * 2.2) + aSeed * 40.0));
+        gl_PointSize = uSize * aSize * uPixelRatio * (1.0 + 0.25 * k) / max(-mv.z, 0.5);
+        vColor = color * tw * (1.0 + 0.9 * k);
+        vFade = 1.0 - smoothstep(30.0, 75.0, -mv.z);
+      }`,
+  };
+}
+
 /** Keep a points material's pixel ratio and time current (call from useFrame). */
 export function tickPoints(material: THREE.ShaderMaterial | null, dpr: number, time: number | null) {
   if (!material) return;

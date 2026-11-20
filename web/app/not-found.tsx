@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { StatusAction, StatusLink, StatusPage } from "@/components/status-page";
 
-export const metadata: Metadata = { title: "Page not found · Tip-Off" };
+export const metadata: Metadata = { title: "Page not found · NBA Game Predictor" };
 
 /** Unknown URLs, and pages that call notFound() without their own not-found file. */
 export default function NotFound() {

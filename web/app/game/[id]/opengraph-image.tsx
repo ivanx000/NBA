@@ -1,12 +1,14 @@
 import { ImageResponse } from "next/og";
 
+import { ballDataUri } from "@/lib/ball-mark-svg";
+
 import { shortDate, tipoffET } from "@/lib/dates";
 import { getGameDetail } from "@/lib/db/queries";
 import { actualWinner, winProb } from "@/lib/slate";
 import { hologramMatchup } from "@/lib/team-colors";
 import { requireTeam } from "@/lib/teams";
 
-export const alt = "Tip-Off: the model's win chance for this NBA game";
+export const alt = "NBA Game Predictor: the model's win chance for this NBA game";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -20,7 +22,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     return new ImageResponse(
       (
         <div style={{ display: "flex", width: "100%", height: "100%", background: BG, color: "#f3f6fc", fontSize: 64, alignItems: "center", justifyContent: "center" }}>
-          Tip-Off
+          NBA Game Predictor
         </div>
       ),
       size,
@@ -79,8 +81,11 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           <div style={{ display: "flex", fontSize: 40, color: "#a8b3cc" }}>Prediction published on game day</div>
         )}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 36, fontSize: 24, color: "#a8b3cc" }}>
-          <span style={{ fontWeight: 800, color: "#f3f6fc", letterSpacing: 2 }}>TIP-OFF</span>
-          <span>Model win chance · Unofficial fan project, not affiliated with the NBA</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 12, fontWeight: 800, color: "#f3f6fc", letterSpacing: 2 }}>
+            <img src={ballDataUri("#f3f6fc")} width={30} height={30} alt="" />
+            NBA GAME PREDICTOR
+          </span>
+          <span>Model win chance</span>
         </div>
       </div>
     ),

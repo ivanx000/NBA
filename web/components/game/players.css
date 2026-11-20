@@ -1,18 +1,4 @@
-/* Projected player lines: the results screen's list and the game page's tables. */
-.player-badge {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid var(--team, var(--line));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--team, #5b8cff) 14%, transparent);
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  color: var(--text);
-}
+/* Projected player lines: the results screen's list and the game page's tables (names only: no badges). */
 
 /* --- Results screen ---------------------------------------------------------------------- */
 .player-list {
@@ -119,13 +105,6 @@
   text-align: left;
   font-weight: 600;
   white-space: nowrap;
-}
-.player-table tbody th .player-badge {
-  width: 1.7rem;
-  height: 1.7rem;
-  margin-right: 0.55rem;
-  vertical-align: middle;
-  font-size: 0.6rem;
 }
 .player-table td {
   padding: 0.5rem 0.6rem 0.5rem 0;

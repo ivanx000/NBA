@@ -4,11 +4,16 @@
  * The two players at center court, picking by clicking a player, and the pick's cinematic
  * (DESIGN.md section 4), one GSAP timeline per pick:
  *
- *   push-in over the picked player's shoulder, he turns to the hoop -> hoop lights up ->
- *   jump shot, the ball leaves his hands at the release frame -> it goes in if the pick is right
- *   (swish / back iron / rattle by confidence) or misses if it's wrong (rim out / off the front) ->
- *   flash and sparks on a make, a head shake on a miss -> he turns back while the camera settles
- *   on him -> results. On the results screen the camera frames whichever team is being viewed.
+ *   the other player fades out while the camera swings round the picked one, in one
+ *   continuous move (an orbit about his feet with a gentle pull-back at its midpoint, after the
+ *   lions-share site's screen changes, flowing into a slow drift toward the rim) to a side-on shot: him in one half of the frame, the real basket at
+ *   that end of the court in the other (pick the left player and the view swings right, the right
+ *   one and it swings left) -> he turns to the basket and the hoop lights up -> jump shot, the
+ *   ball leaves his hands at the release frame -> it goes in if the pick is right (swish / back
+ *   iron / rattle by confidence) or misses if it's wrong (rim out / off the front), the camera
+ *   easing in as it flies -> flash and sparks on a make, a head shake on a miss -> he turns back,
+ *   the other player returns, the camera settles on him -> results. On the results screen the
+ *   camera frames whichever team is being viewed.
  *
  * The timeline sends the scene store's events (revealDone at the shot, shotDone at results), so
  * the page's UI follows it. Skip/Esc jump it to the results label; Home plays the return.
@@ -25,20 +30,25 @@ import { type SlateGame, verdict, winProb } from "@/lib/slate";
 import { hologramMatchup } from "@/lib/team-colors";
 import { requireTeam } from "@/lib/teams";
 
+import { BASKET_X } from "./arena";
 import { cameraOverride, resetCameraOverride } from "./camera-override";
-import { Ball, Burst, type BurstHandle, Hoop, type HoopHandle, RIM_HEIGHT_M, Trail, type TrailHandle } from "./cinematic-props";
+import { Ball, BALL_RADIUS_M, Burst, type BurstHandle, Hoop, type HoopHandle, RIM_HEIGHT_M, Trail, type TrailHandle } from "./cinematic-props";
 import { FloorMark } from "./floor-mark";
 import { Player } from "./player";
 
-/** Release to rim, along the floor (a long two). */
-const SHOT_DISTANCE_M = 6.8;
 const LEFT_HAND_BONE = "mixamorigLeftHand";
+/** The middle fingers' second joints: the ball sits on the fingers, not at the wrists. */
+const FINGERS = ["mixamorigLeftHandMiddle2", "mixamorigRightHandMiddle2"] as const;
 /** Timeline marks, in seconds (DESIGN.md section 4). */
-const T = { pushIn: 0.4, turn: 0.6, hoop: 1.2, shot: 1.8 };
-const HERO_FOV = 35;
+const T = { vanish: 0.05, swing: 0.1, swingFor: 1.55, turn: 0.55, hoop: 0.9, shot: 1.75 };
+/** The swing's midpoint: how far the camera pulls back (share of its distance), rises (m) and widens (deg). */
+const SWING = { pull: 0.15, rise: 0.35, fov: 3 };
+/** How long the camera takes to settle on the results shot after the shot is decided. */
+const HERO_S = 1.4;
+const HERO_FOV = 32;
 /** Hover: how much a player grows, and how far (m) he steps toward the camera. */
-const HOVER_SCALE = 0.08;
-const HOVER_STEP = 0.35;
+const HOVER_SCALE = 0.035;
+const HOVER_STEP = 0.15;
 
 interface Run {
   timeline: gsap.core.Timeline | null;
@@ -56,16 +66,110 @@ interface Run {
   grow: Record<Side, number>;
 }
 
-/** The results shot for one side: his whole body, in his half of the screen, clear of the panel. */
+/** A camera pose in polar form about a pivot on the floor: angle from +z, horizontal radius, height (and its target's). */
+interface Polar {
+  a: number;
+  r: number;
+  y: number;
+  ta: number;
+  tr: number;
+  ty: number;
+  fov: number;
+}
+
+function toPolar(pivot: THREE.Vector3, pos: THREE.Vector3, tgt: THREE.Vector3, fov: number): Polar {
+  const p = pos.clone().sub(pivot);
+  const t = tgt.clone().sub(pivot);
+  return { a: Math.atan2(p.x, p.z), r: Math.hypot(p.x, p.z), y: p.y, ta: Math.atan2(t.x, t.z), tr: Math.hypot(t.x, t.z), ty: t.y, fov };
+}
+
+/** The signed shortest turn from angle a to b. */
+const turnTo = (a: number, b: number) => THREE.MathUtils.euclideanModulo(b - a + Math.PI, Math.PI * 2) - Math.PI;
+
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+/** Cosine ease in and out: starts and ends at rest, no sudden change in speed anywhere. */
+const smooth = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * clamp01(x));
+/** Eases in over the first second, then keeps a steady speed: the drift never stops abruptly. */
+const ramp = (t: number) => (t <= 0 ? 0 : t < 1 ? (t * t) / 2 : t - 0.5);
+
+interface ShotCamera {
+  pivot: THREE.Vector3;
+  A: Polar;
+  B: Polar;
+  startTgt: THREE.Vector3;
+  view: { position: THREE.Vector3; target: THREE.Vector3; fov: number };
+  rim: THREE.Vector3;
+  hero: { position: THREE.Vector3; target: THREE.Vector3 };
+  /** Seconds: when the swing starts, how long it takes, when the drift starts, when the results shot begins. */
+  swingAt: number;
+  swingFor: number;
+  driftAt: number;
+  heroAt: number;
+}
+
+const tmpPos = new THREE.Vector3();
+const tmpTgt = new THREE.Vector3();
+const toRim = new THREE.Vector3();
+
+/**
+ * The whole shot's camera as one path in time, so it never stops and starts: it swings round the
+ * shooter's feet from the home framing to the side-on shot (angles turning the short way, a gentle
+ * pull-back and rise at the midpoint), then, before the swing has quite finished, drifts slowly on
+ * toward the rim while the ball flies, and finally blends into the results shot while still
+ * drifting. Every part eases in and out, and they overlap, so the speed never jumps.
+ */
+function placeShotCamera(c: ShotCamera, t: number) {
+  const lerp = THREE.MathUtils.lerp;
+  const { A, B, pivot } = c;
+  const k = smooth((t - c.swingAt) / c.swingFor);
+  const bump = Math.sin(Math.PI * k);
+  const a = A.a + turnTo(A.a, B.a) * k;
+  const r = lerp(A.r, B.r, k) * (1 + SWING.pull * bump);
+  tmpPos.set(pivot.x + Math.sin(a) * r, pivot.y + lerp(A.y, B.y, k) + SWING.rise * bump, pivot.z + Math.cos(a) * r);
+  tmpTgt.lerpVectors(c.startTgt, c.view.target, k);
+  tmpTgt.y += SWING.rise * 0.5 * bump;
+  let fov = lerp(A.fov, B.fov, k) + SWING.fov * bump;
+  // The drift: toward the rim, a few tens of centimeters a second, the view leaning to the rim.
+  const d = ramp(t - c.driftAt);
+  toRim.copy(c.rim).sub(tmpPos).setY(0).normalize();
+  tmpPos.addScaledVector(toRim, 0.22 * d);
+  tmpTgt.lerp(c.rim, Math.min(0.15, 0.025 * d));
+  fov -= Math.min(4, 0.6 * d);
+  // The results shot, blended in over HERO_S.
+  const h = smooth((t - c.heroAt) / HERO_S);
+  const o = cameraOverride;
+  o.position.lerpVectors(tmpPos, c.hero.position, h);
+  o.target.lerpVectors(tmpTgt, c.hero.target, h);
+  o.fov = lerp(fov, HERO_FOV, h);
+}
+
+/**
+ * The side-on shot: the shooter (feet at ``feet``) in one half of the frame, the rim in the other.
+ * ``side`` is -1 for the left player (the camera stands behind his left shoulder and looks right,
+ * down the court) and +1 for the right one. Solved for a 16:10 screen and for a phone.
+ */
+function shotView(feet: THREE.Vector3, rim: THREE.Vector3, side: number, aspect: number) {
+  const portrait = aspect < 1;
+  const offset = portrait ? new THREE.Vector3(side * 5.75, 2.4, 1.0) : new THREE.Vector3(side * 3.25, 2.0, 3.25);
+  const position = feet.clone().add(offset);
+  const target = new THREE.Vector3(feet.x + (rim.x - feet.x) * 0.2, 1.0 + (rim.y - 1.0) * 0.2, 0);
+  return { position, target, fov: portrait ? 50 : 46 };
+}
+
+/**
+ * The results shot for one side: close on him, his upper body (waist to just over his head)
+ * filling his half of the screen, the stats on the other half. Phones: his upper body in the top
+ * half, the stats scrolling below.
+ */
 function heroShot(sideX: number, wx: number, aspect: number) {
   if (aspect < 1) {
-    // Phones: the panel is a sheet at the bottom; put him in the upper part, centered.
-    return { position: new THREE.Vector3(wx, 1.9, 6.8), target: new THREE.Vector3(wx, 0.35, 0) };
+    return { position: new THREE.Vector3(wx, 1.95, 3.9), target: new THREE.Vector3(wx, 1.2, 0) };
   }
-  const distance = 5.6;
+  const distance = 2.55;
   const halfWidth = distance * Math.tan(((HERO_FOV / 2) * Math.PI) / 180) * aspect;
-  const x = wx - sideX * halfWidth * 0.48;
-  return { position: new THREE.Vector3(x, 1.3, distance), target: new THREE.Vector3(x, 1.0, 0) };
+  // Centered in his half: half of that half off the screen's middle.
+  const x = wx - sideX * halfWidth * 0.5;
+  return { position: new THREE.Vector3(x, 1.5, distance), target: new THREE.Vector3(x, 1.4, 0) };
 }
 
 export function Matchup({
@@ -106,7 +210,15 @@ export function Matchup({
   const homeSpin = useRef<THREE.Group>(null);
   const awayRoot = useRef<THREE.Group>(null);
   const homeRoot = useRef<THREE.Group>(null);
+  // Each player's presence: the other one collapses into the floor during the shot.
+  const awayHere = useRef<THREE.Group>(null);
+  const homeHere = useRef<THREE.Group>(null);
+  const camera = useThree((s) => s.camera);
   const hoopRoot = useRef<THREE.Group>(null);
+  // The shot's props (hoop, ball, trail, sparks), hidden until the shot.
+  const propsRoot = useRef<THREE.Group>(null);
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
   const hoop = useRef<HoopHandle>(null);
   const ball = useRef<THREE.Mesh>(null);
   const trail = useRef<TrailHandle>(null);
@@ -136,6 +248,37 @@ export function Matchup({
     };
   }, [setCinematic, setHover]);
 
+  // Warm the shot's props up once they exist: compile their shaders and upload their textures
+  // now, off-screen, instead of the first time they're drawn (that cost a 300 ms freeze right as
+  // the ball appeared, in the middle of the camera's move). Three only compiles what's visible,
+  // so they're shown for the compile and hidden again.
+  useEffect(() => {
+    const root = propsRoot.current;
+    if (!root) return;
+    let live = true;
+    const hidden: THREE.Object3D[] = [];
+    root.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+      const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      for (const m of Array.isArray(mat) ? mat : mat ? [mat] : []) {
+        const map = (m as THREE.MeshStandardMaterial).map;
+        if (map) gl.initTexture(map);
+      }
+    });
+    gl.compileAsync(root, camera, scene)
+      .catch(() => {})
+      .finally(() => {
+        if (live) for (const o of hidden) o.visible = false;
+      });
+    return () => {
+      live = false;
+      for (const o of hidden) o.visible = false;
+    };
+  }, [gl, camera, scene]);
+
   // A pointer cursor over a pickable player.
   useEffect(() => {
     const body = document.body;
@@ -148,6 +291,13 @@ export function Matchup({
   useEffect(() => {
     const r = run.current;
     const spin = pick === "home" ? homeSpin.current : awaySpin.current;
+    const showAll = () => {
+      for (const g of [awayHere.current, homeHere.current]) {
+        if (!g) continue;
+        g.visible = true;
+        g.scale.set(1, 1, 1);
+      }
+    };
 
     const hideProps = () => {
       r.held = false;
@@ -167,47 +317,74 @@ export function Matchup({
       hoop.current?.setOpacity(0);
       resetCameraOverride();
       for (const g of [awaySpin.current, homeSpin.current]) if (g) g.rotation.y = 0;
+      showAll();
       return;
     }
 
     if (phase === "revealing" && !r.timeline && spin && shooter) {
-      const turn = shooter.turn;
       const wx = shooter.x * playerX;
-      // Turned around to face the hoop: the model faces +z at rest, so after half a turn it faces
-      // -z, a little to the side by its resting turn.
-      r.facing.set(-Math.sin(turn), 0, -Math.cos(turn));
-      const right = new THREE.Vector3(-r.facing.z, 0, r.facing.x);
       const feet = new THREE.Vector3(wx, 0, 0);
-      r.rim.copy(feet).addScaledVector(r.facing, SHOT_DISTANCE_M).setY(RIM_HEIGHT_M);
+      // The basket at the far end of the court from him: the left player shoots at the right one.
+      r.rim.set(-shooter.x * BASKET_X, RIM_HEIGHT_M, 0);
+      r.facing.copy(r.rim).sub(feet).setY(0).normalize();
+      // He turns to face it (the model faces +z at rest, inside his resting turn).
+      const faceYaw = Math.atan2(r.facing.x, r.facing.z) - shooter.turn;
       hoopRoot.current?.position.copy(r.rim);
       hoopRoot.current?.rotation.set(0, Math.atan2(-r.facing.x, -r.facing.z), 0);
-      const left = spin.getObjectByName(LEFT_HAND_BONE);
-      const rightHand = spin.getObjectByName(HAND_BONE);
+      const left = spin.getObjectByName(FINGERS[0]) ?? spin.getObjectByName(LEFT_HAND_BONE);
+      const rightHand = spin.getObjectByName(FINGERS[1]) ?? spin.getObjectByName(HAND_BONE);
       r.hands = left && rightHand ? [left, rightHand] : null;
       // In if the pick is right, out if it's wrong (judged by the final score once there is one).
       const correct = verdict(game, shooter.side)?.right ?? true;
       const outcome = pickShot(correct, winProb(game, shooter.side) ?? 0.5);
-      // Durations depend only on the outcome; the real path is computed at release.
-      const plan = shotPath(r.rim, r.rim, outcome);
+      // A long shot: more time in the air and a higher arc than a two.
+      const distance = Math.abs(r.rim.x - feet.x);
+      const flightS = 1.1 + Math.max(0, distance - 6.8) * 0.08;
+      const apexM = 2.5 + Math.max(0, distance - 6.8) * 0.2;
+      // Durations depend only on the outcome and the flight; the real path is computed at release.
+      const plan = shotPath(r.rim, r.rim, outcome, flightS, apexM);
       const colors = [shooter.color, shooter.jersey.trim];
 
-      // Over his right shoulder looking down at the hoop.
+      // Start from exactly where the home camera is, then swing round him to the side-on shot.
       const o = cameraOverride;
-      o.position.copy(feet).addScaledVector(r.facing, -3.6).addScaledVector(right, 0.8).setY(2.2);
-      o.target.copy(feet).addScaledVector(r.facing, 4).setY(1.95);
-      o.fov = 42;
-      o.weight = 0;
-      const shotLook = r.rim.clone().setY(RIM_HEIGHT_M - 0.1);
+      const cam = camera as THREE.PerspectiveCamera;
+      const startPos = cam.position.clone();
+      const forward = cam.getWorldDirection(new THREE.Vector3());
+      const startTgt = startPos.clone().addScaledVector(forward, Math.abs(startPos.z / (forward.z || -1)));
+      o.position.copy(startPos);
+      o.target.copy(startTgt);
+      o.fov = cam.fov;
+      o.weight = 1;
+      const view = shotView(feet, r.rim, shooter.x, aspect);
+      const A = toPolar(feet, startPos, startTgt, cam.fov);
+      const B = toPolar(feet, view.position, view.target, view.fov);
       const hero = heroShot(shooter.x, wx, aspect);
       const showHoop = (opacity: number, duration: number, at: gsap.Position, tl: gsap.core.Timeline) =>
         tl.to(r.hoop, { opacity, duration, onUpdate: () => hoop.current?.setOpacity(r.hoop.opacity) }, at);
 
       const release = T.shot + JUMPSHOT_RELEASE_TIME;
       const decided = release + plan.decidedAt;
+      const resultsAt = decided + 0.9;
+      // One clock drives the camera for the whole shot (placeShotCamera), so it moves as one piece.
+      const path: ShotCamera = {
+        pivot: feet,
+        A,
+        B,
+        startTgt,
+        view,
+        rim: r.rim.clone(),
+        hero,
+        swingAt: T.swing,
+        swingFor: T.swingFor,
+        driftAt: T.swing + T.swingFor * 0.65,
+        heroAt: resultsAt,
+      };
+      const clock = { t: 0 };
+      const camEnd = resultsAt + HERO_S;
       const tl = gsap.timeline();
       tl.addLabel("reveal", 0)
-        .to(o, { weight: 1, duration: 1.2, ease: "power2.inOut" }, T.pushIn)
-        .to(spin.rotation, { y: Math.PI, duration: 0.7, ease: "power2.inOut" }, T.turn);
+        .to(clock, { t: camEnd, duration: camEnd, ease: "none", onUpdate: () => placeShotCamera(path, clock.t) }, 0)
+        .to(spin.rotation, { y: faceYaw, duration: 0.9, ease: "sine.inOut" }, T.turn);
       showHoop(1, 0.6, T.hoop, tl)
         .addLabel("shot", T.shot)
         .call(
@@ -221,15 +398,12 @@ export function Matchup({
           "shot",
         )
         .fromTo(r.ball, { scale: 0 }, { scale: 1, duration: 0.25, ease: "back.out(2)" }, "shot")
-        // Tilt up to follow the arc.
-        .to(o.target, { x: shotLook.x, y: shotLook.y, z: shotLook.z, duration: 1.6, ease: "sine.inOut" }, "shot+=0.7")
-        .to(o.position, { y: 2.4, duration: 1.6, ease: "sine.inOut" }, "shot+=0.7")
         .addLabel("release", release)
         .call(
           () => {
             r.held = false;
             const from = ball.current ? ball.current.position.clone() : r.rim.clone();
-            r.path = shotPath(from, r.rim, outcome);
+            r.path = shotPath(from, r.rim, outcome, flightS, apexM);
           },
           [],
           "release",
@@ -245,15 +419,10 @@ export function Matchup({
           [],
           "decided",
         )
-        // A clank shakes less than a make.
-        .fromTo(o, { shake: plan.made ? 1 : 0.45 }, { shake: 0, duration: 0.35, ease: "power1.out" }, "decided")
         .call(() => setShooterClip(plan.made ? CLIPS.celebrate[0] : CLIPS.miss), [], "decided+=0.35")
-        .to(spin.rotation, { y: Math.PI * 2, duration: 0.8, ease: "power2.inOut" }, "decided+=0.3")
-        .addLabel("results", decided + 0.7)
-        .call(() => send({ type: "shotDone" }), [], "results")
-        .to(o.position, { x: hero.position.x, y: hero.position.y, z: hero.position.z, duration: 1.1, ease: "power2.inOut" }, "results")
-        .to(o.target, { x: hero.target.x, y: hero.target.y, z: hero.target.z, duration: 1.1, ease: "power2.inOut" }, "results")
-        .to(o, { fov: HERO_FOV, duration: 1.1, ease: "power2.inOut" }, "results");
+        .to(spin.rotation, { y: 0, duration: 0.9, ease: "power2.inOut" }, "decided+=0.5")
+        .addLabel("results", resultsAt)
+        .call(() => send({ type: "shotDone" }), [], "results");
       showHoop(0, 0.8, "results+=0.4", tl);
       r.timeline = tl;
       return;
@@ -270,6 +439,7 @@ export function Matchup({
       r.timeline?.kill();
       hideProps();
       const tl = gsap.timeline({ onComplete: () => send({ type: "returned" }) });
+      showAll();
       tl.call(() => setShooterClip(CLIPS.idle[0]), [], 0)
         .to(cameraOverride, { weight: 0, duration: 1, ease: "power2.inOut" }, 0)
         .to(r.hoop, { opacity: 0, duration: 0.4, onUpdate: () => hoop.current?.setOpacity(r.hoop.opacity) }, 0);
@@ -280,21 +450,24 @@ export function Matchup({
       }
       r.timeline = tl;
     }
-  }, [phase, pick, shooter, game, playerX, aspect, send]);
+  }, [phase, pick, shooter, game, playerX, aspect, send, camera]);
 
   // Results screen: frame whichever team is being viewed (the shooter first; the corner button
-  // switches). With reduced motion there's no camera move; the panel just changes.
+  // switches, and only the viewed team's player is shown, the other fading out as the camera
+  // glides across). With reduced motion there's no camera move; the stats just change.
   useEffect(() => {
     if (phase !== "results" || !viewing || reducedMotion) return;
     const r = run.current;
-    if (r.timeline && r.timeline.isActive() && r.timeline.time() < r.timeline.labels.results + 1.1) return;
+    if (r.timeline && r.timeline.isActive() && r.timeline.time() < r.timeline.labels.results + HERO_S) return;
     const side = sides.find((s) => s.side === viewing)!;
     const hero = heroShot(side.x, side.x * playerX, aspect);
     const o = cameraOverride;
+    // One glide across to the other player while one fades out and the other fades in.
+    const glide = { duration: 1.3, ease: "sine.inOut" };
     const tl = gsap.timeline();
-    tl.to(o, { weight: 1, fov: HERO_FOV, duration: 0.9, ease: "power2.inOut" }, 0)
-      .to(o.position, { x: hero.position.x, y: hero.position.y, z: hero.position.z, duration: 0.9, ease: "power2.inOut" }, 0)
-      .to(o.target, { x: hero.target.x, y: hero.target.y, z: hero.target.z, duration: 0.9, ease: "power2.inOut" }, 0);
+    tl.to(o, { weight: 1, fov: HERO_FOV, ...glide }, 0)
+      .to(o.position, { x: hero.position.x, y: hero.position.y, z: hero.position.z, ...glide }, 0)
+      .to(o.target, { x: hero.target.x, y: hero.target.y, z: hero.target.z, ...glide }, 0);
     return () => void tl.kill();
   }, [phase, viewing, sides, playerX, aspect, reducedMotion]);
 
@@ -319,7 +492,9 @@ export function Matchup({
       const { a, b: c } = tmp.current;
       r.hands[0].getWorldPosition(a);
       r.hands[1].getWorldPosition(c);
-      b.position.copy(a).add(c).multiplyScalar(0.5).addScaledVector(r.facing, 0.1);
+      // Between the fingers, resting on top of them (a ball's radius up), a touch in front.
+      b.position.copy(a).add(c).multiplyScalar(0.5).addScaledVector(r.facing, 0.04);
+      b.position.y += BALL_RADIUS_M * 0.9;
     } else if (r.path) {
       const p = r.path.at(r.flight.t);
       b.position.set(p.x, p.y, p.z);
@@ -355,11 +530,17 @@ export function Matchup({
         const hovered = pickable && hover === side;
         // While one player is hovered, the other steps back into the shade a little.
         const shaded = pickable && hover !== null && hover !== side;
-        const clip = phase !== "idle" && side === pick ? shooterClip : dimmed ? "Idle_Look" : "Idle";
+        // Standing still apart from breathing and small shifts: one calm idle, no stretches or extras.
+        const clip = phase !== "idle" && side === pick ? shooterClip : "Idle";
+        // Who's on the court: both at home; only the shooter during the shot; only the viewed team's
+        // player on the results screen. The others fade out (and back in), never sink.
+        const present =
+          phase === "idle" || phase === "returning" ? true : phase === "results" ? side === viewing : side === pick;
         return (
           <group key={side} position={[x * playerX, 0, 0]}>
-            <group ref={side === "home" ? homeRoot : awayRoot}>
-              <FloorMark color={color} active={hovered} still={reducedMotion} />
+            <group ref={side === "home" ? homeHere : awayHere}>
+              <group ref={side === "home" ? homeRoot : awayRoot}>
+              <FloorMark color={color} active={hovered} still={reducedMotion} presence={present ? 1 : 0} />
               <group ref={side === "home" ? homeSpin : awaySpin}>
                 <Player
                   rotation={[0, turn, 0]}
@@ -369,12 +550,14 @@ export function Matchup({
                   hologram={color}
                   intensity={dimmed ? 0.3 : hovered ? 1.15 : shaded ? 0.6 : 1}
                   highlight={hovered ? 1 : 0}
+                  opacity={present ? 1 : 0}
                   paused={reducedMotion}
                   timeOffset={offset}
                   clip={clip}
-                  idleVariety={clip === "Idle"}
+                  idleVariety={false}
                   lookAt={phase === "idle" && !reducedMotion}
                 />
+                </group>
               </group>
             </group>
             {/* An easy-to-hit invisible column around the player, for hover and click. */}
@@ -385,12 +568,14 @@ export function Matchup({
           </group>
         );
       })}
-      <group ref={hoopRoot}>
-        <Hoop ref={hoop} color={shooter?.color ?? "#ffffff"} />
+      <group ref={propsRoot}>
+        <group ref={hoopRoot}>
+          <Hoop ref={hoop} color={shooter?.color ?? "#ffffff"} />
+        </group>
+        <Ball ref={ball} />
+        <Trail ref={trail} color={shooter?.color ?? "#ffffff"} />
+        <Burst ref={burst} />
       </group>
-      <Ball ref={ball} />
-      <Trail ref={trail} color={shooter?.color ?? "#ffffff"} />
-      <Burst ref={burst} />
     </>
   );
 }

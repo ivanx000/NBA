@@ -60,7 +60,7 @@
 }
 
 /*
- * Tip-Off theme. The site is always dark (DESIGN.md section 1), so :root holds the
+ * Site theme. The site is always dark (DESIGN.md section 1), so :root holds the
  * dark palette and <html> also carries the `dark` class for shadcn's dark: variants.
  */
 :root {
@@ -190,30 +190,6 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
-/* Branded loader while the 3D chunk streams (DESIGN.md section 7). */
-.basketball-loader {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  background:
-    linear-gradient(90deg, transparent 47%, #1a0d05 47%, #1a0d05 53%, transparent 53%),
-    linear-gradient(0deg, transparent 47%, #1a0d05 47%, #1a0d05 53%, transparent 53%),
-    radial-gradient(circle at 35% 30%, #ff9a5a, #ff6b1a 60%, #b4450c);
-  animation: tipoff-spin 1.1s linear infinite;
-}
-
-@keyframes tipoff-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .basketball-loader {
-    animation: none;
-  }
-}
-
 /* --- Interaction layer (components/interactions.tsx) ---------------------------------------- */
 
 /* Panels light their edge under the pointer. */
@@ -241,14 +217,6 @@ html[data-pointer] .cursor-glow {
 }
 body:has([data-room]) .cursor-glow {
   display: none;
-}
-
-/* Tilt toward the pointer (--tx/--ty, -0.5..0.5). */
-html[data-pointer] [data-tilt] {
-  transform: perspective(900px) rotateX(calc(var(--ty, 0) * -6deg)) rotateY(calc(var(--tx, 0) * 7deg))
-    translateY(calc((var(--tx, 0) * var(--tx, 0) + var(--ty, 0) * var(--ty, 0)) * -6px));
-  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease;
-  will-change: transform;
 }
 
 /* Content rises into place as it scrolls into view: a scroll-driven animation, so no script
@@ -288,7 +256,7 @@ html[data-pointer] [data-tilt] {
   right: 0;
   bottom: 0.1rem;
   height: 1px;
-  background: linear-gradient(90deg, var(--blue-hi), var(--red-hi));
+  background: var(--blue-hi);
   transform: scaleX(0);
   transform-origin: right;
   transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -309,10 +277,93 @@ html[data-pointer] [data-tilt] {
   .cursor-glow {
     display: none;
   }
-  [data-tilt] {
-    transform: none !important;
-  }
   .ink-link::after {
     transition: none;
   }
+}
+
+/* --- The cursor (components/cursor.tsx), mouse only ------------------------------------------ */
+.cursor {
+  display: none;
+}
+html.has-cursor,
+html.has-cursor * {
+  cursor: none !important;
+}
+html.has-cursor .cursor {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+html.has-cursor .cursor.is-on {
+  opacity: 1;
+}
+.cursor__ring,
+.cursor__dot,
+.cursor__label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  will-change: transform;
+}
+.cursor__ring::before,
+.cursor__dot::before {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.cursor__ring::before {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(243, 246, 252, 0.85);
+  transition:
+    width 0.2s,
+    height 0.2s,
+    opacity 0.2s,
+    border-color 0.2s;
+}
+.cursor__dot::before {
+  width: 4px;
+  height: 4px;
+  background: var(--text);
+}
+.cursor__label {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  margin: -5px 0 0 38px;
+  transition: opacity 0.15s;
+}
+.cursor.has-label .cursor__label {
+  opacity: 1;
+}
+.cursor.is-hot .cursor__ring::before {
+  width: 42px;
+  height: 42px;
+  border-color: var(--red-hi);
+}
+.cursor.has-label .cursor__ring::before {
+  width: 64px;
+  height: 64px;
+  border-color: var(--text);
+}
+.cursor.is-blocked .cursor__ring::before,
+.cursor.is-blocked .cursor__dot::before {
+  opacity: 0.35;
+}
+.cursor.is-down .cursor__ring::before {
+  width: 22px;
+  height: 22px;
 }

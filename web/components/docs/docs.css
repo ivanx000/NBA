@@ -54,10 +54,6 @@
   /* Phones: the sections become a compact block above the page. */
   .docs-sidebar {
     grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-    padding: 1rem 1.1rem;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    background: var(--panel);
   }
 }
 .docs-sidebar__title {
@@ -186,7 +182,6 @@
 }
 .docs-prose :not(pre) > code {
   padding: 0.1rem 0.35rem;
-  border: 1px solid var(--line);
   border-radius: 0.3rem;
   background: rgba(255, 255, 255, 0.04);
   font-family: var(--font-jetbrains), ui-monospace, monospace;
@@ -211,7 +206,6 @@
 .docs-prose pre {
   overflow-x: auto;
   padding: 1rem 1.1rem;
-  border: 1px solid var(--line);
   border-radius: 0.75rem;
   background:
     repeating-linear-gradient(0deg, rgba(91, 140, 255, 0.035) 0 1px, transparent 1px 4px),
@@ -260,15 +254,11 @@
   width: auto;
   height: auto;
   margin-inline: auto;
-  border: 1px solid var(--line);
   border-radius: 0.75rem;
 }
 .docs-diagram {
   margin-top: 1.3rem;
-  padding: 1rem;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: rgba(6, 10, 24, 0.6);
+  padding: 1rem 0;
   overflow-x: auto;
 }
 .docs-diagram svg {
@@ -295,9 +285,7 @@
 .docs-pager a {
   display: grid;
   gap: 0.2rem;
-  padding: 0.8rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
+  padding: 0.8rem 0;
   font-weight: 650;
   transition: border-color 0.2s ease;
 }
@@ -306,7 +294,7 @@
   text-align: right;
 }
 .docs-pager a:hover {
-  border-color: rgba(91, 140, 255, 0.6);
+  color: var(--blue-hi);
 }
 .docs-pager span {
   font-family: var(--font-jetbrains), ui-monospace, monospace;

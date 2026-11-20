@@ -51,6 +51,7 @@ export function Player({
   hologram = null,
   intensity = 1,
   highlight = 0,
+  opacity = 1,
   paused = false,
   clip = "Idle",
   extraClips,
@@ -71,6 +72,8 @@ export function Player({
   intensity?: number;
   /** Hover highlight, 0 to 1 (eased): a brighter rim in the hologram color. */
   highlight?: number;
+  /** 0 to 1 (eased, about half a second): he fades out and in rather than popping. */
+  opacity?: number;
   /** Freeze animation and effects (prefers-reduced-motion). */
   paused?: boolean;
   /** Clip to play; idle clips rotate among the idle variants when ``idleVariety`` is on. */
@@ -120,13 +123,22 @@ export function Player({
       }),
     [instance, mask, base, trim, text, shorts, chestText, number, debugMask, hologram],
   );
-  const shown = useRef({ intensity, highlight, time: 0 });
+  const shown = useRef({ intensity, highlight, opacity, time: 0 });
+  // The skinned mesh and its depth pre-pass (set in the effect below), for the fade.
+  const meshes = useRef<{ body: THREE.SkinnedMesh | null; depth: THREE.SkinnedMesh | null }>({ body: null, depth: null });
   useFrame((_, dt) => {
     const state = shown.current;
     state.intensity += (intensity - state.intensity) * Math.min(1, dt * 6);
     state.highlight += (highlight - state.highlight) * Math.min(1, dt * 8);
+    state.opacity += (opacity - state.opacity) * Math.min(1, dt * 5);
     if (!paused) state.time += dt;
-    material.tick(state.time, state.intensity, state.highlight);
+    material.tick(state.time, state.intensity, state.highlight, state.opacity);
+    // While fading, drop the depth pre-pass (it would cut an invisible hole in the crowd behind
+    // him) and his shadow; once gone, stop drawing him at all.
+    const { body, depth } = meshes.current;
+    if (depth) depth.visible = state.opacity > 0.98;
+    if (body) body.castShadow = state.opacity > 0.5;
+    if (root.current) root.current.visible = state.opacity > 0.01;
   });
 
   const root = useRef<THREE.Group>(null);
@@ -135,7 +147,8 @@ export function Player({
     let depthOnly: THREE.SkinnedMesh | null = null;
     if (mesh) {
       mesh.material = material.material;
-      mesh.castShadow = !hologram; // a hologram has no body to block light
+      // Even as a hologram he casts a shadow: it is what stands him on the floor.
+      mesh.castShadow = true;
       if (hologram && mesh.parent) {
         // Depth pre-pass: an invisible copy on the same skeleton writes depth first, so the
         // see-through hologram only draws the surface nearest the camera (no back number or far
@@ -147,6 +160,7 @@ export function Player({
         mesh.parent.add(depthOnly);
       }
     }
+    meshes.current = { body: mesh, depth: depthOnly };
     return () => {
       if (depthOnly) {
         depthOnly.removeFromParent();

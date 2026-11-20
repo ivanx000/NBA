@@ -137,6 +137,7 @@ export function makeTintMaterial(source: THREE.MeshStandardMaterial, opts: TintO
     uTime: { value: 0 },
     uIntensity: { value: 1 },
     uHighlight: { value: 0 },
+    uFade: { value: 1 },
   };
   if (opts.hologram) {
     material.defines = { ...material.defines, TIPOFF_HOLO: "" };
@@ -162,7 +163,7 @@ export function makeTintMaterial(source: THREE.MeshStandardMaterial, opts: TintO
 varying vec3 vBind;
 uniform sampler2D uMask, uFront, uBack;
 uniform vec3 uJersey, uTrim, uShorts, uOrigin;
-uniform float uScale, uTime, uIntensity, uHighlight;
+uniform float uScale, uTime, uIntensity, uHighlight, uFade;
 uniform vec3 uHolo;
 varying float vWorldY;
 float holoHash(vec2 p) {
@@ -244,22 +245,23 @@ float boxCoord(float v, float a, float b) { return (v - a) / (b - a); }`,
   col *= 1.0 - beat * (0.35 + 0.65 * holoHash(vec2(floor(y * 70.0), floor(uTime * 40.0)))) * 0.3;
 
   outgoingLight = col * uIntensity;
-  diffuseColor.a = alpha * mix(0.35, 1.0, uIntensity);
+  diffuseColor.a = alpha * mix(0.35, 1.0, uIntensity) * uFade;
 }
 #endif
 #include <opaque_fragment>`,
       );
   };
   const variant = `${opts.debugMask ? "-debug" : ""}${opts.hologram ? "-holo" : ""}`; // same program for every color
-  material.customProgramCacheKey = () => `tipoff-tint-v8${variant}`;
+  material.customProgramCacheKey = () => `tipoff-tint-v9${variant}`;
   return {
     material,
     textures: [front, back],
     /** Advance time-based effects (hologram sweep and flicker) and set hologram brightness and highlight. */
-    tick: (seconds: number, intensity = 1, highlight = 0) => {
+    tick: (seconds: number, intensity = 1, highlight = 0, fade = 1) => {
       uniforms.uTime.value = seconds;
       uniforms.uIntensity.value = intensity;
       uniforms.uHighlight.value = highlight;
+      uniforms.uFade.value = fade;
     },
   };
 }

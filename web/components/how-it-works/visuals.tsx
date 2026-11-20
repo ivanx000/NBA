@@ -368,7 +368,7 @@ export function Scorecard() {
   const p = useChapterProgress();
   const [active, bind] = useActive<string>();
   const rows = [
-    { label: "Tip-Off model", value: TEST_SEASON.accuracy.model, color: BLUE },
+    { label: "The model", value: TEST_SEASON.accuracy.model, color: BLUE },
     { label: "Elo ratings", value: TEST_SEASON.accuracy.elo, color: "rgba(243,246,252,0.7)" },
     { label: "Always pick the home team", value: TEST_SEASON.accuracy.home, color: "rgba(243,246,252,0.3)" },
   ];

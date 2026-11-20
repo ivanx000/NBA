@@ -1,4 +1,4 @@
-Tip-Off predicts who wins every NBA game, publishes the prediction before tip-off, and grades itself
+This site predicts who wins every NBA game, publishes the prediction before tip-off, and grades itself
 once the game ends. These pages explain how, for anyone who wants the details: the data, the
 features, the model, how it's checked, and where it falls short.
 
@@ -17,7 +17,7 @@ Honest numbers first. On the 2025-26 season, which was held out of every decisio
 | --- | --- | --- |
 | Always pick the home team | 55.5% | 0.687 |
 | Elo ratings | 69.2% | 0.598 |
-| **Tip-Off model** (logistic regression, calibrated) | 67.1% | 0.602 |
+| **The model** (logistic regression, calibrated) | 67.1% | 0.602 |
 
 The model clearly beats picking the home team, and it's close to Elo, a simple rating system, but
 behind it on that season. The gap isn't statistically meaningful, and the model led Elo on the
@@ -33,5 +33,4 @@ to high 60s for accuracy; the site doesn't promise more.
 4. **Explanations:** each prediction split exactly into 11 human factors ([Explaining predictions](/docs/explaining-predictions)).
 5. **Production:** a GitHub Actions job predicts each morning and writes to Postgres; the website only reads ([Daily pipeline](/docs/pipeline), [Architecture](/docs/architecture)).
 
-> Tip-Off is an unofficial fan project. It isn't affiliated with the NBA, and its predictions are
-> not betting advice.
+> These predictions are not betting advice.

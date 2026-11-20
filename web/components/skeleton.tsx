@@ -19,7 +19,7 @@ function Skeleton({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function Panel({ children }: { children: ReactNode }) {
-  return <div className="skeleton__panel holo-panel">{children}</div>;
+  return <div className="skeleton__panel">{children}</div>;
 }
 
 function Tiles({ n }: { n: number }) {

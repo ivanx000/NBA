@@ -67,7 +67,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 1px;
-  background: linear-gradient(90deg, var(--blue-hi), var(--red-hi));
+  background: var(--blue-hi);
   transform: scaleX(0.12);
   transform-origin: left;
   opacity: 0.6;
@@ -215,7 +215,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, var(--blue-hi), var(--red-hi));
+  background: var(--blue-hi);
   transform: scaleX(var(--f, 0));
   transform-origin: left;
 }

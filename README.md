@@ -1,4 +1,4 @@
-# Tip-Off
+# NBA Game Predictor
 
 **Who wins tonight?** Pick the winner of any NBA game by clicking a hologram player, watch your pick take the shot, then see what the model thinks: the win chance, the reasons behind it, both teams' numbers and each player's projected line.
 
@@ -34,7 +34,7 @@ Every model was chosen on the 2024-25 season and then scored **once** on 2025-26
 |---|---|---|
 | Always pick the home team | 55.5% | 0.687 |
 | Elo ratings | 69.2% | 0.598 |
-| **Tip-Off model** | 67.1% | 0.602 |
+| **The model** | 67.1% | 0.602 |
 
 The model clearly beats picking the home team and is close to Elo, but behind it on that season (the gap isn't statistically meaningful; the model led on the validation season). Good NBA game models land in the mid to high 60s, and the site doesn't promise more. Elo stays on the report card as the benchmark to beat.
 
@@ -119,7 +119,7 @@ A local fallback for the daily job can be installed on a Mac (`ml/scripts/instal
 
 ## Credits
 
-The 3D player was generated for this project with Meshy; the arena, court, crowd, hoop and effects are drawn in code. Team names and colors only: no league or team logos, wordmarks or real player likenesses. Data from NBA.com's public endpoints. Full credits in [`web/public/CREDITS.md`](web/public/CREDITS.md).
+The 3D player was generated for this project with Meshy; the arena, court, crowd, hoop and effects are drawn in code. Team names and colors, plus each home team's logo at center court (trademarks of their teams and the NBA, from NBA.com, used only to identify the team); no league logo, wordmarks or real player likenesses. Data from NBA.com's public endpoints. Full credits in [`web/public/CREDITS.md`](web/public/CREDITS.md).
 
 ## License
 

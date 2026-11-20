@@ -16,9 +16,9 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
   return (
     <html lang="en" className="dark h-full antialiased">
       <body className="flex min-h-full flex-col">
-        <title>Something went wrong · Tip-Off</title>
+        <title>Something went wrong · NBA Game Predictor</title>
         <main className="mx-auto grid w-full max-w-3xl flex-1 content-center px-4 py-24 sm:px-6">
-          <p className="eyebrow">Tip-Off</p>
+          <p className="eyebrow">NBA Game Predictor</p>
           <h1 className="mt-3 text-5xl leading-[0.95] font-extrabold uppercase sm:text-7xl">The site didn&apos;t load</h1>
           <p className="mt-6 max-w-prose text-lg text-muted-foreground">
             Something failed on our side. Try again in a moment.
@@ -33,9 +33,6 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
             </button>
           </div>
         </main>
-        <p className="px-4 py-6 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
-          Unofficial fan project. Not affiliated with the NBA.
-        </p>
       </body>
     </html>
   );

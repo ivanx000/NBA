@@ -21,12 +21,18 @@ export function StoryProgress({ steps }: { steps: readonly Step[] }) {
     const measure = () => {
       frame = 0;
       const vh = window.innerHeight;
+      const y = window.scrollY;
+      // The page can't scroll past its end, so the last chapter's bottom never reaches mid-screen:
+      // each segment is full by the time the page is scrolled to the bottom.
+      const maxY = Math.max(0, document.documentElement.scrollHeight - vh);
       const next = steps.map(({ id }) => {
         const el = document.getElementById(id);
         if (!el) return 0;
         const r = el.getBoundingClientRect();
         // From the chapter's top reaching mid-screen to its bottom doing the same.
-        return Math.min(1, Math.max(0, (vh * 0.5 - r.top) / Math.max(1, r.height)));
+        const start = Math.min(r.top + y - vh * 0.5, maxY - 1);
+        const end = Math.min(r.bottom + y - vh * 0.5, maxY);
+        return Math.min(1, Math.max(0, (y - start) / Math.max(1, end - start)));
       });
       setFill((old) => (old.every((v, i) => Math.abs(v - next[i]) < 0.004) ? old : next));
       const first = document.getElementById(steps[0].id);

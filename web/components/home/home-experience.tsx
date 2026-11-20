@@ -12,6 +12,7 @@ import { GameDrawer } from "./game-drawer";
 import { MatchupHeader } from "./matchup-header";
 import { ResultsView } from "./results-view";
 import { TeamLabel } from "./team-label";
+import { UiLens } from "./ui-lens";
 import "./home.css";
 
 // Phase timings for the 2D fallback, which has no cinematic.
@@ -128,7 +129,7 @@ export function HomeExperience({
       </div>
 
       {game ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col pt-14 pb-5">
+        <div data-lens className="pointer-events-none absolute inset-0 z-10 flex flex-col pt-14 pb-5">
           {/* The names fade as the camera moves in and come back with the home shot. */}
           <div className={`transition-opacity duration-500 ${phase === "idle" ? "" : "opacity-0 delay-300"}`}>
             <MatchupHeader game={game} today={slate.today} />
@@ -187,18 +188,15 @@ export function HomeExperience({
           game={game}
           pick={pick}
           viewing={viewing}
+          extras={slate.details?.[game.gameId] ?? null}
           onView={(side) => send({ type: "view", side })}
           onHome={() => send({ type: "back" })}
         />
       )}
 
       {animating && (
-        <button
-          type="button"
-          onClick={() => send({ type: "skip" })}
-          className="holo-panel absolute right-4 bottom-6 rounded-md px-3 py-1.5 font-mono text-xs uppercase"
-        >
-          Skip
+        <button type="button" onClick={() => send({ type: "skip" })} className="skip-button">
+          Skip <kbd aria-hidden>Esc</kbd>
         </button>
       )}
 
@@ -212,12 +210,11 @@ export function HomeExperience({
         />
       )}
 
+      {/* The cursor lens over the page layers too, not just the 3D scene. */}
+      <UiLens />
+
       <p className="sr-only" aria-live="polite">
         {announcement}
-      </p>
-
-      <p className="pointer-events-none absolute right-3 bottom-1.5 z-20 font-mono text-[10px] tracking-wide text-white/55 uppercase">
-        Unofficial fan project. Not affiliated with the NBA.
       </p>
     </main>
   );

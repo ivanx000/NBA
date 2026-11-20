@@ -10,9 +10,9 @@ import { pageMeta } from "@/lib/site";
 import { FACTOR_COUNT, FEATURE_COUNT, LEARNED_GAMES, SEASON_GAMES, TEST_SEASON } from "@/lib/story";
 
 export const metadata: Metadata = pageMeta({
-  title: "How it works · Tip-Off",
+  title: "How it works · NBA Game Predictor",
   description:
-    "From box scores to tonight's pick in five steps: the data, the numbers, the model, the prediction and the 3D shot. Unofficial fan project.",
+    "From box scores to tonight's pick in five steps: the data, the numbers, the model, the prediction and the 3D shot.",
   path: "/how-it-works",
 });
 
@@ -32,7 +32,7 @@ export default function Page() {
       <header className="story-hero">
         <h1 className="story-hero__title">How it works</h1>
         <p className="story-hero__lede">
-          Tip-Off picks a winner for every NBA game before tip-off. Here&apos;s how it gets there, following one
+          The model picks a winner for every NBA game before tip-off. Here&apos;s how it gets there, following one
           example game, the Celtics at the Knicks, through five steps.
         </p>
         <nav aria-label="Steps" className="story-index">

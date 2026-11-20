@@ -11,12 +11,12 @@ import { pageMeta } from "@/lib/site";
 export async function generateMetadata({ params }: PageProps<"/game/[id]">): Promise<Metadata> {
   const { id } = await params;
   const detail = await getGameDetail(id);
-  if (!detail) return { title: "Game not found · Tip-Off" };
+  if (!detail) return { title: "Game not found · NBA Game Predictor" };
   const { game } = detail;
-  const title = `${game.away.name} at ${game.home.name}, ${shortDate(game.gameDate)} · Tip-Off`;
+  const title = `${game.away.name} at ${game.home.name}, ${shortDate(game.gameDate)} · NBA Game Predictor`;
   return pageMeta({
     title,
-    description: `Who wins ${game.away.city} at ${game.home.city}: the model's win chance, the reasons behind it, both teams' form, the season series and projected player lines. Unofficial fan project.`,
+    description: `Who wins ${game.away.city} at ${game.home.city}: the model's win chance, the reasons behind it, both teams' form, the season series and projected player lines.`,
     path: `/game/${game.gameId}`,
     image: {
       url: `/game/${game.gameId}/opengraph-image`,

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { CountUp } from "@/components/count-up";
-import { tiltHandlers } from "@/lib/tilt";
 import {
   CartesianGrid,
   ComposedChart,
@@ -53,7 +52,7 @@ function Tile({
 }) {
   const beatsElo = lowerIsBetter ? model < elo : model > elo;
   return (
-    <div className="perf-tile holo-panel" data-tilt {...tiltHandlers()}>
+    <div className="perf-tile">
       <p className="perf-tile__label">{label}</p>
       <p className="perf-tile__value tabular">
         <CountUp value={model} format={format} />
@@ -81,7 +80,7 @@ function verdict(model: Metrics, elo: Metrics) {
 
 function CallList({ title, rows }: { title: string; rows: PickRow[] }) {
   return (
-    <div className="perf-calls holo-panel">
+    <div className="perf-calls">
       <h3 className="eyebrow">{title}</h3>
       <ul>
         {rows.map((r) => (
@@ -139,7 +138,7 @@ function PickTable({ rows }: { rows: PickRow[] }) {
       (filter === "all" || (filter === "right") === r.correct) && (source === "all" || r.source === source),
   );
   return (
-    <section className="perf-table holo-panel" aria-labelledby="picks">
+    <section className="perf-table" aria-labelledby="picks">
       <div className="perf-table__head">
         <h2 id="picks" className="eyebrow">
           Recent picks
@@ -242,7 +241,7 @@ export function PerformanceView({ seasons }: { seasons: SeasonSummary[] }) {
               note="Penalizes confident misses. Lower is better; 0.693 is a coin flip." /> {/* prettier-ignore */}
         <Tile label="Brier score" model={model.brier} elo={elo.brier} home={home.brier} format={(n) => n.toFixed(3)} lowerIsBetter
               note="Squared error of the probability. Lower is better; 0.250 is a coin flip." /> {/* prettier-ignore */}
-        <div className="perf-tile holo-panel" data-tilt {...tiltHandlers()}>
+        <div className="perf-tile">
           <p className="perf-tile__label">Games graded</p>
           <p className="perf-tile__value tabular">
             <CountUp value={model.n} format={(n) => Math.round(n).toLocaleString()} />
@@ -254,7 +253,7 @@ export function PerformanceView({ seasons }: { seasons: SeasonSummary[] }) {
       </div>
 
       <div className="perf-charts">
-        <section className="perf-chart holo-panel" aria-labelledby="rolling">
+        <section className="perf-chart" aria-labelledby="rolling">
           <h2 id="rolling" className="eyebrow">
             Accuracy, last 50 games
           </h2>
@@ -285,7 +284,7 @@ export function PerformanceView({ seasons }: { seasons: SeasonSummary[] }) {
           </p>
         </section>
 
-        <section className="perf-chart holo-panel" aria-labelledby="calibration">
+        <section className="perf-chart" aria-labelledby="calibration">
           <h2 id="calibration" className="eyebrow">
             Calibration
           </h2>

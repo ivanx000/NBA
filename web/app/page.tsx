@@ -2,19 +2,19 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
+import { ArenaLoader } from "@/components/arena-loader";
 import { HomeExperience } from "@/components/home/home-experience";
 import { todayET } from "@/lib/dates";
 import { getSlate } from "@/lib/db/queries";
 import { pageMeta, SITE_DESCRIPTION } from "@/lib/site";
 import { defaultGame } from "@/lib/slate";
 
-export const metadata: Metadata = pageMeta({ title: "Tip-Off: who wins tonight?", description: SITE_DESCRIPTION, path: "/" });
+export const metadata: Metadata = pageMeta({ title: "NBA Game Predictor", description: SITE_DESCRIPTION, path: "/" });
 
 function HomeShell() {
   return (
-    <main id="main" className="grid h-svh min-h-[600px] place-items-center" aria-busy>
-      <span className="basketball-loader" aria-hidden />
-      <span className="sr-only">Loading tonight&apos;s games</span>
+    <main id="main" className="h-svh min-h-[560px]" aria-busy>
+      <ArenaLoader label="Loading tonight's games" />
     </main>
   );
 }

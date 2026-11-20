@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Component, type ReactNode, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { ArenaLoader } from "@/components/arena-loader";
 import { EXAMPLE } from "@/lib/story";
 import { hologramMatchup } from "@/lib/team-colors";
 import { requireTeam } from "@/lib/teams";
@@ -14,8 +15,8 @@ const HologramCanvas = dynamic(() => import("./hologram-canvas"), { ssr: false }
 
 function Loading() {
   return (
-    <div className="story-holo__loading" role="status" aria-label="Loading the hologram">
-      <span className="basketball-loader" aria-hidden />
+    <div className="story-holo__loading">
+      <ArenaLoader label="Loading the hologram" backdrop={false} />
     </div>
   );
 }

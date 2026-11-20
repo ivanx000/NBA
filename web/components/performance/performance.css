@@ -1,8 +1,15 @@
 /* /performance: the model's report card (DESIGN.md section 6). */
+/* No frames: sections sit on the page, set apart by space and their mono labels. */
 .perf {
   margin-top: 2.5rem;
   display: grid;
   gap: 1.25rem;
+}
+.perf-tiles,
+.perf-charts,
+.perf-callgrid,
+.perf-table {
+  margin-top: 2.25rem;
 }
 .perf-muted {
   color: var(--text-muted);
@@ -22,32 +29,43 @@
   text-shadow: 0 0 22px rgba(91, 140, 255, 0.55);
 }
 
+/* Text tabs: the selected one underlined in blue. */
 .perf-seg {
   display: inline-flex;
-  padding: 3px;
-  gap: 3px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(6, 10, 24, 0.6);
+  gap: 1.4rem;
   justify-self: start;
 }
 .perf-seg button {
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
+  position: relative;
+  padding: 0.4rem 0;
   font-family: var(--font-jetbrains), ui-monospace, monospace;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
   cursor: pointer;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: color 0.2s ease;
+}
+.perf-seg button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--blue-hi);
+  box-shadow: 0 0 10px var(--blue-hi);
+  transform: scaleX(0);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.perf-seg button:hover {
+  color: var(--text);
 }
 .perf-seg button[aria-pressed="true"] {
-  background: rgba(91, 140, 255, 0.2);
   color: var(--text);
-  box-shadow: inset 0 0 0 1px rgba(91, 140, 255, 0.55);
+}
+.perf-seg button[aria-pressed="true"]::after {
+  transform: scaleX(1);
 }
 .perf-seg button:focus-visible {
   outline: 2px solid var(--blue-hi);
@@ -56,12 +74,10 @@
 
 .perf-tiles {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 2rem 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
 }
 .perf-tile {
-  border-radius: 1rem;
-  padding: 1.1rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -74,7 +90,7 @@
   color: var(--red-hi);
 }
 .perf-tile__value {
-  font-size: 2.4rem;
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
   line-height: 1;
   font-weight: 850;
   font-stretch: 125%;
@@ -103,7 +119,7 @@
 
 .perf-charts {
   display: grid;
-  gap: 1rem;
+  gap: 2.5rem 3rem;
   align-items: start;
 }
 @media (min-width: 900px) {
@@ -112,8 +128,6 @@
   }
 }
 .perf-chart {
-  border-radius: 1rem;
-  padding: 1.1rem 1.25rem;
   min-width: 0;
 }
 .perf-chart__plot {
@@ -164,7 +178,7 @@
 
 .perf-callgrid {
   display: grid;
-  gap: 1rem;
+  gap: 2.5rem 3rem;
 }
 @media (min-width: 900px) {
   .perf-callgrid {
@@ -172,8 +186,7 @@
   }
 }
 .perf-calls {
-  border-radius: 1rem;
-  padding: 1.1rem 1.25rem;
+  min-width: 0;
 }
 .perf-calls ul {
   list-style: none;
@@ -195,8 +208,6 @@
 }
 
 .perf-table {
-  border-radius: 1rem;
-  padding: 1.1rem 1.25rem;
   min-width: 0;
 }
 .perf-table__head {
@@ -224,7 +235,7 @@
 .perf-table th {
   position: sticky;
   top: 0;
-  background: #070c1c;
+  background: var(--bg);
   text-align: left;
   font-weight: 400;
   font-family: var(--font-jetbrains), ui-monospace, monospace;
@@ -280,6 +291,6 @@
 .perf-tile__value {
   transition: text-shadow 0.3s ease;
 }
-.perf-tile[data-lit] .perf-tile__value {
+.perf-tile:hover .perf-tile__value {
   text-shadow: 0 0 24px rgba(91, 140, 255, 0.55);
 }

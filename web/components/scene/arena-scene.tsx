@@ -15,6 +15,7 @@ import type { Phase } from "@/lib/scene-store";
 import type { Side, SlateGame } from "@/lib/slate";
 
 import { cameraOverride } from "./camera-override";
+import { LensEffect } from "./lens-effect";
 import { Arena, type ArenaTeams } from "./arena";
 import { Matchup } from "./matchup";
 import { geometryFrom, pointsMaterial, rng, tickPoints } from "./points";
@@ -35,23 +36,19 @@ export interface ArenaSceneProps {
 const FOV = 35;
 /** Deep navy rather than black, so the room reads behind the players. */
 const BG = "#060b1f";
-/** NBA blue and red, brightened for light (DESIGN.md section 1). */
-const BLUE = "#5b8cff";
-const RED = "#ff4d5e";
 
-/** Dust in the arena's light: faint motes around and behind the players, twinkling slowly. */
+/** Dust in the arena's light: faint white motes around and behind the players, twinkling slowly. */
 function StarField({ still }: { still: boolean }) {
   const { geometry, material } = useMemo(() => {
     const random = rng(42);
     const pos: number[] = [];
     const col: number[] = [];
     const size: number[] = [];
-    const tint = [new THREE.Color("#ffffff"), new THREE.Color(BLUE), new THREE.Color(RED)];
+    const white = new THREE.Color("#ffffff");
     for (let i = 0; i < 900; i++) {
       const z = -1 - random() * 18;
       pos.push((random() - 0.5) * 26, random() * 9, z);
-      const pick = random();
-      const c = tint[pick < 0.8 ? 0 : pick < 0.9 ? 1 : 2].clone().multiplyScalar(0.15 + random() * 0.45);
+      const c = white.clone().multiplyScalar(0.12 + random() * 0.35);
       col.push(c.r, c.g, c.b);
       size.push(0.8 + random() * 1.6);
     }
@@ -190,7 +187,15 @@ function Stage({ game, phase, pick, viewing, pickable, reducedMotion, post }: Ar
     const home = requireTeam(game.home.teamId);
     const away = requireTeam(game.away.teamId);
     const holo = hologramMatchup(home, away);
-    const team = (t: typeof home, glow: string) => ({ glow, paint: t.colors.primary, name: t.name, city: t.city });
+    const team = (t: typeof home, glow: string) => ({
+      glow,
+      paint: t.colors.primary,
+      trim: t.colors.secondary,
+      tertiary: t.colors.tertiary,
+      abbr: t.abbr,
+      name: t.name,
+      city: t.city,
+    });
     return { away: team(away, holo.away.color), home: team(home, holo.home.color) };
   }, [game]);
 
@@ -206,6 +211,26 @@ function Stage({ game, phase, pick, viewing, pickable, reducedMotion, post }: Ar
       <directionalLight position={[-3, 4, 5]} intensity={2.1} color="#fff6ee" />
       <directionalLight position={[4, 2, 3]} intensity={0.55} color="#dbe6ff" />
       <directionalLight position={[0, 3, -4]} intensity={1.2} color="#cfdcff" />
+      {/* The arena's overhead lights: high and a little behind the players, the one light that casts
+          shadows. Each player's own animated shadow falls forward from his feet onto the court, in
+          view (from in front, a shadow behind him hides behind his body), which is what makes him
+          read as standing on it. The shadow camera covers center court only. */}
+      <directionalLight
+        position={[-2, 9, -4.2]}
+        intensity={0.35}
+        color="#fff6ee"
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+        shadow-radius={4}
+        shadow-camera-left={-4}
+        shadow-camera-right={4}
+        shadow-camera-top={3.5}
+        shadow-camera-bottom={-3.5}
+        shadow-camera-near={1}
+        shadow-camera-far={20}
+      />
       <CameraRig parallax={!reducedMotion} />
       <Arena teams={teams} still={reducedMotion} />
       <StarField still={reducedMotion} />
@@ -228,7 +253,7 @@ function Stage({ game, phase, pick, viewing, pickable, reducedMotion, post }: Ar
       </Suspense>
 
       {/* Phones start without post-processing; slow devices drop it (ArenaScene below). */}
-      {post !== "off" && <Post fadeIn={post === "fade-in"} />}
+      {post !== "off" && <Post fadeIn={post === "fade-in"} lens={!reducedMotion} />}
     </>
   );
 }
@@ -237,7 +262,23 @@ const BLOOM = 1.05;
 
 /** Bloom and vignette. ``fadeIn`` eases the bloom up from nothing, so turning it on mid-session
  * reads as the glow warming up rather than popping in. */
-function Post({ fadeIn }: { fadeIn: boolean }) {
+function Post({ fadeIn, lens: withLens }: { fadeIn: boolean; lens: boolean }) {
+  // The cursor lens (lens-effect.ts): on while the cursor moves over the scene, gone a second after it stops.
+  const lens = useMemo(() => new LensEffect(), []);
+  useEffect(() => () => lens.dispose(), [lens]);
+  const seen = useRef({ x: 9, y: 9, at: -10 });
+  useFrame(({ pointer, size, viewport, clock }, dt) => {
+    const u = lens.uniforms;
+    const p = seen.current;
+    if (pointer.x !== p.x || pointer.y !== p.y) Object.assign(p, { x: pointer.x, y: pointer.y, at: clock.elapsedTime });
+    const live = withLens && clock.elapsedTime - p.at < 1.2 && Math.abs(pointer.x) < 1 && Math.abs(pointer.y) < 1;
+    const strength = u.get("uStrength")!;
+    strength.value += ((live ? 1 : 0) - strength.value) * Math.min(1, dt * 6);
+    (u.get("uMouse")!.value as THREE.Vector2).set(pointer.x * 0.5 + 0.5, pointer.y * 0.5 + 0.5);
+    (u.get("uRes")!.value as THREE.Vector2).set(size.width * viewport.dpr, size.height * viewport.dpr);
+    u.get("uRadius")!.value = 60 * (size.height / 1080) * viewport.dpr;
+    u.get("uClock")!.value = clock.elapsedTime;
+  });
   const bloom = useRef<BloomEffectType>(null);
   // Fixed for the component's life: the Bloom wrapper rebuilds its effect when props change.
   const [start] = useState(fadeIn ? 0 : BLOOM);
@@ -251,6 +292,7 @@ function Post({ fadeIn }: { fadeIn: boolean }) {
     <EffectComposer multisampling={0}>
       <Bloom ref={bloom} mipmapBlur intensity={start} luminanceThreshold={0.66} luminanceSmoothing={0.12} radius={0.72} />
       <Vignette offset={0.3} darkness={0.7} />
+      <primitive object={lens} dispose={null} />
     </EffectComposer>
   );
 }
@@ -299,6 +341,7 @@ export default function ArenaScene(props: ArenaSceneProps) {
       dpr={dpr}
       camera={{ position: [0, 1.4, 6], fov: FOV, near: 0.1, far: 80 }}
       gl={{ antialias: false, powerPreference: "high-performance" }}
+      shadows
       aria-hidden
     >
       <PerformanceMonitor

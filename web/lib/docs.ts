@@ -11,7 +11,7 @@ export const DOC_SECTIONS: { title: string; pages: { slug: string; title: string
   {
     title: "Start here",
     pages: [
-      { slug: "", title: "Overview", description: "What Tip-Off predicts, how well, and how it fits together." },
+      { slug: "", title: "Overview", description: "What the model predicts, how well, and how it fits together." },
       { slug: "architecture", title: "Architecture", description: "The pipeline, the database and the website, and why they're split this way." },
     ],
   },
