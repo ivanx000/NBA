@@ -1,3 +1,4 @@
+import type { PlayerAdvanced, TeamAdvanced } from "@/lib/advanced-stats";
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GamePlayers } from "@/lib/players";
 import type { TeamStats } from "@/lib/team-stats";
@@ -64,6 +65,14 @@ export interface Slate {
 export interface GameExtras {
   form: { home: RecentGame[]; away: RecentGame[] };
   series: PastGame[];
+  /** Advanced stats before the game's day (null when no box scores are stored yet). */
+  advanced: GameAdvanced | null;
+}
+
+/** Both teams' advanced numbers and each projected player's, keyed by player id. */
+export interface GameAdvanced {
+  teams: { home: TeamAdvanced | null; away: TeamAdvanced | null };
+  players: Record<number, PlayerAdvanced>;
 }
 
 /**

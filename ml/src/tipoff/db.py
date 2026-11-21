@@ -51,7 +51,8 @@ def get_engine(target: Target = "dev", url: str | None = None) -> Engine:
 def tables(engine: Engine) -> dict[str, Table]:
     meta = MetaData()
     meta.reflect(bind=engine, only=["teams", "games", "model_versions", "game_predictions",
-                                    "player_projections", "pipeline_state"])  # fmt: skip
+                                    "player_projections", "pipeline_state", "team_game_stats",
+                                    "player_game_stats"])  # fmt: skip
     return dict(meta.tables)
 
 

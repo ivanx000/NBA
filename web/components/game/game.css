@@ -102,8 +102,13 @@
 .breakdown__chance,
 .breakdown__team,
 .breakdown__series,
-.breakdown__players {
+.breakdown__players,
+.breakdown__advanced {
   min-width: 0;
+}
+.breakdown__advanced .adv-matchup {
+  max-width: 46rem;
+  margin-top: 0.8rem;
 }
 .breakdown__split {
   margin-top: 0.8rem;

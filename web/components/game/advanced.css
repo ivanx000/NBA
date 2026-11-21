@@ -1,0 +1,168 @@
+/* Advanced stats (components/game/advanced-stats.tsx). No boxes: open figures and thin bars. */
+
+.adv-tiles {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.9rem 1.4rem;
+}
+.adv-tiles__tile {
+  cursor: help;
+  transition: transform 0.2s ease;
+}
+.adv-tiles__tile:hover {
+  transform: translateY(-2px);
+}
+.adv-tiles__tile dt {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.adv-tiles__tile dd {
+  margin: 0.15rem 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.adv-tiles__rank {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.adv-tiles__rank[data-tier="top"] {
+  color: #4ade80;
+}
+.adv-tiles__rank[data-tier="low"] {
+  color: var(--red-hi);
+}
+
+.adv-matchup ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+.adv-matchup__head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+}
+.adv-matchup__head span:first-child {
+  color: var(--away);
+}
+.adv-matchup__head span:last-child {
+  color: var(--home);
+}
+.adv-matchup li {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 1fr) minmax(0, 1.6fr) minmax(5.5rem, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  cursor: help;
+  transition: background-color 0.2s ease;
+}
+.adv-matchup li:hover {
+  background: linear-gradient(90deg, transparent, rgba(243, 246, 252, 0.05), transparent);
+}
+.adv-matchup__value {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+.adv-matchup__value[data-side="home"] {
+  text-align: right;
+}
+.adv-matchup__value small {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: var(--ink-faint);
+}
+.adv-matchup li[data-edge="away"] .adv-matchup__value[data-side="away"] {
+  color: var(--away);
+  font-weight: 750;
+}
+.adv-matchup li[data-edge="home"] .adv-matchup__value[data-side="home"] {
+  color: var(--home);
+  font-weight: 750;
+}
+.adv-matchup__label {
+  display: grid;
+  gap: 0.3rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+/* From the middle toward the higher-ranked team; length = the gap in ranks. */
+.adv-matchup__bar {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(243, 246, 252, 0.08);
+}
+.adv-matchup__bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--w);
+  border-radius: 2px;
+  transform-origin: var(--origin);
+  animation: adv-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.3s;
+}
+.adv-matchup__bar span[data-side="away"] {
+  right: 50%;
+  --origin: right;
+  background: var(--away);
+}
+.adv-matchup__bar span[data-side="home"] {
+  left: 50%;
+  --origin: left;
+  background: var(--home);
+}
+.adv-note,
+.adv-empty {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* A player's season shooting and usage under his projected line. */
+.player-adv {
+  margin-top: 0.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.player-adv b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+@keyframes adv-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adv-matchup__bar span {
+    animation: none;
+  }
+}
+@media (max-width: 480px) {
+  .adv-matchup li {
+    grid-template-columns: minmax(4.5rem, 1fr) minmax(0, 1.2fr) minmax(4.5rem, 1fr);
+  }
+}

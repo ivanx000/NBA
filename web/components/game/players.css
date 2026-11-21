@@ -146,3 +146,8 @@
 .player-table tbody tr:hover {
   background: linear-gradient(90deg, rgba(91, 140, 255, 0.12), transparent 75%);
 }
+
+.player-table__adv {
+  vertical-align: top;
+  color: var(--text-muted);
+}

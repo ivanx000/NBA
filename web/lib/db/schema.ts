@@ -196,6 +196,77 @@ export const pipelineState = pgTable("pipeline_state", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Box scores for the advanced stats (docs/DESIGN.md section 5): one row per team per game and one
+ * per player per game, regular season, this season and last. Written by `tipoff stats` (part of
+ * the daily job) from the staged box scores; the website aggregates them into season-to-date
+ * ratings, the Four Factors and player shooting and usage, from games before the day only.
+ */
+const boxColumns = {
+  minutes: integer("minutes").notNull(),
+  pts: integer("pts").notNull(),
+  fgm: integer("fgm").notNull(),
+  fga: integer("fga").notNull(),
+  fg3m: integer("fg3m").notNull(),
+  fg3a: integer("fg3a").notNull(),
+  ftm: integer("ftm").notNull(),
+  fta: integer("fta").notNull(),
+  oreb: integer("oreb").notNull(),
+  dreb: integer("dreb").notNull(),
+  ast: integer("ast").notNull(),
+  stl: integer("stl").notNull(),
+  blk: integer("blk").notNull(),
+  tov: integer("tov").notNull(),
+  pf: integer("pf").notNull(),
+};
+
+export const teamGameStats = pgTable(
+  "team_game_stats",
+  {
+    gameId: text("game_id")
+      .notNull()
+      .references(() => games.gameId),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => teams.teamId),
+    oppTeamId: integer("opp_team_id")
+      .notNull()
+      .references(() => teams.teamId),
+    season: text("season").notNull(),
+    gameDate: date("game_date").notNull(),
+    isHome: boolean("is_home").notNull(),
+    ...boxColumns,
+    oppPts: integer("opp_pts").notNull(),
+    /** Possessions (box-score estimate, the same formula as the ML features). */
+    poss: real("poss").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.gameId, t.teamId] }),
+    index("team_game_stats_season_date_idx").on(t.season, t.gameDate),
+  ],
+);
+
+export const playerGameStats = pgTable(
+  "player_game_stats",
+  {
+    gameId: text("game_id")
+      .notNull()
+      .references(() => games.gameId),
+    playerId: integer("player_id").notNull(),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => teams.teamId),
+    season: text("season").notNull(),
+    gameDate: date("game_date").notNull(),
+    playerName: text("player_name").notNull(),
+    ...boxColumns,
+  },
+  (t) => [
+    primaryKey({ columns: [t.gameId, t.playerId] }),
+    index("player_game_stats_player_date_idx").on(t.playerId, t.gameDate),
+  ],
+);
+
 export type Game = typeof games.$inferSelect;
 export type GamePrediction = typeof gamePredictions.$inferSelect;
 export type PlayerProjection = typeof currentPlayerProjections.$inferSelect;

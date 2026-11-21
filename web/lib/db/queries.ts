@@ -1,11 +1,12 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { cacheLife } from "next/cache";
 
+import { leagueAdvanced, type PlayerAdvanced, playerAdvanced, type PlayerTotals, type TeamTotals } from "@/lib/advanced-stats";
 import { seasonFor } from "@/lib/dates";
 import type { StoredFactor } from "@/lib/factor-copy";
 import type { GradedGame } from "@/lib/performance";
 import { type GamePlayers, NO_PLAYERS, type PlayerLine } from "@/lib/players";
-import type { GameExtras, GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
+import type { GameAdvanced, GameExtras, GameStatus, Slate, SlateGame, SlateTeam } from "@/lib/slate";
 import { headToHead, type PastGame, type RecentGame, recentGames, seriesGames, teamStats } from "@/lib/team-stats";
 import { requireTeam } from "@/lib/teams";
 
@@ -31,6 +32,111 @@ async function pastGames(db: Db, day: string): Promise<PastGame[]> {
     homeScore: Number(r.home_score),
     awayScore: Number(r.away_score),
   }));
+}
+
+const n = (v: unknown) => Number(v ?? 0);
+
+/** Every team's summed box scores (and its opponents') this season before ``day``. */
+async function teamTotals(db: Db, day: string): Promise<TeamTotals[]> {
+  const result = await db.execute(sql`
+    select t.team_id, count(*) as games, sum(t.minutes) as minutes, sum(t.pts) as pts,
+           sum(t.fgm) as fgm, sum(t.fga) as fga, sum(t.fg3m) as fg3m, sum(t.fta) as fta,
+           sum(t.ftm) as ftm, sum(t.oreb) as oreb, sum(t.dreb) as dreb, sum(t.tov) as tov,
+           sum(t.poss) as poss,
+           sum(o.pts) as o_pts, sum(o.fgm) as o_fgm, sum(o.fga) as o_fga, sum(o.fg3m) as o_fg3m,
+           sum(o.fta) as o_fta, sum(o.ftm) as o_ftm, sum(o.oreb) as o_oreb, sum(o.dreb) as o_dreb,
+           sum(o.tov) as o_tov, sum(o.poss) as o_poss
+      from team_game_stats t
+      join team_game_stats o on o.game_id = t.game_id and o.team_id = t.opp_team_id
+     where t.season = ${seasonFor(day)} and t.game_date < ${day}
+     group by t.team_id`);
+  return rows<Record<string, unknown>>(result).map((r) => ({
+    teamId: n(r.team_id),
+    games: n(r.games),
+    minutes: n(r.minutes),
+    pts: n(r.pts),
+    fgm: n(r.fgm),
+    fga: n(r.fga),
+    fg3m: n(r.fg3m),
+    fta: n(r.fta),
+    ftm: n(r.ftm),
+    oreb: n(r.oreb),
+    dreb: n(r.dreb),
+    tov: n(r.tov),
+    poss: n(r.poss),
+    opp: {
+      pts: n(r.o_pts),
+      fgm: n(r.o_fgm),
+      fga: n(r.o_fga),
+      fg3m: n(r.o_fg3m),
+      fta: n(r.o_fta),
+      ftm: n(r.o_ftm),
+      oreb: n(r.o_oreb),
+      dreb: n(r.o_dreb),
+      tov: n(r.o_tov),
+      poss: n(r.o_poss),
+    },
+  }));
+}
+
+/** ``ids``' summed box scores this season before ``day`` (games they played), with their teams'
+ *  totals in those games (for usage) and their last 5 games. */
+async function playerTotals(db: Db, day: string, ids: readonly number[]): Promise<PlayerTotals[]> {
+  if (!ids.length) return [];
+  const result = await db.execute(sql`
+    with p as (
+      select p.*, t.minutes as t_minutes, t.fga as t_fga, t.fta as t_fta, t.tov as t_tov,
+             row_number() over (partition by p.player_id order by p.game_date desc) as recent
+        from player_game_stats p
+        join team_game_stats t on t.game_id = p.game_id and t.team_id = p.team_id
+       where p.season = ${seasonFor(day)} and p.game_date < ${day} and p.minutes > 0
+         and p.player_id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)})
+    )
+    select player_id, count(*) as games, sum(minutes) as minutes, sum(pts) as pts,
+           sum(oreb + dreb) as reb, sum(ast) as ast, sum(fga) as fga, sum(fg3m) as fg3m,
+           sum(fg3a) as fg3a, sum(fta) as fta, sum(tov) as tov,
+           sum(t_minutes) as t_minutes, sum(t_fga) as t_fga, sum(t_fta) as t_fta, sum(t_tov) as t_tov,
+           count(*) filter (where recent <= 5) as l5_games,
+           sum(pts) filter (where recent <= 5) as l5_pts,
+           sum(minutes) filter (where recent <= 5) as l5_minutes
+      from p group by player_id`);
+  return rows<Record<string, unknown>>(result).map((r) => ({
+    playerId: n(r.player_id),
+    games: n(r.games),
+    minutes: n(r.minutes),
+    pts: n(r.pts),
+    reb: n(r.reb),
+    ast: n(r.ast),
+    fga: n(r.fga),
+    fg3m: n(r.fg3m),
+    fg3a: n(r.fg3a),
+    fta: n(r.fta),
+    tov: n(r.tov),
+    team: { minutes: n(r.t_minutes), fga: n(r.t_fga), fta: n(r.t_fta), tov: n(r.t_tov) },
+    last5: { games: n(r.l5_games), pts: n(r.l5_pts), minutes: n(r.l5_minutes) },
+  }));
+}
+
+/** Advanced stats for ``slate`` (games on ``day``): both teams with league ranks, and every
+ *  projected player. Null for a game when nothing is stored for its season yet. */
+async function advancedFor(db: Db, slate: readonly SlateGame[], day: string): Promise<Map<string, GameAdvanced | null>> {
+  const ids = slate.flatMap((g) => [...g.players.home, ...g.players.away].map((p) => p.playerId));
+  const [teams, players] = await Promise.all([teamTotals(db, day), playerTotals(db, day, [...new Set(ids)])]);
+  const league = leagueAdvanced(teams);
+  const byPlayer = new Map<number, PlayerAdvanced>();
+  for (const t of players) {
+    const a = playerAdvanced(t);
+    if (a) byPlayer.set(t.playerId, a);
+  }
+  return new Map(
+    slate.map((g) => {
+      const home = league.get(g.home.teamId) ?? null;
+      const away = league.get(g.away.teamId) ?? null;
+      if (!home && !away && !byPlayer.size) return [g.gameId, null];
+      const mine = [...g.players.home, ...g.players.away].filter((p) => byPlayer.has(p.playerId));
+      return [g.gameId, { teams: { home, away }, players: Object.fromEntries(mine.map((p) => [p.playerId, byPlayer.get(p.playerId)!])) }];
+    }),
+  );
 }
 
 function selectGames(db: Db) {
@@ -155,13 +261,15 @@ async function withRecords(
   // Records and stats are as of the games' day (games before it only).
   const [past, players] = await Promise.all([pastGames(db, day), playersFor(db, rowsIn)]);
   const games = rowsIn.map((r) => toSlateGame(r, past, day, players.get(r.gameId)));
-  // Each game's last 10s and season series, for the results screen's full breakdown.
+  const advanced = await advancedFor(db, games, day);
+  // Each game's last 10s, season series and advanced stats, for the results screen's breakdown.
   const details = Object.fromEntries(
     games.map((g) => [
       g.gameId,
       {
         form: { home: recentGames(past, g.home.teamId, day), away: recentGames(past, g.away.teamId, day) },
         series: seriesGames(past, g.home.teamId, g.away.teamId, day),
+        advanced: advanced.get(g.gameId) ?? null,
       },
     ]),
   );
@@ -198,6 +306,7 @@ export interface GameDetail {
   game: SlateGame;
   form: { home: RecentGame[]; away: RecentGame[] };
   series: PastGame[];
+  advanced: GameAdvanced | null;
 }
 
 /** ``gameId``'s breakdown, or null if there's no such game. Any day (past games included). Uncached. */
@@ -207,8 +316,10 @@ export async function fetchGameDetail(db: Db, gameId: string): Promise<GameDetai
   const day = String(row.gameDate);
   const [past, players] = await Promise.all([pastGames(db, day), playersFor(db, [row])]);
   const game = toSlateGame(row, past, day, players.get(gameId));
+  const advanced = (await advancedFor(db, [game], day)).get(gameId) ?? null;
   return {
     game,
+    advanced,
     form: {
       home: recentGames(past, game.home.teamId, day),
       away: recentGames(past, game.away.teamId, day),

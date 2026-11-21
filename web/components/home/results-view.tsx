@@ -3,6 +3,7 @@
 import { type CSSProperties, useEffect, useRef } from "react";
 
 import { CountUp } from "@/components/count-up";
+import { AdvancedMatchup, TeamAdvancedTiles } from "@/components/game/advanced-stats";
 import { FactorBars } from "@/components/game/factor-bars";
 import { FinalBadge } from "@/components/game/final-badge";
 import { Form } from "@/components/game/game-breakdown";
@@ -123,6 +124,13 @@ export function ResultsView({
             <TeamNumbers stats={shown.stats} />
           </div>
 
+          {extras?.advanced?.teams[viewing] && (
+            <div className="results__block" style={block()}>
+              <h4 className="results__h">Advanced · league rank</h4>
+              <TeamAdvancedTiles stats={extras.advanced.teams[viewing]} />
+            </div>
+          )}
+
           {extras && (
             <div className="results__block" style={block()}>
               <h4 className="results__h">Last 10</h4>
@@ -133,7 +141,7 @@ export function ResultsView({
           {game.players[viewing].length > 0 && (
             <div className="results__block" style={block()}>
               <h4 className="results__h">Projected lines</h4>
-              <PlayerList lines={game.players[viewing]} color={shownColor} limit={8} />
+              <PlayerList lines={game.players[viewing]} color={shownColor} limit={8} advanced={extras?.advanced?.players} />
               <p className="results__muted results__small">
                 If he plays. Each range should hold the real number 8 times in 10.
               </p>
@@ -178,6 +186,17 @@ export function ResultsView({
               </>
             )}
           </div>
+
+          {extras?.advanced && (
+            <div className="results__block results__section" style={block()}>
+              <h4 className="results__h">Advanced matchup</h4>
+              <AdvancedMatchup
+                advanced={extras.advanced}
+                away={{ abbr: game.away.abbr, color: colors.away.color }}
+                home={{ abbr: game.home.abbr, color: colors.home.color }}
+              />
+            </div>
+          )}
 
           <div className="results__block results__section" style={block()}>
             <h4 className="results__h">
@@ -230,6 +249,7 @@ export function ResultsView({
                       lines={game.players[side]}
                       teamName={`${game[side].city} ${game[side].name}`}
                       color={readableTeamColor(requireTeam(game[side].teamId))}
+                      advanced={extras?.advanced?.players}
                     />
                   ) : null,
                 )}

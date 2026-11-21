@@ -77,6 +77,7 @@ uv run tipoff sync [--target prod]     # games from cdn.nba.com (safe in CI)
 uv run tipoff predict --date today     # champion predictions + factors (live/) and player projections (players/) in data/predictions/
 uv run tipoff publish --date today [--target prod]   # games + player projections, pregame-only guard
 uv run tipoff results [--target prod]  # fill projected players' actual lines from staged box scores
+uv run tipoff stats [--target prod] [--rewrite]  # box scores (this season and last) for the site's advanced stats
 uv run tipoff backfill [--target prod] # weekly walk-forward history, source='backfill' (--what players: this season's projections)
 uv run tipoff freshness-check [--target prod]
 uv run tipoff daily --target prod --if-needed        # local fallback (launchd, scripts/daily.sh)

@@ -10,6 +10,7 @@ import { requireTeam } from "@/lib/teams";
 
 import { FactorBars } from "./factor-bars";
 import { FinalBadge } from "./final-badge";
+import { AdvancedMatchup } from "./advanced-stats";
 import { PlayerTable } from "./player-lines";
 import { TeamNumbers } from "./team-numbers";
 import "./game.css";
@@ -58,7 +59,7 @@ function TeamColumn({ team, side, form, picked }: { team: SlateTeam; side: Side;
 
 /** Everything about one game: verdict, win chances, reasons, both teams, form and the series. */
 export function GameBreakdown({ detail }: { detail: GameDetail }) {
-  const { game, form, series } = detail;
+  const { game, form, series, advanced } = detail;
   const homeP = winProb(game, "home");
   const model = predictedWinner(game);
   // The teams' glow colors: bright on the dark background, and never alike.
@@ -130,6 +131,19 @@ export function GameBreakdown({ detail }: { detail: GameDetail }) {
         <TeamColumn team={game.home} side="home" form={form.home} picked={model === "home"} />
       </div>
 
+      {advanced && (
+        <section className="breakdown__advanced" aria-labelledby="advanced">
+          <h2 id="advanced" className="eyebrow">
+            Advanced stats
+          </h2>
+          <AdvancedMatchup
+            advanced={advanced}
+            away={{ abbr: game.away.abbr, color: colors.away.color }}
+            home={{ abbr: game.home.abbr, color: colors.home.color }}
+          />
+        </section>
+      )}
+
       <section className="breakdown__series" aria-labelledby="series">
         <h2 id="series" className="eyebrow">
           Season series · {game.away.abbr} {game.headToHead.away}–{game.headToHead.home} {game.home.abbr}
@@ -174,6 +188,7 @@ export function GameBreakdown({ detail }: { detail: GameDetail }) {
                     lines={game.players[side]}
                     teamName={`${game[side].city} ${game[side].name}`}
                     color={readableTeamColor(requireTeam(game[side].teamId))}
+                    advanced={advanced?.players}
                   />
                 ) : null,
               )}

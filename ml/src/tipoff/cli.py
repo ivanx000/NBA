@@ -392,6 +392,30 @@ def results(target: TargetOpt = DbTarget.dev) -> None:
     typer.echo(f"results: {n} projected lines filled in ({target.value})")
 
 
+@app.command()
+def stats(
+    target: TargetOpt = DbTarget.dev,
+    rewrite: Annotated[
+        bool, typer.Option(help="Rewrite every game in scope, not just new ones.")
+    ] = False,
+) -> None:
+    """Write this season's and last season's box scores for the site's advanced stats."""
+    import pandas as pd
+
+    from tipoff.config import STAGED_DIR
+    from tipoff.db import get_engine
+    from tipoff.publish.stats import publish_stats
+
+    res = publish_stats(get_engine(target.value),
+                        pd.read_parquet(STAGED_DIR / "team_games.parquet"),
+                        pd.read_parquet(STAGED_DIR / "player_games.parquet"),
+                        only_new=not rewrite)  # fmt: skip
+    typer.echo(
+        f"stats: {res.games} games ({res.team_rows} team rows, {res.player_rows} player rows) "
+        f"written to {target.value}; {res.skipped_unsynced} not synced yet"
+    )
+
+
 @app.command("freshness-check")
 def freshness_check(
     date_: DateOpt = "today",
@@ -426,7 +450,7 @@ def daily(
     ] = False,
 ) -> None:
     """The daily job: new results -> stage -> sync -> predict and project today (ET) ->
-    publish -> fill projected players' actual lines."""
+    publish -> fill projected players' actual lines -> box scores for the advanced stats."""
     from tipoff.db import get_engine, today_et
     from tipoff.publish.freshness import missing_predictions
 
@@ -449,6 +473,11 @@ def daily(
         results(target=target)
     except SQLAlchemyError as e:
         typer.echo(f"results: failed ({type(e).__name__}); game predictions are unaffected",
+                   err=True)  # fmt: skip
+    try:
+        stats(target=target)
+    except SQLAlchemyError as e:
+        typer.echo(f"stats: failed ({type(e).__name__}); game predictions are unaffected",
                    err=True)  # fmt: skip
     freshness_check(date_=day.isoformat(), target=target, upcoming_only=True)
 

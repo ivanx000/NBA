@@ -200,6 +200,24 @@ select distinct on (game_id) *
 from game_predictions
 where is_pregame
 order by game_id, (source = 'live') desc, generated_at desc;
+
+-- Box scores for the advanced stats (migration 0003_box_score_stats): regular season, this
+-- season and last. Facts, upserted by `tipoff stats` (part of the daily job).
+create table team_game_stats (
+  game_id text references games, team_id int references teams, opp_team_id int references teams,
+  season text, game_date date, is_home boolean,
+  minutes int, pts int, fgm int, fga int, fg3m int, fg3a int, ftm int, fta int,
+  oreb int, dreb int, ast int, stl int, blk int, tov int, pf int,
+  opp_pts int, poss real,              -- box-score possession estimate (same as the ML features)
+  primary key (game_id, team_id)
+);
+create table player_game_stats (
+  game_id text references games, player_id int, team_id int references teams,
+  season text, game_date date, player_name text,
+  minutes int, pts int, fgm int, fga int, fg3m int, fg3a int, ftm int, fta int,
+  oreb int, dreb int, ast int, stl int, blk int, tov int, pf int,
+  primary key (game_id, player_id)
+);
 ```
 
 **Integrity rules**
@@ -213,7 +231,7 @@ order by game_id, (source = 'live') desc, generated_at desc;
 Next.js 16 with **Cache Components** (`cacheComponents: true`): route-segment `revalidate` no longer exists.
 
 - `app/page.tsx` renders a static shell and, inside `<Suspense>`, a request-time `Home` that calls `await connection()`, reads `searchParams.game`, computes "today" in ET, and loads the slate. With no `?game=` (or one that isn't today's), `defaultGame` picks today's next game that hasn't started (`lib/slate.ts`); the client then writes `?game=` into the URL with `history.replaceState`, so refreshes and shares keep the game.
-- `getSlate(today)` (`lib/db/queries.ts`) is a `'use cache'` function with `cacheLife('minutes')` (stale 5 min, revalidate 1 min). It wraps `fetchSlate(db, today)`, a plain function that the tests run against Postgres. It returns today's games in tip-off order and, only when today has none, the closest later day with games (`next`), with `current_game_predictions` (live beats backfill). It also loads the season's finished regular-season games before that day and works out each team's numbers (`lib/team-stats.ts`: record, home/away, last 10, streak, points for/against, margin, rest) and the season series, so the results screen needs no extra request. Each game also carries its projected player lines from `current_player_projections` (one whole set per game, split by team, most projected minutes first; `lib/players.ts`). Past days are never returned.
+- `getSlate(today)` (`lib/db/queries.ts`) is a `'use cache'` function with `cacheLife('minutes')` (stale 5 min, revalidate 1 min). It wraps `fetchSlate(db, today)`, a plain function that the tests run against Postgres. It returns today's games in tip-off order and, only when today has none, the closest later day with games (`next`), with `current_game_predictions` (live beats backfill). It also loads the season's finished regular-season games before that day and works out each team's numbers (`lib/team-stats.ts`: record, home/away, last 10, streak, points for/against, margin, rest) and the season series, so the results screen needs no extra request. Advanced stats come with it (`advancedFor`): one query sums every team's box scores (and its opponents') this season before the day, one sums the projected players' (with their teams' totals in those games, for usage, and their last 5); `lib/advanced-stats.ts` turns the sums into ratings, pace, the Four Factors, league ranks, true shooting, usage and per-36. `fetchGameDetail` does the same for one game. Each game also carries its projected player lines from `current_player_projections` (one whole set per game, split by team, most projected minutes first; `lib/players.ts`). Past days are never returned.
 - `/docs/[[...slug]]` imports `web/content/docs/{slug}.mdx` (`@next/mdx`; `mdx-components.tsx` maps links and adds `<Diagram>`), prerendered for every page in `lib/docs.ts` (`DOC_SECTIONS`, the single list behind the sidebar, static params and previous/next). "On this page" comes from `docToc(slug)`, which reads the MDX source's headings (cached for good).
 - `/performance` reads `getGradedSeasons()` (cached, `cacheLife('hours')`, after `await connection()` so the page renders per request and CI builds need no database): every finished regular-season game with its `current_game_predictions` row, by season. `lib/performance.ts` turns a season into a summary (metrics vs Elo and the home-team baseline, rolling accuracy, calibration, best and worst calls, the last 150 picks) that a client component charts with Recharts.
 - `/game/[id]` reads `getGameDetail(id)` (cached, `cacheLife('minutes')`; wraps `fetchGameDetail`): the game for any day (with its player lines and, once final, their real numbers), plus each team's last 10 results and the season series, from the same finished-games query. The page reads `params` inside `<Suspense>` (no `generateStaticParams`), and `generateMetadata` and `opengraph-image.tsx` use the same cached call.

@@ -273,6 +273,15 @@ Notes:
 - This season so far (226 graded games: 189 v3 backfill, 37 live v2): log loss 0.6048 vs Elo 0.6065, but accuracy 64.2% vs 69.5%; the log-loss gap's 95% CI is −0.021..+0.016. Many close calls landed on the wrong side; worth watching as live v3 games accumulate.
 - The study scripts in `ml/notebooks/elo_gap/` have relaxed ruff rules (math-style names); nothing imports them.
 
+## Phase 12: Advanced stats on the site
+- [x] `team_game_stats` and `player_game_stats` (migration `0003_box_score_stats`), written by `tipoff stats` from the staged box scores (this season and last, regular season) and by the daily job, local and cloud
+- [x] `lib/advanced-stats.ts`: ratings, pace, Four Factors with league ranks; player true shooting, usage, per-36, last 5
+- [x] Results screen: team tiles with ranks, the advanced matchup, player shooting and usage; game page: the matchup and TS%/USG% columns
+- [x] Deploy (2026-11-20): prod migrated (`0003_box_score_stats`), `tipoff stats --target prod` (1,456 games: 2,912 team rows, 31,740 player rows), then the code pushed. Order matters: `tipoff.db.tables()` reflects the new tables, so the pipeline needs them before the code
+
+Notes:
+- Dev filled on 2026-11-20: 1,456 games (2,912 team rows, 31,740 player rows).
+
 ## Later ideas
 - Predicted final score / spread (regression model)
 - Live in-game win probability using play-by-play from cdn.nba.com

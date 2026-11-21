@@ -1,5 +1,6 @@
 import { type CSSProperties } from "react";
 
+import type { PlayerAdvanced } from "@/lib/advanced-stats";
 import {
   didNotPlay,
   inRange,
@@ -11,7 +12,29 @@ import {
   STATS,
 } from "@/lib/players";
 
+import "./advanced.css";
 import "./players.css";
+
+const pct = (v: number | null) => (v === null ? "—" : `${(v * 100).toFixed(1)}%`);
+
+/** His season so far: shooting, usage and recent scoring, under the projection. */
+function Season({ adv }: { adv: PlayerAdvanced | undefined }) {
+  if (!adv) return null;
+  return (
+    <p className="player-adv tabular" title="Season to date, before this game">
+      <span title="True shooting: points per shot, free throws included">
+        TS <b>{pct(adv.ts)}</b>
+      </span>
+      <span title="Usage: share of his team's plays he finishes while on the floor">
+        USG <b>{pct(adv.usage)}</b>
+      </span>
+      <span title="Points per game, last 5 games and the season">
+        Last 5 <b>{adv.last5Pts === null ? "—" : adv.last5Pts.toFixed(1)}</b> pts
+        <span className="player-list__range"> ({adv.seasonPts.toFixed(1)} season)</span>
+      </span>
+    </p>
+  );
+}
 
 function Real({ line }: { line: PlayerLine }) {
   if (!line.actual) return null;
@@ -25,7 +48,18 @@ function Real({ line }: { line: PlayerLine }) {
 }
 
 /** The results screen's compact list: one team's top players by projected minutes. */
-export function PlayerList({ lines, color, limit = 5 }: { lines: PlayerLine[]; color: string; limit?: number }) {
+export function PlayerList({
+  lines,
+  color,
+  limit = 5,
+  advanced,
+}: {
+  lines: PlayerLine[];
+  color: string;
+  limit?: number;
+  /** Season shooting and usage by player id (shown under each line when there). */
+  advanced?: Record<number, PlayerAdvanced>;
+}) {
   return (
     <ol className="player-list" style={{ "--team": color } as CSSProperties}>
       {lines.slice(0, limit).map((line) => (
@@ -43,6 +77,7 @@ export function PlayerList({ lines, color, limit = 5 }: { lines: PlayerLine[]; c
                 </span>
               ))}
             </p>
+            <Season adv={advanced?.[line.playerId]} />
             <Real line={line} />
           </div>
         </li>
@@ -68,11 +103,15 @@ export function PlayerTable({
   lines,
   teamName,
   color,
+  advanced,
 }: {
   lines: PlayerLine[];
   teamName: string;
   color: string;
+  /** Season shooting and usage by player id: adds TS% and USG% columns. */
+  advanced?: Record<number, PlayerAdvanced>;
 }) {
+  const showAdv = Boolean(advanced && lines.some((l) => advanced[l.playerId]));
   const final = lines.some((l) => l.actual !== null);
   return (
     <div className="player-table" style={{ "--team": color } as CSSProperties}>
@@ -87,6 +126,16 @@ export function PlayerTable({
                 {STAT_LABEL[s]}
               </th>
             ))}
+            {showAdv && (
+              <>
+                <th scope="col" title="True shooting this season">
+                  TS%
+                </th>
+                <th scope="col" title="Usage rate this season">
+                  USG%
+                </th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -117,6 +166,12 @@ export function PlayerTable({
                   <Mark line={line} stat={s} />
                 </td>
               ))}
+              {showAdv && (
+                <>
+                  <td className="tabular player-table__adv">{pct(advanced?.[line.playerId]?.ts ?? null)}</td>
+                  <td className="tabular player-table__adv">{pct(advanced?.[line.playerId]?.usage ?? null)}</td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
