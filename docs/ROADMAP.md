@@ -305,7 +305,7 @@ Study: `ml/reports/injury_report_study.md`.
 - [x] Daily job: morning report in the cloud run (never blocks predictions), evening `daily --refresh` re-publish, `state push --what injuries`
 - [x] Site: `player_projections.injury_status` (migration `0004_injury_status`, recreates the view), status tag on the results screen and game page, "Injury report" factor, docs pages
 - [x] One-time re-test on 2025-26 for the new major versions (user's OK, `--force-retest`): game v4 0.5866 vs Elo 0.5978 (CI −0.0200..−0.0023) and v3 0.5952; players minutes 4.658 vs v1 4.729. v3's and player v1's reports kept as `*_v3.*` / `*_v1.*`. Walk-forward 2025-26: v4 0.5862
-- [ ] Deploy: prod migration `0004`, `state push --what injuries`, push code, push both champions, backfill this season with v4
+- [x] Deploy (2026-11-21): prod migration `0004`, `state push --what injuries`, code pushed (`10848aa`, CI and Vercel green), `game-v4` and `player-v2` pushed to prod state, a manual cloud run published the day with v4 and the morning report, then backfill to prod (`game-v4-wf`: 1,456 games over 2025-26 and this season; `player-v2-wf`: 3,532 lines for 226 games). Live picks untouched
 - [ ] Watch the first live week: morning vs evening picks, late scratches
 
 Notes:
@@ -314,6 +314,8 @@ Notes:
 - `cdn_headers()` pins `Host: cdn.nba.com`, which the PDF host refuses with 403 (indistinguishable from "not published"). `static_headers()` drops it, and an ingest that finds no report in 10+ snapshots stops instead of caching misses.
 - The PDF's filename isn't its publish time: the hourly `_09AM` file went up at 9:30. Every cutoff check uses `Last-Modified`.
 - "Available" plays less often than "Probable" (74% vs 87%): it's mostly fringe and two-way players.
+- Deploy-order trap: the pushed injury tables make the stored archive hold five files, and the code before this change refused any archive that wasn't exactly three, so the code had to go out before the next hourly cloud run (it did, 14 minutes before).
+- This season after the backfill (189 graded games, v4 walk-forward): log loss 0.5946 vs Elo 0.5974, accuracy 67.2% vs 69.8%.
 - The `current_player_projections` view selects `p.*`, which Postgres expands at creation, so the migration has to recreate it to show the new column.
 
 ## Later ideas

@@ -28,32 +28,33 @@
 
 ## How good it is
 
-Every model is chosen without looking at the 2025-26 season, then scored on it **once** (the rules allow one re-test for a new major version, which the current model, v3, used). The site grades itself on every game since.
+Every model is chosen without looking at the 2025-26 season, then scored on it **once** (the rules allow one re-test for a new major version, which the current models, game v4 and player v2, used). The site grades itself on every game since.
 
-**Game outcomes** (2025-26, 1,230 games, model v3):
+**Game outcomes** (2025-26, 1,230 games, model v4):
 
 | | Accuracy | Log loss | Brier |
 |---|---|---|---|
 | Always pick the home team | 55.5% | 0.687 | 0.247 |
 | Elo ratings | 69.2% | 0.598 | 0.205 |
-| **The model** | 68.0% | **0.595** | **0.205** |
+| **The model** | 68.1% | **0.587** | **0.201** |
 
-The model beats Elo on log loss, Brier score and AUC, the measures of how good its probabilities are, but Elo picked a few more winners that season, and the gap either way is within noise. The model was chosen on six held-out seasons (2019-20 to 2024-25), each predicted by a model trained only on the seasons before it, and it beat Elo on log loss in all six. Good NBA game models land in the mid to high 60s for accuracy, and the site doesn't promise more. Elo stays on the report card as the benchmark to beat, including this season, where the [performance page](https://nba-alpha-olive.vercel.app/performance) shows the live record.
+The model beats Elo on log loss, Brier score and AUC, the measures of how good its probabilities are, and that edge holds up statistically (log-loss gap −0.011, 95% interval −0.020 to −0.002); Elo still picked about one more winner in a hundred. The model was chosen on six held-out seasons (2019-20 to 2024-25), each predicted by a model trained only on the seasons before it, and it beat Elo on log loss in all six. The biggest recent gain came from the league's official injury report, read as it stood at 9 AM Eastern on game day (and again at 5:45 PM to update games that haven't started). Good NBA game models land in the mid to high 60s for accuracy, and the site doesn't promise more. Elo stays on the report card as the benchmark to beat, including this season, where the [performance page](https://nba-alpha-olive.vercel.app/performance) shows the live record.
 
 **Player lines** (2025-26, 23,170 player-games): average miss of the model vs each player's last-10 average.
 
 | | Last-10 average | Model | 80% range held |
 |---|---|---|---|
-| Minutes | 5.08 | 4.73 | |
-| Points | 4.88 | 4.73 | 81.3% |
-| Rebounds | 2.00 | 1.94 | 81.1% |
-| Assists | 1.44 | 1.40 | 80.7% |
+| Minutes | 5.08 | 4.66 | |
+| Points | 4.88 | 4.71 | 80.9% |
+| Rebounds | 2.00 | 1.93 | 80.7% |
+| Assists | 1.44 | 1.40 | 82.2% |
 
 ## How it works
 
 ```mermaid
 flowchart LR
   A["NBA.com box scores<br/>and schedules"] --> B["Features<br/>(only games before tip-off)"]
+  I["Official injury report<br/>(as of 9 AM ET)"] --> B
   B --> C["Game model<br/>Elo + adjustments, calibrated"]
   B --> D["Player models<br/>minutes x per-minute rate"]
   A --> S["Season box-score stats"]
@@ -64,11 +65,11 @@ flowchart LR
 ```
 
 - **Data:** every regular-season game since 2015-16 (about 13,000), team and player box scores, cached on disk.
-- **Features:** 57 numbers per game (ratings, form, shooting, rest, travel, who's missing, lineup strength) and 47 per player-game, all built only from games before tip-off. Leakage tests perturb a day's results and delete the future, and the features must not change. Lineup strength rates each player by his Game Score per minute and weights him by his recent minutes, so it notices who has been out.
-- **Game model:** starts from Elo's log-odds and learns adjustments from 35 features (rest, travel, availability, lineup strength, recent form, home and road records), with a penalty on the adjustments only, so a noisy input can't pull it far from Elo; then Platt calibration. It was picked over logistic regression, LightGBM and an ensemble of the two. Each prediction is split exactly into 12 readable reasons.
-- **Player model:** projected minutes times projected per-minute rates (LightGBM), with quantile models and a conformal correction for the 80% ranges.
+- **Features:** 61 numbers per game (ratings, form, shooting, rest, travel, who's missing, lineup strength, the injury report) and 51 per player-game, all built only from games before tip-off and the injury report published before the prediction. Leakage tests perturb a day's results and delete the future, and the features must not change. Lineup strength rates each player by his Game Score per minute and weights him by his recent minutes, so it notices who has been out.
+- **Game model:** starts from Elo's log-odds and learns adjustments from 37 features (rest, travel, availability, lineup strength, the injury report, recent form, home and road records), with a penalty on the adjustments only, so a noisy input can't pull it far from Elo; then Platt calibration. It was picked over logistic regression, LightGBM and an ensemble of the two. Each prediction is split exactly into 13 readable reasons.
+- **Player model:** projected minutes times projected per-minute rates (LightGBM), with quantile models and a conformal correction for the 80% ranges. Players listed Out or Doubtful aren't projected; teammates' expected absences feed the minutes.
 - **Advanced stats:** offensive, defensive and net rating, pace, the Four Factors with league ranks, and each player's true shooting, usage and recent scoring, computed on the site from season box scores the pipeline stores, using only games before the day.
-- **In production:** a GitHub Actions job pulls the history from Postgres each morning, adds last night's games from cdn.nba.com box scores, predicts today's games and publishes them before tip-off. A weekly job refits both models and promotes a refit only if it's no worse than what was published. The website never runs a model; it only reads.
+- **In production:** a GitHub Actions job pulls the history from Postgres each morning, adds last night's games from cdn.nba.com box scores, reads the official injury report, predicts today's games and publishes them before tip-off, and re-publishes in the evening with the latest report. A weekly job refits both models and promotes a refit only if it's no worse than what was published. The website never runs a model; it only reads.
 
 More in the [technical docs](https://nba-alpha-olive.vercel.app/docs) and in [`docs/`](docs/).
 
