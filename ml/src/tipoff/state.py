@@ -1,6 +1,7 @@
 """Pipeline state in Postgres (``pipeline_state`` table) for the cloud daily job.
 
-- ``staged``: the three staged parquet tables, packed as a tar.gz
+- ``staged``: the three staged parquet tables, packed as a tar.gz, plus the staged injury report
+  snapshots (``injury_reports.parquet`` and ``injury_snapshots.parquet``) once they exist
 - ``champion``: the champion ``GameModel`` (joblib) plus its provenance in ``meta``
 - ``player_champion``: the champion ``PlayerModel`` (joblib) plus its provenance
 
@@ -24,6 +25,8 @@ from tipoff.config import STAGED_DIR
 from tipoff.db import tables, upsert
 
 STAGED_FILES = ("games.parquet", "team_games.parquet", "player_games.parquet")
+# Packed when present; an archive from before they existed is still accepted.
+OPTIONAL_FILES = ("injury_reports.parquet", "injury_snapshots.parquet")
 
 
 class StateError(RuntimeError):
@@ -56,6 +59,9 @@ def pack_staged(staged_dir: Path = STAGED_DIR) -> bytes:
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for name in STAGED_FILES:
             tar.add(staged_dir / name, arcname=name)
+        for name in OPTIONAL_FILES:
+            if (staged_dir / name).exists():
+                tar.add(staged_dir / name, arcname=name)
     return buf.getvalue()
 
 
@@ -63,10 +69,13 @@ def unpack_staged(data: bytes, staged_dir: Path = STAGED_DIR) -> None:
     staged_dir.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
         members = {m.name: m for m in tar.getmembers()}
-        if set(members) != set(STAGED_FILES) or not all(m.isfile() for m in members.values()):
+        names = set(members)
+        if (not set(STAGED_FILES) <= names <= {*STAGED_FILES, *OPTIONAL_FILES}
+                or not all(m.isfile() for m in members.values())):  # fmt: skip
             raise StateError(f"Unexpected staged archive contents: {sorted(members)}")
-        for name in STAGED_FILES:  # only the expected plain files, never arbitrary paths
-            (staged_dir / name).write_bytes(tar.extractfile(members[name]).read())
+        for name in (*STAGED_FILES, *OPTIONAL_FILES):  # only expected plain files, never paths
+            if name in members:
+                (staged_dir / name).write_bytes(tar.extractfile(members[name]).read())
 
 
 def push_staged(engine: Engine, staged_dir: Path = STAGED_DIR) -> str:
@@ -75,6 +84,22 @@ def push_staged(engine: Engine, staged_dir: Path = STAGED_DIR) -> str:
     games = pd.read_parquet(staged_dir / "games.parquet", columns=["game_date"])
     meta = {"rows": len(games), "through": str(games["game_date"].max().date())}
     return push(engine, "staged", pack_staged(staged_dir), meta)
+
+
+def push_injuries(engine: Engine, staged_dir: Path = STAGED_DIR) -> dict[str, Any]:
+    """Put the local injury report tables into the stored ``staged`` archive, keeping its game
+    history as it is (the cloud's may be newer than the local one)."""
+    import shutil
+    import tempfile
+
+    data, meta = pull(engine, "staged")
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp)
+        unpack_staged(data, work)
+        for name in OPTIONAL_FILES:
+            shutil.copyfile(staged_dir / name, work / name)
+        push(engine, "staged", pack_staged(work), meta)
+    return meta
 
 
 def pull_staged(engine: Engine, staged_dir: Path = STAGED_DIR) -> dict[str, Any]:

@@ -38,6 +38,10 @@ def _f(v) -> float | None:
     return None if pd.isna(v) else float(v)
 
 
+def _s(v) -> str | None:
+    return None if v is None or pd.isna(v) else str(v)
+
+
 def _i(v) -> int | None:
     return None if pd.isna(v) else int(v)
 
@@ -54,6 +58,7 @@ def _row(r, source: str) -> dict:
         "generated_at": pd.Timestamp(r.generated_at).to_pydatetime(),
         "features_hash": r.features_hash,
         "source": source,
+        "injury_status": _s(getattr(r, "injury_status", None)),
     }
     for s in STATS:
         row[s] = _f(getattr(r, f"proj_{s}"))

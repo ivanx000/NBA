@@ -199,6 +199,7 @@ function playerLine(r: ProjectionRow): PlayerLine {
       r.actualMinutes === null || r.actualMinutes === undefined
         ? null
         : { minutes: Number(r.actualMinutes), pts: opt(r.actualPts), reb: opt(r.actualReb), ast: opt(r.actualAst) },
+    status: r.injuryStatus ?? null,
   };
 }
 

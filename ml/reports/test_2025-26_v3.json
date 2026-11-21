@@ -1,0 +1,57 @@
+{
+  "ran_at": "2026-11-21T00:25:23+00:00",
+  "test_season": "2025-26",
+  "n_games": 1230,
+  "champion": "Anchored",
+  "features_hash": "a7b0980c4623da92",
+  "config": {
+    "kind": "anchored",
+    "calibration": "platt",
+    "logreg_c": 0.1,
+    "ensemble_weight_logreg": 0.8
+  },
+  "metrics": {
+    "Home team": {
+      "log_loss": 0.6874,
+      "brier": 0.2472,
+      "accuracy": 0.5545,
+      "auc": 0.5,
+      "ece": 0.011
+    },
+    "Elo": {
+      "log_loss": 0.5978,
+      "brier": 0.2054,
+      "accuracy": 0.6919,
+      "auc": 0.7379,
+      "ece": 0.0446
+    },
+    "LogReg": {
+      "log_loss": 0.5987,
+      "brier": 0.206,
+      "accuracy": 0.6821,
+      "auc": 0.7364,
+      "ece": 0.0267
+    },
+    "LightGBM": {
+      "log_loss": 0.6059,
+      "brier": 0.2092,
+      "accuracy": 0.678,
+      "auc": 0.7258,
+      "ece": 0.032
+    },
+    "Ensemble": {
+      "log_loss": 0.599,
+      "brier": 0.2061,
+      "accuracy": 0.6821,
+      "auc": 0.7362,
+      "ece": 0.0283
+    },
+    "Anchored": {
+      "log_loss": 0.5952,
+      "brier": 0.2047,
+      "accuracy": 0.6797,
+      "auc": 0.7411,
+      "ece": 0.0284
+    }
+  }
+}

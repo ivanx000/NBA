@@ -36,6 +36,16 @@ function Season({ adv }: { adv: PlayerAdvanced | undefined }) {
   );
 }
 
+/** "Questionable" and the like, from the official injury report when he was projected. */
+function Status({ line }: { line: PlayerLine }) {
+  if (!line.status || line.status === "Available") return null;
+  return (
+    <span className="player-status" title={`${line.status} on the official injury report`}>
+      {line.status}
+    </span>
+  );
+}
+
 function Real({ line }: { line: PlayerLine }) {
   if (!line.actual) return null;
   if (didNotPlay(line)) return <p className="player-real">Didn&apos;t play</p>;
@@ -66,7 +76,10 @@ export function PlayerList({
         <li key={line.playerId}>
           <div className="player-list__body">
             <p className="player-list__head">
-              <span className="player-list__name">{shortName(line.name)}</span>
+              <span className="player-list__name">
+                {shortName(line.name)}
+                <Status line={line} />
+              </span>
               <span className="player-list__min tabular">{round(line.minutes)} min</span>
             </p>
             <p className="player-list__stats tabular">
@@ -143,6 +156,7 @@ export function PlayerTable({
             <tr key={line.playerId} data-dnp={didNotPlay(line) || undefined}>
               <th scope="row">
                 <span>{line.name}</span>
+                <Status line={line} />
               </th>
               <td className="tabular">
                 <b className="player-table__min">{round(line.minutes)}</b>

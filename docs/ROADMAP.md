@@ -266,7 +266,7 @@ held-out seasons its edge over Elo is small and it loses in three of them.
 - [x] Deploy: code pushed (`f74dedb`, CI and Vercel green), then the v3 champion pushed to prod state (`game-v3`); the cloud job needs `features/lineup.py` before the v3 model, so keep that order
 - [x] The one-time re-test on 2025-26 for the new major version (`--force-retest`, approved by the user): v3 0.5952 vs Elo 0.5978 (CI −0.0104..+0.0051); v1's report kept as `test_2025-26_v1.*`
 - [x] Backfill with v3 to prod (`game-v3-wf`, 1,456 games: all of 2025-26 and this season's games before live predictions began); live v2 picks are untouched (live beats backfill in `current_game_predictions`)
-- [ ] Later: official injury reports (worth up to about 0.004 more log loss)
+- [x] Later: official injury reports (worth up to about 0.004 more log loss): done in Phase 14
 
 Notes:
 - Rolling validation (2019-20..2024-25), pooled log loss: Elo 0.6287, LogReg 0.6228, LightGBM 0.6297, ensemble 0.6227, Elo-anchored (λ = 100) 0.6212, better than Elo in all 6 seasons: champion v3 with Platt. 2025-26 walk-forward: v3 0.5950 vs Elo 0.5979 (v2: 0.6024); accuracy 67.9% vs Elo 69.0%.
@@ -293,6 +293,28 @@ Notes:
 Notes:
 - Mixamo has no basketball jump shot (only a dribble), so nothing was downloaded from it.
 - The first posture version left its rotation on the bones between frames; the mixer saved it into the clips' starting pose when they blended, and it compounded until the arms pointed straight up. Applying it just before drawing and restoring right after fixed it (`posture.test.ts`).
+
+## Phase 14: Official injury report
+Study: `ml/reports/injury_report_study.md`.
+- [x] Source checked: PDFs on `ak-static.cms.nba.com` back to 2019-20, reachable from GitHub Actions (probe workflow, 2026-11-21); publish time from `Last-Modified`
+- [x] Fetch as of a cutoff, parse all four layouts, match names (`ingest/injury_report.py`, `tipoff ingest --source injury`); history staged locally (2,275 snapshots, morning 09:00 ET and evening 17:45 ET)
+- [x] Game inputs: injury-adjusted lineup strength, minutes lost, filed flags (`features/injury.py`, `FEATURES_VERSION = 4`); chance of playing by status in `ml/config/injury_play_probs.json`
+- [x] Player inputs and candidates: own status, teammates' minutes lost and back; Out/Doubtful not projected, returning players are (`PLAYER_FEATURES_VERSION = 2`)
+- [x] Rolling validation 2019-20..2024-25 (game) and 2024-25 (players), against v3/v1, Elo, home team and last-10; logged to MLflow
+- [x] Champions registered locally: `tipoff-game` v4 (anchored, 37 adjustments), `tipoff-player` v2
+- [x] Daily job: morning report in the cloud run (never blocks predictions), evening `daily --refresh` re-publish, `state push --what injuries`
+- [x] Site: `player_projections.injury_status` (migration `0004_injury_status`, recreates the view), status tag on the results screen and game page, "Injury report" factor, docs pages
+- [x] One-time re-test on 2025-26 for the new major versions (user's OK, `--force-retest`): game v4 0.5866 vs Elo 0.5978 (CI −0.0200..−0.0023) and v3 0.5952; players minutes 4.658 vs v1 4.729. v3's and player v1's reports kept as `*_v3.*` / `*_v1.*`. Walk-forward 2025-26: v4 0.5862
+- [ ] Deploy: prod migration `0004`, `state push --what injuries`, push code, push both champions, backfill this season with v4
+- [ ] Watch the first live week: morning vs evening picks, late scratches
+
+Notes:
+- Rolling validation, chosen variant vs v3: morning report −0.0026 ± 0.0017 (5 of 6 seasons; 2019-20 can't change), evening report −0.0052 ± 0.0022 (6 of 6). Full selection: anchored 0.6186 pooled (Elo 0.6287), 2024-25 validation 0.5901 (v3 0.5952).
+- Players, 2024-25: minutes MAE 4.771 → 4.688, points 4.787 → 4.766; minutes better in all four rolling seasons.
+- `cdn_headers()` pins `Host: cdn.nba.com`, which the PDF host refuses with 403 (indistinguishable from "not published"). `static_headers()` drops it, and an ingest that finds no report in 10+ snapshots stops instead of caching misses.
+- The PDF's filename isn't its publish time: the hourly `_09AM` file went up at 9:30. Every cutoff check uses `Last-Modified`.
+- "Available" plays less often than "Probable" (74% vs 87%): it's mostly fringe and two-way players.
+- The `current_player_projections` view selects `p.*`, which Postgres expands at creation, so the migration has to recreate it to show the new column.
 
 ## Later ideas
 - Predicted final score / spread (regression model)

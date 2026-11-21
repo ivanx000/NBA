@@ -105,6 +105,12 @@ def cdn_headers() -> dict[str, str]:
     return dict(NBALiveHTTP.headers)
 
 
+def static_headers() -> dict[str, str]:
+    """The cdn headers without ``Host``, for other nba.com static hosts (the injury report PDFs
+    on ak-static.cms.nba.com answer 403 to a request that names cdn.nba.com as its host)."""
+    return {k: v for k, v in cdn_headers().items() if k.lower() != "host"}
+
+
 def get_cdn_json(url: str, *, limiter: RateLimiter = DEFAULT_LIMITER) -> dict[str, Any]:
     """GET a cdn.nba.com JSON document with retries."""
 

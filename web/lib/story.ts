@@ -21,10 +21,10 @@ export const SEASON_GAMES: readonly { season: string; games: number; test?: bool
 
 export const LEARNED_GAMES = SEASON_GAMES.filter((s) => !s.test).reduce((n, s) => n + s.games, 0);
 export const TEST_GAMES = SEASON_GAMES.filter((s) => s.test).reduce((n, s) => n + s.games, 0);
-export const FEATURE_COUNT = 57;
-/** Model v3 (Elo-anchored) adjusts Elo with this many of the features (`ANCHOR_FEATURES` in ml/src/tipoff/features/columns.py). */
-export const ADJUSTED_FEATURE_COUNT = 35;
-export const FACTOR_COUNT = 12;
+export const FEATURE_COUNT = 61;
+/** Model v4 (Elo-anchored) adjusts Elo with this many of the features (`ANCHOR_FEATURES` in ml/src/tipoff/features/columns.py). */
+export const ADJUSTED_FEATURE_COUNT = 37;
+export const FACTOR_COUNT = 13;
 
 export const EXAMPLE = { home: "NYK", away: "BOS" } as const;
 
@@ -63,7 +63,7 @@ export const EXAMPLE_REASONS: readonly ExampleReason[] = [
   { factor: "Recent form", copy: "Celtics in better recent form", points: -3.0 },
   { factor: "Shooting", copy: "Knicks have the shooting edge", points: 1.1 },
   { factor: "Travel", copy: "Celtics on a tougher trip", points: 0.4 },
-  { factor: "Everything else", copy: "Six smaller factors", points: -0.9 },
+  { factor: "Everything else", copy: "Seven smaller factors", points: -0.9 },
 ];
 
 /** The base plus every reason: the Knicks' win chance. */
@@ -83,7 +83,7 @@ export function runningTotals(base = EXAMPLE_BASE, reasons = EXAMPLE_REASONS): {
 export const TEST_SEASON = {
   season: "2025-26",
   games: 1230,
-  accuracy: { model: 0.6797, elo: 0.6919, home: 0.5545 },
+  accuracy: { model: 0.6813, elo: 0.6919, home: 0.5545 },
 } as const;
 
 /**

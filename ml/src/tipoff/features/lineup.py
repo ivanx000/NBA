@@ -61,8 +61,10 @@ def player_ratings(player_games: pd.DataFrame) -> pd.DataFrame:
     })  # fmt: skip
 
 
-def lineup_features(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
-    """``lineup_strength`` per team-game row of ``tl`` (same index as ``tl.reset_index``)."""
+def lineup_pairs(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
+    """The players behind each team-game's ``lineup_strength``: one row per (``row`` of ``tl``,
+    player) with his average minutes over the team's previous ``WINDOW`` games and his rating
+    before the game. Traded players (latest appearance for another team) are left out."""
     tl = tl.reset_index(drop=True)
     pg = player_games[["game_id", "team_id", "player_id", "game_date", "minutes", *BOX]].copy()
     pg["game_date"] = pg["game_date"].astype("datetime64[ns]")
@@ -97,13 +99,26 @@ def lineup_features(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFram
             "player_id": players[c], "avg_min": avg[r, c],
         }))  # fmt: skip
 
-    strength = np.full(len(tl), np.nan)
-    if pairs:
-        cand = pd.concat(pairs, ignore_index=True).sort_values("game_date")
-        cand = pd.merge_asof(cand, ratings, on="game_date", by="player_id",
-                             allow_exact_matches=False)  # fmt: skip
-        cand = cand[cand["last_team"] == cand["team_id"]]
-        total = (cand["avg_min"] * cand["rating"]).groupby(cand["row"]).sum()
-        strength[total.index.to_numpy()] = total.to_numpy()
-    strength = np.where(np.isfinite(strength) & (strength > 0), strength, DEFAULT_STRENGTH)
-    return pd.DataFrame({"lineup_strength": strength})
+    cols = ["row", "team_id", "game_date", "player_id", "avg_min", "rating"]
+    if not pairs:
+        return pd.DataFrame(columns=cols)
+    cand = pd.concat(pairs, ignore_index=True).sort_values("game_date")
+    cand = pd.merge_asof(cand, ratings, on="game_date", by="player_id",
+                         allow_exact_matches=False)  # fmt: skip
+    cand = cand[cand["last_team"] == cand["team_id"]]
+    return cand[cols].reset_index(drop=True)
+
+
+def strength_from_pairs(pairs: pd.DataFrame, n_rows: int) -> np.ndarray:
+    """Sum of average minutes x rating per row; the league default where there's nothing."""
+    strength = np.full(n_rows, np.nan)
+    if len(pairs):
+        total = (pairs["avg_min"] * pairs["rating"]).groupby(pairs["row"]).sum()
+        strength[total.index.to_numpy(dtype=int)] = total.to_numpy()
+    return np.where(np.isfinite(strength) & (strength > 0), strength, DEFAULT_STRENGTH)
+
+
+def lineup_features(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
+    """``lineup_strength`` per team-game row of ``tl`` (same index as ``tl.reset_index``)."""
+    pairs = lineup_pairs(tl, player_games)
+    return pd.DataFrame({"lineup_strength": strength_from_pairs(pairs, len(tl))})

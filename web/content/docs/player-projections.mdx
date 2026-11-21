@@ -3,8 +3,11 @@ Every game also gets projected lines for each team's 8 players with the most pro
 game prediction, before tip-off, and graded once the game ends: each game's page (linked from the
 results screen and the [performance page](/performance)) shows the projection next to the real line.
 
-Projections mean **"if he plays"**. There's no injury report in the data, so the players projected
-for a game are the ones who played in their team's previous game.
+Projections mean **"if he plays"**. The players projected for a game are the ones who played in
+their team's previous game, adjusted by the league's official injury report as of 9 AM Eastern on
+game day (and again at 5:45 PM, for games that haven't started): players listed **Out** or
+**Doubtful** aren't projected, players listed as available after missing the last game (back from an
+injury) are, and anyone listed as Questionable or Probable carries that tag next to his name.
 
 ## Two stages
 
@@ -45,17 +48,28 @@ Separate quantile models predict the 10th and 90th percentile of each stat. A co
 learned on a season those models never saw, then nudges the ranges so that about 8 in 10 real lines
 land inside. In practice the correction was tiny: the quantile models were already close to 80%.
 
+## The injury report's share
+
+Four inputs come from the report: his own chance of playing, the minutes his teammates are expected
+to lose (all together, and the biggest single absence), and the minutes coming back from injury.
+A teammate out for weeks counts for nothing new: his minutes are already spread around. On the
+2024-25 validation season they cut the minutes error from 4.77 to 4.69 (the last-10 average misses
+by 5.11), with points, rebounds and assists a little better too; the minutes gain held in each of
+the four seasons checked.
+
 ## Against the baseline
 
 The bar was each player's average over his last 10 games. Settings were chosen on 2024-25, then
 the models were refit and scored **once** on 2025-26 (23,170 player-games), as the game model was.
+These are the second version's numbers, with the injury report (re-tested once as a new major
+version); the first version scored 4.73 on minutes and 4.73 on points.
 
 | | Last-10 average | Model | Better by | 80% range held |
 | --- | --- | --- | --- | --- |
-| Minutes | 5.08 | 4.73 | 6.9% | |
-| Points | 4.88 | 4.73 | 3.1% | 81.3% |
-| Rebounds | 2.00 | 1.94 | 3.2% | 81.1% |
-| Assists | 1.44 | 1.40 | 2.9% | 80.7% |
+| Minutes | 5.08 | 4.66 | 8.3% | |
+| Points | 4.88 | 4.71 | 3.6% | 80.9% |
+| Rebounds | 2.00 | 1.93 | 3.4% | 80.7% |
+| Assists | 1.44 | 1.40 | 3.0% | 82.2% |
 
 (Mean absolute error: the average miss, in minutes or in points, rebounds or assists.)
 

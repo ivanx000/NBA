@@ -16,9 +16,9 @@ home edge ("Home court"). (For LightGBM the same split comes from TreeSHAP, the 
 `shap.TreeExplainer`; Platt scaling multiplies every term by its slope.) Tests check that the parts
 add up to the whole.
 
-## From 57 features to 12 reasons
+## From 61 features to 13 reasons
 
-The contributions are summed into **12 factors** defined in `shared/factors.json`, each with
+The contributions are summed into **13 factors** defined in `shared/factors.json`, each with
 plain-language copy:
 
 | Factor | Copy (for the team it favors) |
@@ -34,9 +34,10 @@ plain-language copy:
 | Travel | Knicks on a tougher trip |
 | Missing players | Knicks missing key players |
 | Rotation strength | Celtics have the stronger rotation lately |
+| Injury report | Knicks have more players listed out on the injury report |
 | Point in the season | The point in the season favors Celtics |
 
-(Travel and missing players name the opponent: the Knicks' tougher trip favors the Celtics.)
+(Travel, missing players and the injury report name the opponent: the Knicks' tougher trip favors the Celtics.)
 
 Each game stores its top 5 factors (those worth at least half a point).
 

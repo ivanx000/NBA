@@ -11,7 +11,11 @@ and it makes a model look far better on paper than it is. The project guards aga
 3. Season-to-date stats reset at season boundaries and lean on last season's prior early on.
 4. Elo is updated **after** each game and read **before** it.
 5. Scaling and encoding are fit inside the training data only (scikit-learn `Pipeline`).
-6. Splits are by time, never random: train 2015-16 to 2023-24, validate on 2024-25, test on 2025-26.
+6. The official injury report used for a game is the one **published** before the prediction time
+   (9 AM Eastern on game day, or 5:45 PM for the evening update), going by the file's publish time,
+   never the time in its name: the hourly "9 AM" report actually went up at 9:30. Training uses the
+   same rule, so the model never learns from a report it couldn't have had.
+7. Splits are by time, never random: train 2015-16 to 2023-24, validate on 2024-25, test on 2025-26.
    The data loader can't return the test season during training at all.
 
 ## The test

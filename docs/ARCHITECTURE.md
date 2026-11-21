@@ -27,7 +27,7 @@
 ```
 
 **Why it's split this way**
-- `stats.nba.com` drops connections from cloud and CI IP ranges, so anything that needs it (historical game logs, box scores, advanced stats) runs locally on a schedule. `cdn.nba.com` (schedule, scoreboard) works from anywhere, so schedule and result syncing can run in GitHub Actions. It sits behind Akamai, which returns 403 unless requests carry a full browser-like header set (nba_api's live headers); the manual `cdn-probe` workflow confirmed GitHub-hosted runners get through with those headers.
+- `stats.nba.com` drops connections from cloud and CI IP ranges, so anything that needs it (historical game logs, box scores, advanced stats) runs locally on a schedule. `cdn.nba.com` (schedule, scoreboard) works from anywhere, so schedule and result syncing can run in GitHub Actions. It sits behind Akamai, which returns 403 unless requests carry a full browser-like header set (nba_api's live headers); the manual `cdn-probe` workflow confirmed GitHub-hosted runners get through with those headers. The official injury report PDFs (`ak-static.cms.nba.com`, a static S3 host behind Akamai) also answer GitHub-hosted runners (probed 2026-11-21), with the same headers minus `Host`.
 - Predictions change at most once a day, so the website reads precomputed rows. No Python runs on Vercel. That keeps the site fast, cheap, and simple.
 
 ## 2. Daily schedule (all times ET)
@@ -35,7 +35,8 @@
 | Time | Where | Job | What it does |
 |---|---|---|---|
 | ~06:07 | GitHub Actions | `schedule-sync` | `tipoff sync --target prod`: upserts the whole current season's games from the cdn schedule (which also carries final scores) |
-| hourly ~09:07–18:07 | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --if-needed` | pull staged history + champions from `pipeline_state` → cdn.nba.com box scores for newly finished games → incremental stage → push history back → sync → predict today and project its players → publish both → fill projected players' actual lines → freshness check. The player steps run after the game predictions are out and never stop the job. Exits immediately once today is published |
+| hourly ~09:07–18:07 | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --if-needed` | pull staged history + champions from `pipeline_state` → cdn.nba.com box scores for newly finished games → incremental stage → push history back → sync → the official injury report as of 09:00 ET (staged and pushed) → predict today and project its players → publish both → fill projected players' actual lines → freshness check. The player steps run after the game predictions are out and never stop the job; neither does a missing injury report (predictions go out without it). Exits immediately once today is published |
+| ~17:52 (and ~18:52) | GitHub Actions | `daily` → `tipoff daily --cloud --target prod --refresh` | the evening refresh: once the 17:45 ET injury report snapshot is due, stage it, re-predict today's games and players and re-publish the ones that haven't started (the pregame guard keeps started games untouched). Once a day: a later run, or a day with no evening report, does nothing |
 | 09:30, retried hourly to 18:30, and at login | Local launchd agent (`ml/scripts/daily.sh`), **fallback** | `tipoff daily --target prod --if-needed` | same job using stats.nba.com; only acts if the cloud run hasn't published. **Uninstalled 2026-11-20** after six clean cloud days; `ml/scripts/install_launchd.sh` reinstalls it if the cloud job ever needs a backup |
 | ~10:37 | GitHub Actions | `freshness-check` | syncs, then fails (GitHub emails) if any of today's games lacks a live prediction |
 | hourly ~18:17–02:17 | GitHub Actions | `results-sync` | same sync, plus live status/scores from today's scoreboard |
@@ -43,7 +44,7 @@
 
 GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for EST) and can start late. The daily job no longer needs the Mac: cdn.nba.com box scores carry every counting stat the features use (verified field by field against stats.nba.com), and pace and ratings come from the box-score possession formula for every season, so history and new games match. stats.nba.com is still used locally for historical ingest and rebuilds.
 
-**Pipeline state** (`pipeline_state` table, written by `tipoff state push`): `staged` = the three staged parquet tables (tar.gz, ~5 MB), `champion` = the champion `GameModel` (joblib) with its provenance, `player_champion` = the champion `PlayerModel` (joblib) with its provenance. The cloud job reads them and pushes `staged` back after adding games; without a `player_champion` it still publishes game predictions and skips the projections. Pulls verify a SHA-256 and only unpack the three expected files. After registering a new champion locally, run `tipoff state push --what champion --target prod` (or `--what player-champion` for the player model).
+**Pipeline state** (`pipeline_state` table, written by `tipoff state push`): `staged` = the three staged parquet tables plus the staged injury report snapshots (`injury_reports.parquet`, `injury_snapshots.parquet`) (tar.gz, ~5 MB), `champion` = the champion `GameModel` (joblib) with its provenance, `player_champion` = the champion `PlayerModel` (joblib) with its provenance. The cloud job reads them and pushes `staged` back after adding games; without a `player_champion` it still publishes game predictions and skips the projections. Pulls verify a SHA-256 and only unpack the expected files (the injury tables are optional, so archives from before them still unpack). After registering a new champion locally, run `tipoff state push --what champion --target prod` (or `--what player-champion` for the player model).
 
 ## 3. Repo layout
 
@@ -59,6 +60,7 @@ GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for E
 │   │   │   ├── http.py           # shared rate limiter, retries, cdn headers
 │   │   │   ├── nba_stats.py      # nba_api wrappers with rate limit + disk cache + manifest
 │   │   │   ├── nba_cdn.py        # schedule/scoreboard from cdn.nba.com
+│   │   │   ├── injury_report.py  # official injury report PDFs: as-of fetch, parse, name matching
 │   │   │   ├── stage.py          # raw -> validated games / team_games / player_games
 │   │   │   └── schemas.py        # pandera schemas
 │   │   ├── features/
@@ -66,7 +68,9 @@ GitHub cron runs in UTC, so Actions times drift by an hour with DST (shown for E
 │   │   │   ├── team_form.py      # rolling team stats (shifted!) blended with priors
 │   │   │   ├── elo.py            # Elo + grid-search tuning (params in ml/config/elo_params.json)
 │   │   │   ├── schedule.py       # rest days, back-to-backs, travel, time zones
-│   │   │   ├── availability.py   # who's out (missed the previous game; injury report later)
+│   │   │   ├── availability.py   # who's out (missed the previous game)
+│   │   │   ├── lineup.py         # lineup strength (recent minutes × player rating)
+│   │   │   ├── injury.py         # the injury report: adjusted lineup strength, player inputs
 │   │   │   ├── columns.py, schemas.py
 │   │   │   └── build.py          # assembles the game-level feature table + features_hash
 │   │   ├── models/
@@ -184,6 +188,7 @@ create table player_projections (
   source         text not null default 'live',   -- live | backfill (walk-forward backtest)
   actual_minutes real,                        -- the real line once final (0 = didn't play)
   actual_pts integer, actual_reb integer, actual_ast integer,
+  injury_status  text,                        -- e.g. 'Questionable' on the official report when projected
   primary key (game_id, player_id, model_version)
 );
 

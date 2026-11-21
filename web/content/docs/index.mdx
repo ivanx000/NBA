@@ -30,9 +30,9 @@ promise more.
 ## How it fits together
 
 1. **Data:** box scores and schedules from NBA.com, cached on disk ([Data sources](/docs/data-sources)).
-2. **Features:** 57 numbers per game, each computed only from games before it ([Features](/docs/features), [Leakage](/docs/leakage)).
+2. **Features:** 61 numbers per game, each computed only from games before it or, for the official injury report, from the report published before the prediction ([Features](/docs/features), [Leakage](/docs/leakage)).
 3. **Model:** Elo plus learned adjustments, calibrated, chosen against logistic regression, LightGBM and an ensemble on six held-out seasons ([Models](/docs/models), [Calibration](/docs/calibration)).
-4. **Explanations:** each prediction split exactly into 12 human factors ([Explaining predictions](/docs/explaining-predictions)).
+4. **Explanations:** each prediction split exactly into 13 human factors ([Explaining predictions](/docs/explaining-predictions)).
 5. **Production:** a GitHub Actions job predicts each morning and writes to Postgres; the website only reads ([Daily pipeline](/docs/pipeline), [Architecture](/docs/architecture)).
 
 > These predictions are not betting advice.

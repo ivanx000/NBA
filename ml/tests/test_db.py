@@ -216,3 +216,31 @@ def test_state_roundtrip_and_safety(engine, tmp_path):
     with pytest.raises(state.StateError, match="Unexpected"):
         state.unpack_staged(evil.getvalue(), dest)
     assert not (tmp_path / "escape.parquet").exists()
+
+
+def test_push_injuries_keeps_the_stored_game_history(engine, tmp_path):
+    from tipoff import state
+
+    cloud = tmp_path / "cloud"
+    cloud.mkdir()
+    pd.DataFrame({"game_id": ["2"], "game_date": [pd.Timestamp("2026-11-20")]}).to_parquet(
+        cloud / "games.parquet"
+    )
+    for name in ("team_games", "player_games"):
+        pd.DataFrame({"x": [9]}).to_parquet(cloud / f"{name}.parquet")
+    state.push_staged(engine, cloud)
+
+    local = tmp_path / "local"
+    local.mkdir()
+    pd.DataFrame({"game_id": ["1"], "game_date": [pd.Timestamp("2026-11-13")]}).to_parquet(
+        local / "games.parquet"
+    )
+    for name in state.OPTIONAL_FILES:
+        pd.DataFrame({"y": [1]}).to_parquet(local / name)
+    meta = state.push_injuries(engine, local)
+    assert meta["through"] == "2026-11-20"
+    out = tmp_path / "out"
+    state.pull_staged(engine, out)
+    assert (out / "games.parquet").read_bytes() == (cloud / "games.parquet").read_bytes()
+    for name in state.OPTIONAL_FILES:
+        assert (out / name).read_bytes() == (local / name).read_bytes()

@@ -60,8 +60,16 @@ def load_model(model_source: str = "mlflow", engine=None):
     return load_champion(), champion_info()
 
 
-def predict_date(day: date, model_source: str = "mlflow", engine=None) -> pd.DataFrame:
-    """Predictions for the regular-season games scheduled on ``day`` that haven't been played."""
+def predict_date(
+    day: date,
+    model_source: str = "mlflow",
+    engine=None,
+    injuries: pd.DataFrame | None = None,
+    snapshot: str = "am",
+) -> pd.DataFrame:
+    """Predictions for the regular-season games scheduled on ``day`` that haven't been played.
+    ``injuries``: the staged injury report snapshots including ``day``'s
+    (``ingest.injury_report.day_snapshot``); None means no report."""
     sched = scheduled_games(day)
     if sched.empty:
         return pd.DataFrame()
@@ -72,6 +80,7 @@ def predict_date(day: date, model_source: str = "mlflow", engine=None) -> pd.Dat
         pd.read_parquet(STAGED_DIR / "player_games.parquet"),
         upcoming=sched[UPCOMING_COLS],
         elo_params=params,
+        injuries=injuries,
     )
     feats = GameFeatures.validate(feats, lazy=True)
     digest = features_hash(feats, params)
@@ -101,6 +110,7 @@ def predict_date(day: date, model_source: str = "mlflow", engine=None) -> pd.Dat
         "train_window": f"2015-16..{info['trained_through']}",
         "generated_at": datetime.now(UTC),
         "source": "live",
+        "injury_snapshot": snapshot if injuries is not None else None,
     })  # fmt: skip
     PREDICTIONS_DIR.mkdir(parents=True, exist_ok=True)
     (PREDICTIONS_DIR / "live").mkdir(exist_ok=True)

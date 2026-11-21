@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from tipoff.config import CONFIG_DIR, FEATURES_DIR, TEST_SEASON, TRAIN_SEASONS, VALID_SEASON
-from tipoff.features.players import BASELINE, FEATURE_COLUMNS
+from tipoff.features.players import BASELINE, FEATURE_COLUMNS, V1_FEATURE_COLUMNS
 
 STATS = ["pts", "reb", "ast"]
 TARGETS = ["minutes", *STATS]
@@ -92,9 +92,15 @@ class PlayerModel:
     quantiles: dict[str, tuple[lgb.LGBMRegressor, lgb.LGBMRegressor]] = field(default_factory=dict)
     # Conformal correction per stat: added to the high end and taken off the low end.
     widen: dict[str, float] = field(default_factory=dict)
+    # The columns this model was fit on (models pickled before the field existed used v1's).
+    features: list[str] = field(default_factory=lambda: list(FEATURE_COLUMNS))
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        state.setdefault("features", list(V1_FEATURE_COLUMNS))
+        self.__dict__.update(state)
 
     def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> PlayerModel:
-        X = X[FEATURE_COLUMNS]
+        X = X[self.features]
         mins = y["minutes"].to_numpy(float)
         self.models["minutes"] = _regressor(self.params["minutes"]).fit(X, mins)
         for stat in STATS:
@@ -116,7 +122,7 @@ class PlayerModel:
 
     def predict(self, X: pd.DataFrame) -> pd.DataFrame:
         """Projected minutes, pts, reb, ast, and each stat's 80% range (``pts_lo``, ``pts_hi``)."""
-        X = X[FEATURE_COLUMNS]
+        X = X[self.features]
         out = pd.DataFrame(index=X.index)
         mins = np.clip(self.models["minutes"].predict(X), 0, 48)
         out["minutes"] = mins

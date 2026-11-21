@@ -3,7 +3,7 @@
 At prediction time (about 10 AM ET) we don't know who will play tonight, so v1 uses what we do know:
 which rotation players didn't appear in the team's previous game. A rotation player averages at
 least 20 minutes over the team's last 10 games. Players whose most recent appearance was for another
-team (traded) are not counted. Injury reports are a later upgrade (ML_PLAN section 1).
+team (traded) are not counted. The official injury report is a separate input (features/injury.py).
 
 Features per team-game:
 - ``out_min_share``: season-to-date share of the team's minutes played by those missing players

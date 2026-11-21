@@ -124,7 +124,8 @@ def _prev(season: str) -> str:
 
 def _clone(m: GameModel) -> GameModel:
     return GameModel(m.kind, dict(m.lgbm_params), m.logreg_c, m.weight,
-                     anchor_lambda=m.anchor_lambda)  # fmt: skip
+                     anchor_lambda=m.anchor_lambda,
+                     anchor_features=m.anchor_features)  # fmt: skip
 
 
 def select(n_trials: int = 100, log_to_mlflow: bool = True) -> dict[str, Any]:

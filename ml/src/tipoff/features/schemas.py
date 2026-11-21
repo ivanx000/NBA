@@ -47,9 +47,10 @@ class PlayerFeatures(pa.DataFrameModel):
 
     @pa.dataframe_check
     def features_complete_in_scope(cls, df: pd.DataFrame) -> bool:
-        from tipoff.features.players import FEATURE_COLUMNS
+        from tipoff.features.players import V1_FEATURE_COLUMNS
 
-        return bool(df.loc[df["in_scope"], FEATURE_COLUMNS].notna().all().all())
+        # The injury inputs are missing by design where a team has no report.
+        return bool(df.loc[df["in_scope"], V1_FEATURE_COLUMNS].notna().all().all())
 
     @pa.dataframe_check
     def targets_only_for_played(cls, df: pd.DataFrame) -> bool:

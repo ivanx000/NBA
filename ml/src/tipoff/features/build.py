@@ -29,7 +29,8 @@ from tipoff.features.columns import (
     TARGET,
 )
 from tipoff.features.elo import EloParams, run_elo
-from tipoff.features.lineup import lineup_features
+from tipoff.features.injury import injury_features
+from tipoff.features.lineup import lineup_pairs, strength_from_pairs
 from tipoff.features.schedule import schedule_features
 from tipoff.features.schemas import GameFeatures
 from tipoff.features.team_form import team_form
@@ -37,13 +38,38 @@ from tipoff.features.timeline import prepare_games, team_timeline
 from tipoff.seasons import season_start_year
 
 
-def team_level_features(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
-    """All pre-game team features, one row per team-game (aligned with ``tl``)."""
+def team_level_features(
+    tl: pd.DataFrame,
+    player_games: pd.DataFrame,
+    injuries: pd.DataFrame | None = None,
+    play_probs: dict[str, float] | None = None,
+) -> pd.DataFrame:
+    """All pre-game team features, one row per team-game (aligned with ``tl``). ``injuries`` is
+    one snapshot of the staged injury report (None: no report, the injury inputs are 0)."""
+    return _team_level(tl, player_games, injuries, play_probs)[0]
+
+
+def _team_level(tl, player_games, injuries, play_probs):
+    """Team features plus the injury report's per-player rows (game_id, team_id, player_id,
+    lost, back) for the player features (None without a report)."""
     tl = tl.reset_index(drop=True)
+    pairs = lineup_pairs(tl, player_games)
+    lineup = pd.DataFrame({"lineup_strength": strength_from_pairs(pairs, len(tl))})
+    collected: list[pd.DataFrame] = []
+    inj = injury_features(tl, player_games, pairs, injuries, play_probs, players_out=collected)
     parts = [team_form(tl), schedule_features(tl), availability_features(tl, player_games),
-             lineup_features(tl, player_games)]  # fmt: skip
+             lineup, inj]  # fmt: skip
     feats = pd.concat(parts, axis=1)
-    return pd.concat([tl[["game_id", "team_id", "game_date"]], feats], axis=1)
+    ir_players = None
+    if collected:
+        c = collected[0]
+        at = c["row"].to_numpy()
+        ir_players = pd.DataFrame({
+            "game_id": tl["game_id"].to_numpy()[at], "team_id": tl["team_id"].to_numpy()[at],
+            "player_id": c["player_id"].to_numpy(), "lost": c["lost"].to_numpy(),
+            "back": c["back"].to_numpy(),
+        })  # fmt: skip
+    return pd.concat([tl[["game_id", "team_id", "game_date"]], feats], axis=1), ir_players
 
 
 @dataclass
@@ -54,6 +80,8 @@ class Tables:
     tl: pd.DataFrame  # one row per team-game (team_timeline)
     team: pd.DataFrame  # pre-game team features, indexed by (game_id, team_id)
     elo: pd.DataFrame  # pre-game Elo, indexed by game_id
+    injuries: pd.DataFrame | None = None  # the injury report snapshot used (None: no reports)
+    ir_players: pd.DataFrame | None = None  # its per-player rows (features/injury.py)
 
 
 def build_tables(
@@ -62,12 +90,15 @@ def build_tables(
     player_games: pd.DataFrame,
     upcoming: pd.DataFrame | None = None,
     elo_params: EloParams | None = None,
+    injuries: pd.DataFrame | None = None,
 ) -> Tables:
     games = prepare_games(staged_games, upcoming)
     tl = team_timeline(games, team_games)
-    team = team_level_features(tl, player_games).set_index(["game_id", "team_id"])
+    team, ir_players = _team_level(tl, player_games, injuries, None)
+    team = team.set_index(["game_id", "team_id"])
     elo = run_elo(games, elo_params or EloParams.load()).set_index("game_id")
-    return Tables(games=games, tl=tl, team=team, elo=elo)
+    return Tables(games=games, tl=tl, team=team, elo=elo, injuries=injuries,
+                  ir_players=ir_players)  # fmt: skip
 
 
 def build_features(
@@ -78,8 +109,10 @@ def build_features(
     elo_params: EloParams | None = None,
     first_season: str = FIRST_SEASON,
     tables: Tables | None = None,
+    injuries: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    t = tables or build_tables(staged_games, team_games, player_games, upcoming, elo_params)
+    t = tables or build_tables(staged_games, team_games, player_games, upcoming, elo_params,
+                               injuries)  # fmt: skip
     games, team, elo = t.games, t.team, t.elo
 
     in_window = games["season"].map(season_start_year) >= season_start_year(first_season)
@@ -115,8 +148,8 @@ def build_features(
 
 # Bump whenever a feature's definition changes (the hash must change with it).
 # v1: stats.nba.com advanced ratings. v2: box-score possession formula for pace and ratings.
-# v3: lineup strength (features/lineup.py).
-FEATURES_VERSION = 3
+# v3: lineup strength (features/lineup.py). v4: the official injury report (features/injury.py).
+FEATURES_VERSION = 4
 
 
 def features_hash(df: pd.DataFrame, elo_params: EloParams) -> str:
@@ -136,7 +169,10 @@ def build_and_save(
     staged_dir: Path = STAGED_DIR,
     out_dir: Path = FEATURES_DIR,
     upcoming: pd.DataFrame | None = None,
+    snapshot: str = "am",
 ) -> tuple[pd.DataFrame, str]:
+    from tipoff.ingest.injury_report import load_staged
+
     params = EloParams.load()
     df = build_features(
         pd.read_parquet(staged_dir / "games.parquet"),
@@ -144,6 +180,7 @@ def build_and_save(
         pd.read_parquet(staged_dir / "player_games.parquet"),
         upcoming=upcoming,
         elo_params=params,
+        injuries=load_staged(staged_dir, snapshot),
     )
     df = GameFeatures.validate(df, lazy=True)
     digest = features_hash(df, params)

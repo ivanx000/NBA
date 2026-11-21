@@ -16,10 +16,10 @@
 | --- | --- |
 | Home team | Always picks home, at the training home win rate (56.8%) |
 | Elo | The Elo win probability on its own ([Features](/docs/features)) |
-| Logistic regression | All 57 features, standardized; regularization picked on validation (C = 0.1) |
+| Logistic regression | All 61 features, standardized; regularization picked on validation (C = 0.1) |
 | LightGBM | Tuned with Optuna (100 trials); settles on very shallow trees |
 | Ensemble | A log-odds blend of the two; its best weight was 0.8 logistic regression |
-| **Elo-anchored** | Starts from Elo's log-odds and learns adjustments from 35 features (rest, travel, availability, lineup strength, last-10 form, home and road records), with a penalty on the adjustments only, so noisy inputs can't pull it far from Elo |
+| **Elo-anchored** | Starts from Elo's log-odds and learns adjustments from 37 features (rest, travel, availability, lineup strength, the injury report, last-10 form, home and road records), with a penalty on the adjustments only, so noisy inputs can't pull it far from Elo |
 
 ## Rolling validation, 2019-20 to 2024-25 (picks the champion)
 
@@ -28,13 +28,16 @@ Each season predicted by the candidate trained only on the seasons before it (7,
 | Model | Log loss | vs Elo | Seasons better than Elo | Accuracy |
 | --- | --- | --- | --- | --- |
 | Elo | 0.6287 | — | — | 64.5% |
-| Logistic regression | 0.6228 | −0.0059 | 5 of 6 | 65.4% |
-| LightGBM | 0.6297 | +0.0009 | 3 of 6 | 64.6% |
-| Ensemble | 0.6227 | −0.0061 | 4 of 6 | 65.3% |
-| **Elo-anchored** | **0.6212** | **−0.0076** | **6 of 6** | **65.6%** |
+| Logistic regression | 0.6195 | −0.0092 | 6 of 6 | 65.9% |
+| LightGBM | 0.6234 | −0.0053 | 4 of 6 | 65.0% |
+| Ensemble | 0.6193 | −0.0095 | 6 of 6 | 65.8% |
+| **Elo-anchored** | **0.6186** | **−0.0101** | **6 of 6** | **66.0%** |
+| *Elo-anchored v3 (before the injury report)* | *0.6212* | *−0.0076* | *6 of 6* | *65.6%* |
 
-The Elo-anchored model is the champion (v3), with Platt calibration. It's the only candidate that
-beat Elo in every season. Its penalty (100) was picked the same way.
+The Elo-anchored model is the champion (v4), with Platt calibration. Its penalty (100) was picked the
+same way. The injury report's two inputs were kept because they beat v3 on these same seasons:
+−0.0026 with the morning report and −0.0052 with the evening one, which the site uses to update
+predictions before tip-off.
 
 ## Validation season (2024-25)
 
@@ -42,12 +45,12 @@ beat Elo in every season. Its penalty (100) was picked the same way.
 | --- | --- | --- | --- | --- |
 | Home team | 0.6905 | 0.2487 | 54.4% | 0.500 |
 | Elo | 0.6083 | 0.2107 | 66.4% | 0.723 |
-| Logistic regression + Platt | 0.5935 | 0.2039 | 69.0% | 0.743 |
-| LightGBM + Platt | 0.5981 | 0.2058 | 68.5% | 0.739 |
-| Ensemble + Platt | **0.5931** | 0.2037 | 69.2% | 0.744 |
-| Elo-anchored + Platt | 0.5952 | 0.2047 | 68.8% | 0.741 |
+| Logistic regression + Platt | **0.5878** | 0.2016 | 69.2% | 0.749 |
+| LightGBM + Platt | 0.5947 | 0.2047 | 67.9% | 0.741 |
+| Ensemble + Platt | 0.5879 | 0.2017 | 69.0% | 0.749 |
+| Elo-anchored + Platt | 0.5901 | 0.2026 | 69.3% | 0.747 |
 
-On this one season the ensemble is a hair ahead; across six it isn't. LightGBM never catches the
+On this one season logistic regression is a hair ahead; across six it isn't. LightGBM never catches the
 linear models: with these features, the relationships are close to additive in log-odds.
 
 ## Walk-forward on 2025-26
@@ -59,14 +62,35 @@ Each month predicted by the champion's setup refit on every game before it, as i
 | Home team | 0.6875 | 0.2472 | 55.5% | 0.488 |
 | Elo | 0.5979 | 0.2054 | 69.0% | 0.738 |
 | Model v2 (ensemble) | 0.6024 | 0.2074 | 67.0% | 0.733 |
-| **Model v3 (Elo-anchored)** | **0.5950** | **0.2046** | 67.9% | **0.741** |
+| Model v3 (Elo-anchored) | 0.5950 | 0.2046 | 67.9% | 0.741 |
+| **Model v4 (+ injury report)** | **0.5862** | **0.2009** | 68.5% | **0.750** |
 
-v3 beats Elo on log loss, Brier score and AUC that season; Elo still picks a few more winners.
+v4 beats Elo on log loss, Brier score and AUC that season; Elo still picks a few more winners.
+
+## Test season (2025-26), model v4
+
+v4 is a new major version (the injury report), so it got the one allowed re-test (Nov 2026), after
+it was chosen on the earlier seasons. Same protocol: refit on 2015-16 to 2024-25 (11,979 games),
+scored once on the 1,230 games of 2025-26, with the morning injury report.
+
+| Model | Log loss | Brier | Accuracy | AUC |
+| --- | --- | --- | --- | --- |
+| Home team | 0.6874 | 0.2472 | 55.5% | 0.500 |
+| Elo | 0.5978 | 0.2054 | 69.2% | 0.738 |
+| Logistic regression + Platt | 0.5897 | 0.2022 | 68.4% | 0.745 |
+| LightGBM + Platt | 0.5932 | 0.2036 | 69.3% | 0.742 |
+| Ensemble + Platt | 0.5895 | 0.2021 | 68.8% | 0.746 |
+| **Elo-anchored + Platt (v4)** | **0.5866** | **0.2011** | 68.1% | **0.750** |
+
+Against Elo the log-loss gap is −0.0112, with a paired-bootstrap 95% interval of −0.020 to −0.002:
+the first version whose edge over Elo holds up on the test season on its own. Against v3 it's
+−0.0086 (−0.013 to −0.004). Elo still picks about one more winner in a hundred; the model's win
+chances are the better ones.
 
 ## Test season (2025-26), model v3
 
-The rules allow one re-test of the held-out season for a new major model version, and v3 used it
-(Nov 2026), after it was chosen and deployed. All models were refit on 2015-16 to 2024-25 (11,979
+Kept for the record (`ml/reports/test_2025-26_v3.md`). The rules allow one re-test of the held-out
+season for a new major model version, and v3 used it (Nov 2026), after it was chosen and deployed. All models were refit on 2015-16 to 2024-25 (11,979
 games) and scored on the 1,230 games of 2025-26.
 
 | Model | Log loss | Brier | Accuracy | AUC |
@@ -101,8 +125,9 @@ On its test, plain Elo edged out the first model (a gap of +0.004, not statistic
 Rather than swap in Elo because of test numbers, which would turn the test season into a tuning
 set, the models were studied on six earlier seasons. The first model's edge over Elo there was
 small and lost in three of the six. Two changes fixed it: anchoring on Elo, and a lineup-strength
-feature ([Features](/docs/features)). Elo is still graded next to the model on live games, on the
-[performance page](/performance).
+feature ([Features](/docs/features)). The official injury report then added the clearest gain so far,
+on the earlier seasons first and then on the re-test. Elo is still graded next to the model on live
+games, on the [performance page](/performance).
 
 ## In production
 

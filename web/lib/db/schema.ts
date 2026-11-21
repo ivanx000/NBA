@@ -125,6 +125,8 @@ export const playerProjections = pgTable(
     actualPts: integer("actual_pts"),
     actualReb: integer("actual_reb"),
     actualAst: integer("actual_ast"),
+    /** His status on the official injury report when projected (e.g. "Questionable"); null if not listed. */
+    injuryStatus: text("injury_status"),
   },
   (t) => [
     primaryKey({ columns: [t.gameId, t.playerId, t.modelVersion] }),
@@ -175,6 +177,7 @@ export const currentPlayerProjections = pgView("current_player_projections", {
   actualPts: integer("actual_pts"),
   actualReb: integer("actual_reb"),
   actualAst: integer("actual_ast"),
+  injuryStatus: text("injury_status"),
 }).as(
   sql`select p.* from player_projections p join (select distinct on (game_id) game_id, model_version from player_projections order by game_id, (source = 'live') desc, generated_at desc) pick using (game_id, model_version)`,
 );

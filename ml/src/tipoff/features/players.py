@@ -26,10 +26,11 @@ import pandas as pd
 
 from tipoff.config import FEATURES_DIR, FIRST_SEASON, STAGED_DIR
 from tipoff.features.build import Tables
+from tipoff.features.injury import player_injury_features
 from tipoff.seasons import season_start_year
 
-# Bump whenever a player feature's definition changes.
-PLAYER_FEATURES_VERSION = 1
+# Bump whenever a player feature's definition changes. v2: the official injury report.
+PLAYER_FEATURES_VERSION = 2
 
 TARGETS = ["minutes", "pts", "reb", "ast"]
 BOX = ["minutes", "pts", "reb", "ast", "oreb", "dreb", "fga", "fta", "fg3a", "tov", "started",
@@ -55,7 +56,11 @@ RATE_FEATURES = [
     "opp_def_rating", "opp_pace", "team_pace", "opp_oreb_pct", "opp_dreb_pct", "opp_efg",
     "team_off_rating",
 ]  # fmt: skip
-FEATURE_COLUMNS = [*MINUTES_FEATURES, *RATE_FEATURES]
+# The injury report (features/injury.py): missing (NaN) where the team has no report, which
+# LightGBM handles natively; every row before 2019-20 is like that.
+INJURY_FEATURES = ["own_play_prob", "team_ir_out_min", "team_ir_out_max", "team_ir_back_min"]
+V1_FEATURE_COLUMNS = [*MINUTES_FEATURES, *RATE_FEATURES]
+FEATURE_COLUMNS = [*V1_FEATURE_COLUMNS, *INJURY_FEATURES]
 # The last-10 baseline the models must beat (raw averages over the last 10 appearances).
 BASELINE = {"minutes": "min_l10", "pts": "pts_l10", "reb": "reb_l10", "ast": "ast_l10"}
 
@@ -81,26 +86,56 @@ def _box_rows(player_games: pd.DataFrame, team_games: pd.DataFrame) -> pd.DataFr
     return pg
 
 
-def projection_candidates(day_games: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
+# Players listed with these statuses aren't projected (their chance of playing is small).
+NOT_PROJECTED = ("Out", "Doubtful")
+RETURN_LOOKBACK_GAMES = 10
+
+
+def projection_candidates(
+    day_games: pd.DataFrame, player_games: pd.DataFrame, injuries: pd.DataFrame | None = None
+) -> pd.DataFrame:
     """Players expected to play in scheduled games: those whose most recent regular-season
     appearance (before the games' date) was their team's previous game. ``player_games`` must hold
-    only games before that date. Returns game_id, game_date, team_id, player_id, player_name."""
+    only games before that date. Returns game_id, game_date, team_id, player_id, player_name.
+
+    With the day's injury report (one snapshot of the staged table): players listed Out or
+    Doubtful are dropped, and players listed as likely to play who appeared for the team in its
+    last ``RETURN_LOOKBACK_GAMES`` games but missed the previous one (back from an injury) are
+    added."""
     pg = player_games[(player_games["season_type"] == "regular") & (player_games["minutes"] > 0)]
-    last = (
-        pg.sort_values(["game_date", "game_id"])
-        .groupby("player_id")
-        .tail(1)[["player_id", "player_name", "team_id", "game_id"]]
-    )
+    order = pg.sort_values(["game_date", "game_id"])
+    last = order.groupby("player_id").tail(1)[["player_id", "player_name", "team_id", "game_id"]]
     team_games = pg[["game_id", "team_id", "game_date"]].drop_duplicates()
-    prev_game = (
-        team_games.sort_values(["game_date", "game_id"]).groupby("team_id").tail(1)
-        .set_index("team_id")["game_id"]
-    )  # fmt: skip
-    last = last[last["game_id"].to_numpy() == prev_game.reindex(last["team_id"]).to_numpy()]
+    team_games = team_games.sort_values(["game_date", "game_id"])
+    prev_game = team_games.groupby("team_id").tail(1).set_index("team_id")["game_id"]
+    regulars = last[last["game_id"].to_numpy() == prev_game.reindex(last["team_id"]).to_numpy()]
+
+    listed = pd.DataFrame(columns=["team_id", "player_id", "status"])
+    if injuries is not None and not injuries.empty:
+        days = pd.to_datetime(day_games["game_date"]).unique()
+        listed = injuries[pd.to_datetime(injuries["game_date"]).isin(days)]
+        listed = listed[listed["player_id"].notna() & listed["team_id"].notna()]
+        listed = listed[["team_id", "player_id", "status"]].astype(
+            {"team_id": "int64", "player_id": "int64"}
+        )
+        recent = team_games.groupby("team_id").tail(RETURN_LOOKBACK_GAMES)
+        apps = pg[pg["game_id"].isin(recent["game_id"])][["player_id", "team_id"]]
+        back = listed[~listed["status"].isin(NOT_PROJECTED)].merge(
+            apps.drop_duplicates(), on=["player_id", "team_id"]
+        )
+        # His latest appearance must be for this team (not traded away since).
+        back = back.merge(last[["player_id", "player_name", "team_id"]],
+                          on=["player_id", "team_id"])  # fmt: skip
+        regulars = pd.concat([regulars, back[["player_id", "player_name", "team_id"]]])
+        regulars = regulars.drop_duplicates(["player_id", "team_id"])
+        out = listed[listed["status"].isin(NOT_PROJECTED)][["player_id", "team_id"]]
+        regulars = regulars.merge(out.assign(drop=True), on=["player_id", "team_id"], how="left")
+        regulars = regulars[regulars["drop"].isna()]
+
     rows = []
     for g in day_games.itertuples():
         for team in (g.home_team_id, g.away_team_id):
-            for p in last[last["team_id"] == team].itertuples():
+            for p in regulars[regulars["team_id"] == team].itertuples():
                 rows.append((g.game_id, pd.Timestamp(g.game_date), team, p.player_id,
                              p.player_name))  # fmt: skip
     return pd.DataFrame(
@@ -263,6 +298,7 @@ def build_player_features(
     p_home = e["elo_prob_home"].to_numpy()
     out["team_elo_prob"] = np.where(df["is_home"], p_home, 1 - p_home)
     out["is_home_f"] = df["is_home"].astype(float)
+    out = out.join(player_injury_features(df, tables.injuries, tables.ir_players))
 
     res = df[["game_id", "season", "game_date", "player_id", "player_name", "team_id",
               "opp_team_id", "is_home", "played"]].copy()  # fmt: skip
@@ -305,11 +341,13 @@ def build_and_save_players(
     from tipoff.features.build import build_tables
     from tipoff.features.elo import EloParams
     from tipoff.features.schemas import PlayerFeatures
+    from tipoff.ingest.injury_report import load_staged
 
     staged = {n: pd.read_parquet(staged_dir / f"{n}.parquet")
               for n in ("games", "team_games", "player_games")}  # fmt: skip
     tables = build_tables(staged["games"], staged["team_games"], staged["player_games"],
-                          elo_params=EloParams.load())  # fmt: skip
+                          elo_params=EloParams.load(),
+                          injuries=load_staged(staged_dir, "am"))  # fmt: skip
     df = build_player_features(tables, staged["team_games"], staged["player_games"])
     df = PlayerFeatures.validate(df, lazy=True)
     digest = player_features_hash(df)

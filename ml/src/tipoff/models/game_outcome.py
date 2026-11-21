@@ -134,11 +134,17 @@ class GameModel:
     gbm: lgb.LGBMClassifier | None = None
     anchor_lambda: float = 1000.0  # the anchored model's penalty on its adjustments
     anchor: Anchor | None = None
+    anchor_features: list[str] | None = None  # None: ANCHOR_FEATURES
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        state.setdefault("anchor_features", None)  # models pickled before the field existed
+        self.__dict__.update(state)
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> GameModel:
         X = X[self.features]
         if self.kind == "anchored":
-            self.anchor = Anchor(list(ANCHOR_FEATURES), self.anchor_lambda).fit(X, y)
+            feats = self.anchor_features or ANCHOR_FEATURES
+            self.anchor = Anchor(list(feats), self.anchor_lambda).fit(X, y)
             return self
         if self.kind in ("logreg", "ensemble"):
             self.lr = logreg(self.logreg_c).fit(X, y)

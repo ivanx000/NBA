@@ -138,6 +138,17 @@
       ]
     },
     {
+      "id": "injury_report",
+      "label": "Injury report",
+      "template": "{opponent} have more players listed out on the injury report",
+      "features": [
+        "diff_injury_adj",
+        "diff_listed_out_min",
+        "home_ir_filed",
+        "away_ir_filed"
+      ]
+    },
+    {
       "id": "season_phase",
       "label": "Point in the season",
       "template": "The point in the season favors {team}",

@@ -112,7 +112,7 @@ export default function Page() {
       >
         <p>
           The model starts from Elo, a simple rating that rises when a team wins and falls when it loses, and lets {ADJUSTED_FEATURE_COUNT} of the numbers nudge it toward one
-          team or the other: rest, travel, who&apos;s missing, recent form. It learned how hard each one nudges from{" "}
+          team or the other: rest, travel, who&apos;s missing or on the injury report, recent form. It learned how hard each one nudges from{" "}
           {LEARNED_GAMES.toLocaleString("en-US")} past games, and the nudges are kept small, so one noisy number
           can&apos;t pull it far from Elo. Fancier models were tried; this plain one beat Elo in each of the six
           seasons it was checked on, and it&apos;s easy to explain.
@@ -137,7 +137,8 @@ export default function Page() {
         visual={<Scorecard />}
       >
         <p>
-          Every morning a scheduled job makes the day&apos;s predictions and saves them. Once a game tips off, its
+          Every morning a scheduled job makes the day&apos;s predictions and saves them, and updates them in the evening
+          with the latest injury report. Once a game tips off, its
           prediction can&apos;t change, and when it ends it&apos;s graded against the final score.
         </p>
         <p>

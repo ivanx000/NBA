@@ -1,17 +1,20 @@
 Every model has blind spots. These are this one's.
 
-## It's not better than Elo (yet)
+## It doesn't pick more winners than Elo
 
-On the held-out 2025-26 season, a simple Elo rating was a little more accurate (69.2% against
-67.1%). The difference isn't statistically meaningful, but it means the extra features haven't
-proven their worth over a strong simple baseline. The [performance page](/performance) keeps
-score on live games.
+On the held-out 2025-26 season the model's win chances beat a simple Elo rating clearly (log loss
+0.587 against 0.598, an edge that holds up statistically), but Elo still picked slightly more
+winners (69.2% against 68.1%). The model is built to get the chances right, not to win a pick'em.
+The [performance page](/performance) keeps score on live games.
 
-## It doesn't know who's injured
+## It knows the injury report, not the final word
 
-There's no injury report in the data. A player counts as out only if he missed the team's previous
-game. A star ruled out an hour before tip-off, or one returning tonight, isn't known. This is the
-single biggest gap.
+The model reads the league's official injury report as of 9 AM Eastern, and again at 5:45 PM for
+games that haven't started. A player ruled out after that, a late scratch at warm-ups, or a minutes
+limit isn't known. In the morning about 1 team in 5 hasn't filed yet (mostly the second night of a
+back-to-back), and for those teams only "missed the last game" counts. "Questionable" is a coin flip
+the model treats as one: about half of those players play. Reports only go back to 2019-20, so the
+model learned what they're worth from five seasons.
 
 ## Lineups and minutes are invisible
 

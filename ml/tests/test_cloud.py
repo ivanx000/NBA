@@ -51,3 +51,37 @@ def test_cloud_player_steps_never_import_stats_nba():
 
     for module in (features, predict, publish, retrain):
         assert "nba_stats" not in inspect.getsource(module), module.__name__
+
+
+def test_injury_report_path_never_touches_stats_nba():
+    """The cloud job fetches the injury report itself: those modules must not reach
+    stats.nba.com (they use the ak-static.cms.nba.com PDF host only)."""
+    import inspect
+
+    from tipoff.features import injury
+    from tipoff.ingest import injury_report
+
+    for module in (injury, injury_report):
+        src = inspect.getsource(module)
+        assert "nba_stats" not in src and "stats.nba.com" not in src.replace(
+            "not stats.nba.com", ""
+        ), module.__name__
+    assert injury_report.BASE_URL.startswith("https://ak-static.cms.nba.com/")
+
+
+def test_refresh_waits_for_the_evening_snapshot(monkeypatch, capsys):
+    from datetime import date, datetime
+
+    from tipoff import cli
+    from tipoff.ingest import injury_report
+
+    class Early(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 11, 20, 16, 0, tzinfo=tz)
+
+    monkeypatch.setattr("datetime.datetime", Early)
+    monkeypatch.setattr(cli, "_cloud_update", lambda engine: (_ for _ in ()).throw(AssertionError))
+    cli._refresh(date(2026, 11, 20), cli.DbTarget.dev, None, cloud=True)
+    assert "not yet" in capsys.readouterr().out
+    assert injury_report.SNAPSHOTS["pm"].hour == 17

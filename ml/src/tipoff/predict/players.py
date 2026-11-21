@@ -38,6 +38,24 @@ def top_players(rows: pd.DataFrame, pred: pd.DataFrame, n: int = TOP_N) -> pd.Da
     return out.groupby(["game_id", "team_id"], sort=False).head(n).reset_index(drop=True)
 
 
+def injury_status(rows: pd.DataFrame, injuries: pd.DataFrame | None, day: date) -> pd.Series:
+    """Each row's status on ``day``'s injury report (e.g. "Questionable"), or None if unlisted."""
+    none = pd.Series([None] * len(rows), index=rows.index, dtype=object)
+    if injuries is None or injuries.empty:
+        return none
+    inj = injuries[(pd.to_datetime(injuries["game_date"]) == pd.Timestamp(day))
+                   & injuries["player_id"].notna() & injuries["team_id"].notna()]  # fmt: skip
+    if inj.empty:
+        return none
+    inj = inj.astype({"team_id": "int64", "player_id": "int64"})
+    status = inj.drop_duplicates(["team_id", "player_id"], keep="last").set_index(
+        ["team_id", "player_id"])["status"]  # fmt: skip
+    keys = pd.MultiIndex.from_arrays([rows["team_id"].astype("int64"),
+                                      rows["player_id"].astype("int64")])  # fmt: skip
+    vals = status.reindex(keys).to_numpy(dtype=object)
+    return pd.Series([None if pd.isna(v) else str(v) for v in vals], index=rows.index)
+
+
 def load_player_model(model_source: str = "mlflow", engine=None) -> tuple[PlayerModel, dict]:
     """The champion PlayerModel and its provenance, from MLflow (local) or pipeline_state."""
     if model_source == "db":
@@ -77,8 +95,12 @@ def _rows_for_publish(top: pd.DataFrame, sched: pd.DataFrame, info: dict[str, An
     })  # fmt: skip
 
 
-def project_date(day: date, model_source: str = "mlflow", engine=None) -> pd.DataFrame:
-    """Projections for the players in ``day``'s unplayed regular-season games."""
+def project_date(
+    day: date, model_source: str = "mlflow", engine=None, injuries: pd.DataFrame | None = None
+) -> pd.DataFrame:
+    """Projections for the players in ``day``'s unplayed regular-season games. With the injury
+    report (``injuries``, as for ``predict_date``), players listed Out or Doubtful aren't
+    projected, players back from an injury are, and each row carries the player's status."""
     from tipoff.predict.run import scheduled_games
 
     sched = scheduled_games(day)
@@ -91,17 +113,19 @@ def project_date(day: date, model_source: str = "mlflow", engine=None) -> pd.Dat
     if sched.empty:
         return pd.DataFrame()
     before = staged["player_games"][staged["player_games"]["game_date"] < pd.Timestamp(day)]
-    cand = projection_candidates(sched, before)
+    cand = projection_candidates(sched, before, injuries)
     tables = build_tables(staged["games"], staged["team_games"], staged["player_games"],
-                          upcoming=sched[UPCOMING_COLS], elo_params=EloParams.load())  # fmt: skip
+                          upcoming=sched[UPCOMING_COLS], elo_params=EloParams.load(),
+                          injuries=injuries)  # fmt: skip
     feats = build_player_features(tables, staged["team_games"], staged["player_games"], cand)
     digest = player_features_hash(feats)
     rows = feats[(feats["game_date"] == pd.Timestamp(day)) & ~feats["played"] & feats["in_scope"]]
     if rows.empty:
         return pd.DataFrame()
     model, info = load_player_model(model_source, engine)
-    top = top_players(rows, model.predict(rows[FEATURE_COLUMNS]))
+    top = top_players(rows, model.predict(rows))
     out = _rows_for_publish(top, sched, info, digest, "live")
+    out["injury_status"] = injury_status(out, injuries, day)
     (PREDICTIONS_DIR / "players").mkdir(parents=True, exist_ok=True)
     out.to_parquet(PREDICTIONS_DIR / "players" / f"{day.isoformat()}.parquet", index=False)
     return out

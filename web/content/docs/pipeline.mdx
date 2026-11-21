@@ -2,11 +2,12 @@ Predictions are made every morning, published before tip-off, and graded when ga
 anyone at a keyboard.
 
 <Diagram
-  label="The daily jobs: schedule sync early morning, prediction hourly until today's games are published, a freshness check, and results sync through the night."
+  label="The daily jobs: schedule sync early morning, prediction hourly until today's games are published, a freshness check, an evening refresh with the latest injury report, and results sync through the night."
   chart={`flowchart LR
   A["06:07 ET<br/>schedule-sync"] --> B["09:07–18:07 hourly<br/>daily: predict + publish"]
   B --> C["10:37<br/>freshness-check"]
-  C --> D["18:17–02:17 hourly<br/>results-sync"]
+  C --> E["~17:52<br/>daily --refresh"]
+  E --> D["18:17–02:17 hourly<br/>results-sync"]
   D -. "next morning" .-> A`}
 />
 
@@ -15,7 +16,8 @@ anyone at a keyboard.
 | Time (ET) | Job | What it does |
 | --- | --- | --- |
 | ~06:07 | `schedule-sync` | Updates the season's games (dates, times, final scores) from the cdn schedule |
-| Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion models, adds box scores for newly finished games, builds features, predicts today and projects its players, publishes, then fills in yesterday's real player lines. Stops once today is published |
+| Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion models, adds box scores for newly finished games, fetches the official injury report as of 9 AM, builds features, predicts today and projects its players, publishes, then fills in yesterday's real player lines. Stops once today is published. A missing injury report never stops it |
+| ~17:52 | `daily --refresh` | Fetches the 5:45 PM injury report, re-predicts today's games and players, and re-publishes the games that haven't started. Once a day |
 | ~10:37 | `freshness-check` | Fails (and emails) if any of today's games lacks a live prediction |
 | Hourly ~18:17–02:17 | `results-sync` | Live status and final scores, which grade the predictions |
 
@@ -25,7 +27,7 @@ planned (Phase 10); until then the champion is refit by hand.
 
 ## State between runs
 
-The cloud job has no disk, so the staged history (about 5 MB of parquet) and the two champion models
+The cloud job has no disk, so the staged history (about 5 MB of parquet, injury reports included) and the two champion models
 (game and player) live in a `pipeline_state` table. Each run pulls them (checking a SHA-256), adds the new games, and pushes
 the history back.
 

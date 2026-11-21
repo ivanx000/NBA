@@ -2,64 +2,64 @@
   "kind": "anchored",
   "calibration": "platt",
   "logreg_c": 0.1,
-  "ensemble_weight_logreg": 0.8,
+  "ensemble_weight_logreg": 0.9,
   "lgbm_params": {
-    "n_estimators": 200,
-    "learning_rate": 0.06486962989791227,
-    "num_leaves": 7,
-    "min_child_samples": 53,
-    "subsample": 0.710963749392852,
-    "colsample_bytree": 0.6208575181203039,
-    "reg_alpha": 0.017181780694278052,
-    "reg_lambda": 0.006431843731066128,
+    "n_estimators": 300,
+    "learning_rate": 0.04029825121223191,
+    "num_leaves": 5,
+    "min_child_samples": 20,
+    "subsample": 0.6461095035762252,
+    "colsample_bytree": 0.4259040082236593,
+    "reg_alpha": 0.009043721353583771,
+    "reg_lambda": 1.5509622360084223,
     "subsample_freq": 1
   },
   "anchor_lambda": 100.0,
   "selected_on": "rolling 2019-20..2024-25",
   "rolling_log_loss": {
     "elo": 0.62873,
-    "logreg": 0.62279,
-    "lgbm": 0.62968,
-    "ensemble": 0.62268,
-    "anchored": 0.62118
+    "logreg": 0.61951,
+    "lgbm": 0.6234,
+    "ensemble": 0.61927,
+    "anchored": 0.6186
   },
-  "valid_log_loss": 0.59521,
-  "features_hash": "a7b0980c4623da92",
+  "valid_log_loss": 0.59005,
+  "features_hash": "af41e62933857712",
   "candidates": {
     "logreg": {
       "calibration": "platt",
-      "valid_log_loss": 0.59345,
+      "valid_log_loss": 0.58783,
       "calibration_log_loss": {
-        "none": 0.59397,
-        "platt": 0.59345,
-        "isotonic": 0.5983
+        "none": 0.58806,
+        "platt": 0.58783,
+        "isotonic": 0.59642
       }
     },
     "lgbm": {
       "calibration": "platt",
-      "valid_log_loss": 0.59814,
+      "valid_log_loss": 0.5947,
       "calibration_log_loss": {
-        "none": 0.5983,
-        "platt": 0.59814,
-        "isotonic": 0.60702
+        "none": 0.59487,
+        "platt": 0.5947,
+        "isotonic": 0.59884
       }
     },
     "ensemble": {
       "calibration": "platt",
-      "valid_log_loss": 0.59306,
+      "valid_log_loss": 0.58789,
       "calibration_log_loss": {
-        "none": 0.59361,
-        "platt": 0.59306,
-        "isotonic": 0.60032
+        "none": 0.5882,
+        "platt": 0.58789,
+        "isotonic": 0.59919
       }
     },
     "anchored": {
       "calibration": "platt",
-      "valid_log_loss": 0.59521,
+      "valid_log_loss": 0.59005,
       "calibration_log_loss": {
-        "none": 0.5956,
-        "platt": 0.59521,
-        "isotonic": 0.5977
+        "none": 0.59051,
+        "platt": 0.59005,
+        "isotonic": 0.59608
       }
     }
   }

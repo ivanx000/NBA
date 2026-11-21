@@ -88,3 +88,15 @@ def test_results_fill_actual_lines_and_mark_did_not_play(engine):  # noqa: F811
     got = {pid: (m, p) for pid, m, p in _rows(engine, sql)}
     assert got == {1: (33.0, 27), 2: (0.0, None)}
     assert record_results(engine, box, staged) == 0  # nothing left to fill
+
+
+def test_injury_status_reaches_the_view(engine):  # noqa: F811
+    later = NOW + timedelta(hours=6)
+    proj = _proj("0022600905", later, [1, 2])
+    proj["injury_status"] = ["Questionable", None]
+    publish_projections(engine, proj)
+    rows = _rows(engine, "select player_id, injury_status from current_player_projections "
+                         "where game_id = '0022600905' order by player_id")  # fmt: skip
+    assert rows == [(1, "Questionable"), (2, None)]
+    # Older frames without the column still publish.
+    publish_projections(engine, _proj("0022600906", later, [3]))

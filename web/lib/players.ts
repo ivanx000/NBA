@@ -21,6 +21,8 @@ export interface PlayerLine {
   range: Record<Stat, [number, number]>;
   /** The real line once final; minutes 0 means he didn't play (stats null). */
   actual: { minutes: number; pts: number | null; reb: number | null; ast: number | null } | null;
+  /** His status on the official injury report when projected ("Questionable", ...), or null. */
+  status?: string | null;
 }
 
 /** Each side's projected players, most projected minutes first, and where they came from. */

@@ -307,6 +307,7 @@ def run_retrain(engine: Engine, pull: bool = True, dry_run: bool = False,
     from tipoff.features.build import build_features, build_tables
     from tipoff.features.elo import EloParams
     from tipoff.features.players import build_player_features
+    from tipoff.ingest.injury_report import load_staged
     from tipoff.models.final import load_config as load_game_config
     from tipoff.models.players import load_config as load_player_config
     from tipoff.state import (
@@ -325,9 +326,10 @@ def run_retrain(engine: Engine, pull: bool = True, dry_run: bool = False,
             pull_staged(engine, staged_dir)
         staged = {n: pd.read_parquet(staged_dir / f"{n}.parquet")
                   for n in ("games", "team_games", "player_games")}  # fmt: skip
+        injuries = load_staged(staged_dir, "am")  # the morning snapshots, as in training
     params = EloParams.load()
     tables = build_tables(staged["games"], staged["team_games"], staged["player_games"],
-                          elo_params=params)  # fmt: skip
+                          elo_params=params, injuries=injuries)  # fmt: skip
     games = build_features(staged["games"], staged["team_games"], staged["player_games"],
                            elo_params=params, tables=tables)  # fmt: skip
     latest = games.loc[games["played"], "game_date"].max()

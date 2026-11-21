@@ -1,0 +1,17 @@
+{
+  "play_probs": {
+    "Out": 0.017,
+    "Doubtful": 0.074,
+    "Questionable": 0.509,
+    "Probable": 0.87,
+    "Available": 0.74
+  },
+  "counts": {
+    "Out": 21220,
+    "Doubtful": 931,
+    "Questionable": 6588,
+    "Probable": 2614,
+    "Available": 431
+  },
+  "fit_on": "morning reports, 2019-20..2023-24"
+}

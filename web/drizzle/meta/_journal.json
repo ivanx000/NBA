@@ -29,6 +29,13 @@
       "when": 1795221677502,
       "tag": "0003_box_score_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795276184252,
+      "tag": "0004_injury_status",
+      "breakpoints": true
     }
   ]
 }

@@ -46,5 +46,10 @@ history and today.
 
 ![Home win rate by season, 2015-16 onward: around 58–59% before 2019, lower since.](/docs/figures/home_win_rate_by_season.webp)
 
-- **Injuries:** there's no injury report in the data. "Who's out" is inferred from who didn't play
-  in the team's previous game (see [Limitations](/docs/limitations)).
+- **Injuries:** the league's official injury report (a PDF the NBA publishes through the day, every
+  15 minutes this season) gives each player's status for tonight: Out, Doubtful, Questionable,
+  Probable or Available. Reports exist from 2019-20 on. The model uses the one that was current at
+  9 AM Eastern on game day, going by when the file was actually published rather than the time in
+  its name (the hourly "9 AM" file went up at 9:30). Names are matched to players by team; the few
+  that don't match are almost all two-way players and long-term injuries with no recent minutes.
+  Before 2019-20, "who's out" is only inferred from who didn't play in the team's previous game.

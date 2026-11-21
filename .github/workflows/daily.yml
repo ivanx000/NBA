@@ -3,13 +3,20 @@ name: daily
 # The daily prediction job, in the cloud: pull staged history + champion from Postgres, add newly
 # finished games from cdn.nba.com box scores, predict today's games (ET), publish to prod, push the
 # history back. Never calls stats.nba.com. Each scheduled run exits early once today is published.
+# The morning run uses the official injury report as of 09:00 ET; the evening refresh re-predicts
+# and re-publishes the games that haven't started with the 17:45 ET report (once a day).
 on:
   schedule:
     - cron: "7 14-23 * * *" # hourly ~09:07-18:07 ET (EST) / 10:07-19:07 ET (EDT)
+    - cron: "52 21,22 * * *" # evening refresh: the first run after 17:45 ET does it, any later one exits
   workflow_dispatch:
     inputs:
       force:
         description: "Run every step even if today's games are already published"
+        type: boolean
+        default: false
+      refresh:
+        description: "Run the evening refresh (17:45 ET injury report) instead"
         type: boolean
         default: false
 
@@ -45,7 +52,9 @@ jobs:
       - name: Daily job (cloud mode)
         if: steps.gate.outputs.skip != 'true'
         run: |
-          if [ "${{ inputs.force }}" = "true" ]; then
+          if [ "${{ github.event.schedule }}" = "52 21,22 * * *" ] || [ "${{ inputs.refresh }}" = "true" ]; then
+            uv run tipoff daily --cloud --target prod --refresh
+          elif [ "${{ inputs.force }}" = "true" ]; then
             uv run tipoff daily --cloud --target prod
           else
             uv run tipoff daily --cloud --target prod --if-needed

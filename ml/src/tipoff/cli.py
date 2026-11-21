@@ -39,6 +39,7 @@ def main(
 class Source(StrEnum):
     stats = "stats"
     cdn = "cdn"
+    injury = "injury"
     all = "all"
 
 
@@ -48,7 +49,11 @@ def ingest(
         str, typer.Option(help="Season range, e.g. 2014-15:2026-27.")
     ] = f"{WARMUP_SEASON}:{CURRENT_SEASON}",
     source: Annotated[
-        Source, typer.Option(help="stats = stats.nba.com (local only); cdn = cdn.nba.com.")
+        Source,
+        typer.Option(
+            help="stats = stats.nba.com (local only); cdn = cdn.nba.com; injury = the official "
+            "injury report PDFs (morning and evening snapshots since 2019-20)."
+        ),
     ] = Source.all,
     force: Annotated[bool, typer.Option(help="Re-fetch even if cached.")] = False,
     dry_run: Annotated[bool, typer.Option(help="Show what would be fetched.")] = False,
@@ -92,15 +97,29 @@ def ingest(
         for name, n in stage_all().items():
             typer.echo(f"staged: {name} rows={n}")
 
+    if source in (Source.injury, Source.all) and not dry_run:
+        from tipoff.config import STAGED_DIR
+        from tipoff.ingest.injury_report import ingest_staged
+
+        res = ingest_staged(STAGED_DIR, progress=verbose)
+        typer.echo(f"injury: {res['snapshots']} snapshots staged ({res['with_report']} with a "
+                   f"report, {res['rows']} rows)")  # fmt: skip
+
 
 @app.command()
 def features(
     tune_elo: Annotated[
         bool, typer.Option(help="Re-tune Elo parameters on the training seasons first.")
     ] = False,
+    fit_injury_probs: Annotated[
+        bool,
+        typer.Option(help="Re-measure each injury status's chance of playing (2019-20..2023-24)."),
+    ] = False,
 ) -> None:
     """Build the leakage-safe feature tables: games (game_features.parquet) and players
     (player_features.parquet), in data/features/."""
+    import json
+
     import pandas as pd
 
     from tipoff.config import ELO_PARAMS_PATH, STAGED_DIR
@@ -114,6 +133,20 @@ def features(
         params, loss = elo.tune(games)
         params.save(train_log_loss=round(loss, 5), tuned_on="2015-16..2023-24 regular season")
         typer.echo(f"elo: tuned {params} (train log loss {loss:.4f}) -> {ELO_PARAMS_PATH.name}")
+    from tipoff.features.injury import PLAY_PROBS_PATH, fit_play_probs
+    from tipoff.ingest.injury_report import load_staged
+
+    if fit_injury_probs or not PLAY_PROBS_PATH.exists():
+        inj = load_staged(STAGED_DIR, "am")
+        if inj is None:
+            raise typer.BadParameter(
+                "no staged injury reports; run `tipoff ingest --source injury`"
+            )
+        fitted = fit_play_probs(inj, pd.read_parquet(STAGED_DIR / "player_games.parquet"))
+        fitted["fit_on"] = "morning reports, 2019-20..2023-24"
+        PLAY_PROBS_PATH.write_text(json.dumps(fitted, indent=2) + "\n")
+        typer.echo(f"injury: chance of playing by status {fitted['play_probs']} "
+                   f"-> {PLAY_PROBS_PATH.name}")  # fmt: skip
     df, digest = build_and_save()
     typer.echo(f"features: {len(df):,} games, hash {digest}")
     players, p_digest = build_and_save_players()
@@ -256,6 +289,35 @@ class ModelSource(StrEnum):
     db = "db"
 
 
+class Snapshot(StrEnum):
+    am = "am"
+    pm = "pm"
+
+
+def _injuries_for(day: date, snapshot: Snapshot):
+    """The staged injury report snapshots plus ``day``'s; (None, False) if the report can't be
+    had (predictions go out without it rather than not at all). The flag says whether ``day``'s
+    snapshot was newly staged."""
+    from tipoff.config import STAGED_DIR
+    from tipoff.ingest.injury_report import day_snapshot
+
+    try:
+        inj, staged = day_snapshot(STAGED_DIR, day, snapshot.value)
+    except Exception as e:
+        typer.echo(f"injury: report unavailable ({type(e).__name__}: {e}); predicting without it",
+                   err=True)  # fmt: skip
+        return None, False
+    if inj is None:
+        typer.echo("injury: no staged reports; predicting without them", err=True)
+        return None, staged
+    import pandas as pd
+
+    today = inj[inj["game_date"] == pd.Timestamp(day)]
+    typer.echo(f"injury: {snapshot.value} report for {day}: {len(today)} rows"
+               f"{' (newly staged)' if staged else ''}")  # fmt: skip
+    return inj, staged
+
+
 @app.command()
 def predict(
     date_: DateOpt = "today",
@@ -266,25 +328,36 @@ def predict(
     players: Annotated[
         bool, typer.Option("--players/--no-players", help="Also project player lines.")
     ] = True,
-) -> None:
+    snapshot: Annotated[
+        Snapshot,
+        typer.Option(help="Injury report as of 09:00 ET (am) or 17:45 ET (pm) on game day."),
+    ] = Snapshot.am,
+    injury: Annotated[
+        bool, typer.Option("--injury/--no-injury", help="Use the official injury report.")
+    ] = True,
+) -> bool:
     """Predict a date's scheduled games with the champion, and project the players' lines
-    with the player champion (writes data/predictions/live and data/predictions/players)."""
+    with the player champion (writes data/predictions/live and data/predictions/players).
+    Returns whether the day's injury report snapshot was newly staged."""
     from tipoff.db import get_engine
     from tipoff.predict.run import predict_date
 
     day = _day(date_)
     engine = get_engine(target.value) if model_source is ModelSource.db else None
-    preds = predict_date(day, model_source=model_source.value, engine=engine)
+    inj, staged = _injuries_for(day, snapshot) if injury else (None, False)
+    preds = predict_date(day, model_source=model_source.value, engine=engine, injuries=inj,
+                         snapshot=snapshot.value)  # fmt: skip
     if preds.empty:
         typer.echo(f"predict: no unplayed regular-season games on {day}")
-        return
+        return staged
     for r in preds.itertuples(index=False):
         typer.echo(f"{r.game_id}  P(home) {r.home_win_prob:.3f}  (Elo {r.elo_home_win_prob:.3f})")
     if players:
-        _project_players(day, model_source, engine)
+        _project_players(day, model_source, engine, inj)
+    return staged
 
 
-def _project_players(day: date, model_source: ModelSource, engine) -> None:
+def _project_players(day: date, model_source: ModelSource, engine, injuries=None) -> None:
     """Project player lines; a missing player champion is reported, not fatal (games come first)."""
     from mlflow.exceptions import MlflowException
 
@@ -292,7 +365,8 @@ def _project_players(day: date, model_source: ModelSource, engine) -> None:
     from tipoff.state import StateError
 
     try:
-        proj = project_date(day, model_source=model_source.value, engine=engine)
+        proj = project_date(day, model_source=model_source.value, engine=engine,
+                            injuries=injuries)  # fmt: skip
     except (StateError, MlflowException) as e:
         typer.echo(f"players: no player champion available ({e}); skipping projections", err=True)
         return
@@ -448,6 +522,13 @@ def daily(
             "Never calls stats.nba.com."
         ),
     ] = False,
+    refresh: Annotated[
+        bool,
+        typer.Option(
+            help="Evening run: once the 17:45 ET injury report snapshot is due, re-predict and "
+            "re-publish today's games that haven't started (once a day)."
+        ),
+    ] = False,
 ) -> None:
     """The daily job: new results -> stage -> sync -> predict and project today (ET) ->
     publish -> fill projected players' actual lines -> box scores for the advanced stats."""
@@ -456,6 +537,9 @@ def daily(
 
     day = today_et()
     engine = get_engine(target.value)
+    if refresh:
+        _refresh(day, target, engine, cloud)
+        return
     if if_needed and not missing_predictions(engine, day, upcoming_only=True):
         typer.echo(f"daily: nothing left to publish for {day} on {target.value}")
         return
@@ -466,7 +550,10 @@ def daily(
                dry_run=False, stage=True, verbose=False)  # fmt: skip
     sync(target=target)
     source = ModelSource.db if cloud else ModelSource.mlflow
-    predict(date_=day.isoformat(), model_source=source, target=target, players=True)
+    staged = predict(date_=day.isoformat(), model_source=source, target=target, players=True,
+                     snapshot=Snapshot.am, injury=True)  # fmt: skip
+    if cloud and staged:
+        _push_injuries(engine)
     publish(date_=day.isoformat(), target=target)
     # Player steps come after the game predictions are out, and never stop the job.
     try:
@@ -480,6 +567,46 @@ def daily(
         typer.echo(f"stats: failed ({type(e).__name__}); game predictions are unaffected",
                    err=True)  # fmt: skip
     freshness_check(date_=day.isoformat(), target=target, upcoming_only=True)
+
+
+def _push_injuries(engine) -> None:
+    from tipoff.state import push_staged
+
+    push_staged(engine)
+    typer.echo("state: staged pushed (with the new injury report snapshot)")
+
+
+def _refresh(day: date, target: DbTarget, engine, cloud: bool) -> None:
+    """The evening re-publish with the 17:45 ET injury report (see ``daily --refresh``)."""
+    from datetime import datetime
+
+    from tipoff.config import STAGED_DIR
+    from tipoff.ingest.injury_report import ET, SNAPSHOTS, SNAPSHOTS_FILE
+
+    now_et = datetime.now(ET)
+    if now_et.time() < SNAPSHOTS["pm"]:
+        typer.echo(f"refresh: the evening snapshot is due at {SNAPSHOTS['pm']} ET; not yet")
+        return
+    if cloud:
+        _cloud_update(engine)
+    snaps_path = STAGED_DIR / SNAPSHOTS_FILE
+    if snaps_path.exists():
+        import pandas as pd
+
+        snaps = pd.read_parquet(snaps_path)
+        if ((snaps["game_date"] == pd.Timestamp(day)) & (snaps["snapshot"] == "pm")).any():
+            typer.echo(f"refresh: {day} already refreshed")
+            return
+    sync(target=target)
+    source = ModelSource.db if cloud else ModelSource.mlflow
+    staged = predict(date_=day.isoformat(), model_source=source, target=target, players=True,
+                     snapshot=Snapshot.pm, injury=True)  # fmt: skip
+    if not staged:
+        typer.echo("refresh: no evening injury report snapshot; nothing re-published")
+        return
+    if cloud:
+        _push_injuries(engine)
+    publish(date_=day.isoformat(), target=target)
 
 
 def _cloud_update(engine) -> None:
@@ -549,6 +676,7 @@ app.add_typer(state_app, name="state")
 
 class StateWhat(StrEnum):
     staged = "staged"
+    injuries = "injuries"
     champion = "champion"
     player_champion = "player-champion"
     all = "all"
@@ -566,6 +694,12 @@ def state_push(
     engine = get_engine(target.value)
     if what in (StateWhat.staged, StateWhat.all):
         typer.echo(f"state: staged pushed ({push_staged(engine)[:12]}) to {target.value}")
+    if what is StateWhat.injuries:
+        from tipoff.state import push_injuries
+
+        meta = push_injuries(engine)
+        typer.echo(f"state: injury report tables added to {target.value}'s staged history "
+                   f"(through {meta.get('through')})")  # fmt: skip
     if what in (StateWhat.champion, StateWhat.all):
         from tipoff.models.final import load_champion
         from tipoff.predict.run import champion_info
