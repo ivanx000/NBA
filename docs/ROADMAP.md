@@ -263,12 +263,14 @@ held-out seasons its edge over Elo is small and it loses in three of them.
 - [x] Model selection on rolling validation (2019-20..2024-25) instead of one season
 - [x] Champion refit (`tipoff-game` v3, local registry) and 2025-26 walk-forward
 - [x] Deploy: code pushed (`f74dedb`, CI and Vercel green), then the v3 champion pushed to prod state (`game-v3`); the cloud job needs `features/lineup.py` before the v3 model, so keep that order
-- [ ] The one-time re-test on 2025-26 for the new major version (`--force-retest`), with the user's OK
+- [x] The one-time re-test on 2025-26 for the new major version (`--force-retest`, approved by the user): v3 0.5952 vs Elo 0.5978 (CI −0.0104..+0.0051); v1's report kept as `test_2025-26_v1.*`
+- [x] Backfill with v3 to prod (`game-v3-wf`, 1,456 games: all of 2025-26 and this season's games before live predictions began); live v2 picks are untouched (live beats backfill in `current_game_predictions`)
 - [ ] Later: official injury reports (worth up to about 0.004 more log loss)
 
 Notes:
 - Rolling validation (2019-20..2024-25), pooled log loss: Elo 0.6287, LogReg 0.6228, LightGBM 0.6297, ensemble 0.6227, Elo-anchored (λ = 100) 0.6212, better than Elo in all 6 seasons: champion v3 with Platt. 2025-26 walk-forward: v3 0.5950 vs Elo 0.5979 (v2: 0.6024); accuracy 67.9% vs Elo 69.0%.
 - Adding lineup strength also lifted the plain logistic regression from −0.0030 to −0.0059 vs Elo: it's the feature, not just the anchoring.
+- This season so far (226 graded games: 189 v3 backfill, 37 live v2): log loss 0.6048 vs Elo 0.6065, but accuracy 64.2% vs 69.5%; the log-loss gap's 95% CI is −0.021..+0.016. Many close calls landed on the wrong side; worth watching as live v3 games accumulate.
 - The study scripts in `ml/notebooks/elo_gap/` have relaxed ruff rules (math-style names); nothing imports them.
 
 ## Later ideas

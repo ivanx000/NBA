@@ -63,10 +63,29 @@ Each month predicted by the champion's setup refit on every game before it, as i
 
 v3 beats Elo on log loss, Brier score and AUC that season; Elo still picks a few more winners.
 
-## Test season (2025-26), scored once (model v1)
+## Test season (2025-26), model v3
 
-The one-time test of the first model. All models were refit on 2015-16 to 2024-25 (11,979 games)
-and scored on the 1,230 games of 2025-26.
+The rules allow one re-test of the held-out season for a new major model version, and v3 used it
+(Nov 2026), after it was chosen and deployed. All models were refit on 2015-16 to 2024-25 (11,979
+games) and scored on the 1,230 games of 2025-26.
+
+| Model | Log loss | Brier | Accuracy | AUC |
+| --- | --- | --- | --- | --- |
+| Home team | 0.6874 | 0.2472 | 55.5% | 0.500 |
+| Elo | 0.5978 | 0.2054 | 69.2% | 0.738 |
+| Logistic regression + Platt | 0.5987 | 0.2060 | 68.2% | 0.736 |
+| LightGBM + Platt | 0.6059 | 0.2092 | 67.8% | 0.726 |
+| Ensemble + Platt | 0.5990 | 0.2061 | 68.2% | 0.736 |
+| **Elo-anchored + Platt (v3)** | **0.5952** | **0.2047** | 68.0% | **0.741** |
+
+v3 beats Elo on log loss, Brier score and AUC; Elo still picks about one more winner in a hundred.
+The log-loss gap is −0.0026 with a paired-bootstrap 95% interval of −0.010 to +0.005: in the right
+direction, but one season can't settle it on its own. The six earlier seasons, where v3 beat Elo
+every time, carry more weight.
+
+## Test season (2025-26), model v1
+
+The one-time test of the first model, kept for the record (`ml/reports/test_2025-26_v1.md`).
 
 | Model | Log loss | Brier | Accuracy | AUC |
 | --- | --- | --- | --- | --- |
@@ -78,7 +97,7 @@ and scored on the 1,230 games of 2025-26.
 
 ## Reading it honestly
 
-On that test, plain Elo edged out the first model (a gap of +0.004, not statistically meaningful).
+On its test, plain Elo edged out the first model (a gap of +0.004, not statistically meaningful).
 Rather than swap in Elo because of test numbers, which would turn the test season into a tuning
 set, the models were studied on six earlier seasons. The first model's edge over Elo there was
 small and lost in three of the six. Two changes fixed it: anchoring on Elo, and a lineup-strength

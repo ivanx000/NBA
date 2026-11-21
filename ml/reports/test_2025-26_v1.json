@@ -1,0 +1,50 @@
+{
+  "ran_at": "2026-11-14T22:22:55+00:00",
+  "test_season": "2025-26",
+  "n_games": 1230,
+  "champion": "LogReg",
+  "features_hash": "a2aab4e98d28b7b5",
+  "config": {
+    "kind": "logreg",
+    "calibration": "platt",
+    "logreg_c": 0.1,
+    "ensemble_weight_logreg": 0.9
+  },
+  "metrics": {
+    "Home team": {
+      "log_loss": 0.6874,
+      "brier": 0.2472,
+      "accuracy": 0.5545,
+      "auc": 0.5,
+      "ece": 0.011
+    },
+    "Elo": {
+      "log_loss": 0.5978,
+      "brier": 0.2054,
+      "accuracy": 0.6919,
+      "auc": 0.7379,
+      "ece": 0.0446
+    },
+    "LogReg": {
+      "log_loss": 0.6022,
+      "brier": 0.2073,
+      "accuracy": 0.6707,
+      "auc": 0.733,
+      "ece": 0.0331
+    },
+    "LightGBM": {
+      "log_loss": 0.602,
+      "brier": 0.2071,
+      "accuracy": 0.6813,
+      "auc": 0.735,
+      "ece": 0.0299
+    },
+    "Ensemble": {
+      "log_loss": 0.6018,
+      "brier": 0.2072,
+      "accuracy": 0.6707,
+      "auc": 0.7337,
+      "ece": 0.0354
+    }
+  }
+}
