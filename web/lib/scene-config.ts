@@ -39,7 +39,7 @@ export type ClipName =
   | typeof CLIPS.miss;
 
 /**
- * Seconds into JumpShot when the ball leaves the hands: the jump's peak (the hips are highest at
- * 1.27 s). Checked in the cinematic (Phase 7): the ball leaves with the arms extended overhead.
+ * Seconds into JumpShot when the ball leaves the hand: the top of the jump. The shot is built in
+ * code (components/scene/jump-shot.ts), which times its release to this.
  */
-export const JUMPSHOT_RELEASE_TIME = 1.27;
+export const JUMPSHOT_RELEASE_TIME = 0.95;

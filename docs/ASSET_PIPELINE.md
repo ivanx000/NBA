@@ -105,14 +105,14 @@ side. Releases at the peak with a wrist flick, holds the follow-through with the
 arm extended up, then lands softly in place and relaxes.
 
 ```
-`JUMPSHOT_RELEASE_TIME` in `web/lib/scene-config.ts` is estimated from the jump's peak (1.27 s); confirm it visually in Phase 7.
+**Superseded (Nov 2026):** the site no longer uses this clip. The jump shot is built in code from the idle stance (`web/components/scene/jump-shot.ts`, DESIGN.md section 3), so it needs no credits and can be tuned like any other code; `JUMPSHOT_RELEASE_TIME` (0.95 s) is the release it's built around. The Meshy clip stays in `player.glb` but is replaced at load. Mixamo (free) was checked for a replacement and has no basketball shot, only a dribble.
 
 ### Export and optimize (no Blender)
 Export the rigged character from the Meshy web app: Download → glb, skeleton template Mixamo, Animation **All Added**, Single file → `assets-src/base/meshy_rigged.glb`. Then:
 ```bash
 cd web && pnpm assets:player   # -> public/models/player.glb (≤ 4 MB, checked)
 ```
-`scripts/assets/prepare-player.mts` renames clips (Text to Motion clips are exported under their task id, so new ones must be added to its `CLIP_NAMES`), checks every clip is in place (hips drift ≤ 0.15 m), prints the height, the hand bone and the jump peak, then optimizes: dedup, prune, resample, WebP textures (1024, roughness/metal 512) and meshopt.
+`scripts/assets/prepare-player.mts` renames clips (Text to Motion clips are exported under their task id, so new ones must be added to its `CLIP_NAMES`), checks every clip is in place (hips drift ≤ 0.15 m), prints the height, the hand bone and the jump peak, smooths the skin weights around the neck and shoulders (`scripts/assets/skin-weights.mts`: eight passes of neighbor averaging over vertices influenced by the upper spine, neck, clavicles and upper arms between 1.3 and 1.74 m, strongest from 1.4 to 1.66 m, keeping four influences; seam-split vertices are merged first so the mesh can't tear), so the jersey bends at the collar and armholes instead of pinching, then optimizes: dedup, prune, resample, WebP textures (1024, roughness/metal 512) and meshopt.
 
 `player.glb` also takes eight subtle, in-place clips from the motion library batches (`FROM_LIBRARY` in `prepare-player.mts`): `BounceLoose`, `ArmSwings`, `ShoulderStretch`, `NeckRoll`, `FocusBreath`, `AdjustJersey` and `LookUpScoreboard` for idle variety, and `HeadShake` after a missed pick. It's 2.46 MB with them (budget 4 MB, checked by `lib/asset-budget.test.ts`). Rebuilding needs the batches in `assets-src/motions/`.
 
@@ -146,7 +146,7 @@ Every team wears the **same white base uniform, recolored in the shader** (`web/
 ### How B works
 1. `cd web && pnpm assets:mask` bakes `public/textures/player/uniform_mask.webp` (and `assets-src/masks/jersey_mask.png`) from the base texture and mesh, with no hand painting:
    - **R = uniform.** Whole triangles between the shorts hem and the collar (0.5 to 1.75 m) whose color isn't skin-saturated, smoothed with a majority filter over mesh neighbors, OR'd with a dilated per-pixel color mask so island borders are covered.
-   - **G = trim.** Uniform texels above the waist within 2.8 cm of skin, at the collar or the armholes.
+   - **G = trim.** At the collar and armholes the uniform/skin split is blurred in 3D over the mesh (a 1.3 cm Gaussian) and the jersey's edge is where it crosses one half, so the neckline and armholes are smooth curves rather than triangle edges; the trim is the thin band just inside (blurred value 0.5 to 0.8, about 1 cm). Elsewhere, uniform texels within 2.8 cm of skin.
    - **B = side stripes.** Shorts texels on the outer side of each leg.
 2. The shader tints R with `jersey.base` (above the waist, 1.06 m) or `jersey.shorts`, G and B with `jersey.trim`, keeping fabric shading from the base texture's brightness.
 3. Lettering (chest text and number on the front, number on the back) is drawn on a canvas in Oswald and projected in **bind-pose space** (the vertex position before skinning), so it follows every animation. A drei `<Decal>` would not follow the skin.

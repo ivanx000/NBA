@@ -1,7 +1,7 @@
 "use client";
 
 import { useAnimations, useGLTF, useTexture } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { addAfterEffect, useFrame } from "@react-three/fiber";
 import { use, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
@@ -16,6 +16,8 @@ import {
 } from "@/lib/scene-config";
 import type { JerseyColorway } from "@/lib/teams";
 
+import { jumpShotFor } from "./jump-shot";
+import { applyPosture, POSTURE, type Posture, postureBones, restorePosture } from "./posture";
 import { jerseyFontReady, makeTintMaterial } from "./tint-material";
 
 function prepMask(tex: THREE.Texture) {
@@ -59,6 +61,7 @@ export function Player({
   timeOffset = 0,
   speed = 1,
   lookAt = false,
+  posture = POSTURE,
   ...group
 }: {
   colors: JerseyColorway;
@@ -87,6 +90,8 @@ export function Player({
   speed?: number;
   /** Turn the head a little toward the cursor (DESIGN.md section 3, idle). */
   lookAt?: boolean;
+  /** The posture correction on top of every clip (posture.ts); NO_POSTURE turns it off. */
+  posture?: Posture;
 } & Omit<React.ComponentProps<"group">, "children">) {
   // Suspends (with the model) until the jersey font has loaded, so the lettering is never drawn in
   // the fallback face.
@@ -130,7 +135,7 @@ export function Player({
     const state = shown.current;
     state.intensity += (intensity - state.intensity) * Math.min(1, dt * 6);
     state.highlight += (highlight - state.highlight) * Math.min(1, dt * 8);
-    state.opacity += (opacity - state.opacity) * Math.min(1, dt * 5);
+    state.opacity += (opacity - state.opacity) * Math.min(1, dt * 7);
     if (!paused) state.time += dt;
     material.tick(state.time, state.intensity, state.highlight, state.opacity);
     // While fading, drop the depth pre-pass (it would cut an invisible hole in the crowd behind
@@ -171,17 +176,21 @@ export function Player({
     };
   }, [material, hologram]);
 
-  const clips = useMemo(
-    () => (extraClips?.length ? [...gltf.animations, ...extraClips] : gltf.animations),
-    [gltf.animations, extraClips],
-  );
+  const clips = useMemo(() => {
+    // The jump shot is built in code from the idle stance (jump-shot.ts), replacing the file's.
+    const stance = gltf.animations.find((c) => c.name === CLIPS.idle[0]);
+    const shot = stance ? jumpShotFor(gltf.scene, cloneSkinned, stance) : null;
+    const own = gltf.animations.map((c) => (shot && c.name === CLIPS.shot ? shot : c));
+    return extraClips?.length ? [...own, ...extraClips] : own;
+  }, [gltf.animations, gltf.scene, extraClips]);
   const { actions, mixer } = useAnimations(clips, root);
 
   useEffect(() => {
     const idle = (CLIPS.idle as readonly string[]).includes(clip);
     let current = actions[clip];
     if (!current) return;
-    current.reset().fadeIn(0.3).play();
+    // One-shots come in quickly (the shot starts from the idle stance anyway); idles ease in.
+    current.reset().fadeIn(idle ? 0.4 : 0.25).play();
     // Idles start partway in so two players don't move in lockstep; one-shots start at the top.
     if (idle) current.time = timeOffset % current.getClip().duration;
     current.setEffectiveTimeScale(paused ? 0 : idle ? 1 : speed);
@@ -199,7 +208,8 @@ export function Player({
         if (e.action !== shot || !rest) return;
         resting = true;
         rest.reset().setEffectiveTimeScale(1).play();
-        shot.crossFadeTo(rest, 0.8, false);
+        // The built shot ends on the idle's first frame, so a short blend is seamless.
+        shot.crossFadeTo(rest, 0.5, false);
       };
       mixer.addEventListener("finished", onFinished);
       return () => {
@@ -224,7 +234,7 @@ export function Player({
       const next = actions[options[Math.floor(Math.random() * options.length)]];
       if (!next) return;
       next.reset().play();
-      current!.crossFadeTo(next, 0.6, false);
+      current!.crossFadeTo(next, 0.9, false); // slow, so idle changes read as one calm motion
       current = next;
     };
     mixer.addEventListener("loop", onLoop);
@@ -233,6 +243,26 @@ export function Player({
       current?.fadeOut(0.3);
     };
   }, [actions, mixer, clip, idleVariety, timeOffset, speed, paused]);
+
+  // Posture: after the mixer has posed him, straighten the stance (posture.ts). Full on idles,
+  // eased down to 40% during one-shot clips so it doesn't fight the shot's own arm motion.
+  const stance = useRef({ weight: 1, bones: null as ReturnType<typeof postureBones> | null });
+  const oneShot = !(CLIPS.idle as readonly string[]).includes(clip);
+  useFrame((_, dt) => {
+    const s = stance.current;
+    if (!root.current) return;
+    if (!s.bones) s.bones = postureBones(root.current);
+    s.weight += ((oneShot ? 0.4 : 1) - s.weight) * Math.min(1, dt * 4);
+    applyPosture(root.current, s.bones, posture, s.weight);
+  });
+  // ...and take it off again once the frame is drawn (see restorePosture).
+  useEffect(
+    () =>
+      addAfterEffect(() => {
+        if (stance.current.bones) restorePosture(stance.current.bones);
+      }),
+    [],
+  );
 
   // Look-at: after the mixer has posed him (useAnimations' frame runs first), turn the head and
   // neck toward where the cursor points, a little, eased and clamped.

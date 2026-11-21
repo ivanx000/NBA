@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 
+import { POSTURE, type Posture } from "@/components/scene/posture";
+
 import { CLIPS, type ClipName } from "@/lib/scene-config";
 
 interface LibraryClip {
@@ -54,6 +56,8 @@ export function JerseyLab() {
   const [speed, setSpeed] = useState(1);
   const [look, setLook] = useState<"real" | "holo">("holo");
   const [pixel, setPixel] = useState(0);
+  const [posture, setPosture] = useState<Posture>(POSTURE);
+  const [compare, setCompare] = useState(true);
   return (
     <main id="main" className="flex flex-1 flex-col pt-14">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
@@ -102,7 +106,7 @@ export function JerseyLab() {
             }}
             className="rounded-md border border-border bg-background px-2 py-1"
           >
-            {[1, 0.85, 0.7].map((v) => (
+            {[1, 0.85, 0.7, 0.4, 0.25].map((v) => (
               <option key={v} value={v}>
                 {v}x
               </option>
@@ -140,7 +144,40 @@ export function JerseyLab() {
         </label>
       </div>
       <div className="relative min-h-[75vh] flex-1">
-        <LabScene clip={clip} runId={runId} teams={[left, right]} alt={alt} speed={speed} look={look} pixel={pixel} />
+        <LabScene
+          clip={clip}
+          runId={runId}
+          teams={[left, right]}
+          alt={alt}
+          speed={speed}
+          look={look}
+          pixel={pixel}
+          posture={posture}
+          compare={compare}
+        />
+        {/* Posture correction (components/scene/posture.ts): copy the values into POSTURE. */}
+        <div className="absolute top-3 right-3 z-10 w-64 rounded-md border border-border bg-background/85 p-3 text-xs">
+          <p className="mb-2 font-mono uppercase">Posture (degrees)</p>
+          {(Object.keys(posture) as (keyof Posture)[]).map((k) => (
+            <label key={k} className="mb-1 grid grid-cols-[6.5rem_1fr_2rem] items-center gap-2">
+              <span className="text-muted-foreground">{k}</span>
+              <input
+                type="range"
+                min={-15}
+                max={15}
+                step={0.5}
+                value={posture[k]}
+                onChange={(e) => setPosture({ ...posture, [k]: Number(e.target.value) })}
+                aria-label={k}
+              />
+              <span className="tabular text-right">{posture[k]}</span>
+            </label>
+          ))}
+          <label className="mt-2 flex items-center gap-2">
+            <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
+            Left player without it
+          </label>
+        </div>
       </div>
     </main>
   );

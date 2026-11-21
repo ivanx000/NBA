@@ -6,8 +6,8 @@
  * lines with every marking (lane blocks and hash marks, the restricted-area arc, free-throw
  * circles dashed inside the lane, the three-point line, the coaching boxes and the substitution
  * box on the far side); the home city and nickname lettered along the baselines; the home team's
- * official logo at center court (the site's own crest, lib/crests.ts, if it can't be loaded) and
- * two smaller marks on the wings; and courtside a scorer's table and both benches.
+ * official logo at center court (the site's own crest, lib/crests.ts, if it can't be loaded);
+ * and courtside a scorer's table and both benches. No marks on the wings (real courts don't have them).
  *
  * The floor is drawn on a canvas in meters (canvas x = world x, canvas y = world z, so text
  * reads from the home camera). The center mark has its own sharper canvas. Both are unlit (flat,
@@ -190,20 +190,6 @@ function courtTexture(team: CourtTeam, small: boolean): THREE.CanvasTexture {
   ctx.fillStyle = trim;
   letter(ctx, name.split("").join(" "), -L / 2, -W - APRON / 2, 0.85, 0, L - 2);
   letter(ctx, name.split("").join(" "), L / 2, -W - APRON / 2, 0.85, 0, L - 2);
-
-  // Wing marks: the team's abbreviation in a ring, between the center circle and each arc.
-  for (const s of [-1, 1]) {
-    const x = s * 3.75;
-    ctx.fillStyle = team.paint;
-    ctx.beginPath();
-    ctx.arc(x, 0, 0.62, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = trim;
-    ctx.lineWidth = 0.07;
-    stroke(ctx, () => ctx.arc(x, 0, 0.56, 0, Math.PI * 2));
-    ctx.fillStyle = LINE;
-    letter(ctx, team.abbr, x, 0.03, 0.42, 0, 1);
-  }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

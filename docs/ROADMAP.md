@@ -283,6 +283,17 @@ Notes:
 Notes:
 - Dev filled on 2026-11-20: 1,456 games (2,912 team rows, 31,740 player rows).
 
+## Phase 13: Player motion and fit
+- [x] Posture correction layer (`components/scene/posture.ts`), applied only while drawing; tuning lab in `/dev/jerseys`
+- [x] Jump shot built in code with IK (`components/scene/jump-shot.ts`), release at 0.95 s
+- [x] Smoother collar and armhole edges and a thinner trim (`pnpm assets:mask`)
+- [x] Softer shoulder skin weights in the player build (`scripts/assets/skin-weights.mts`)
+- [x] Blend timings tuned to the new shot
+
+Notes:
+- Mixamo has no basketball jump shot (only a dribble), so nothing was downloaded from it.
+- The first posture version left its rotation on the bones between frames; the mixer saved it into the clips' starting pose when they blended, and it compounded until the arms pointed straight up. Applying it just before drawing and restoring right after fixed it (`posture.test.ts`).
+
 ## Later ideas
 - Predicted final score / spread (regression model)
 - Live in-game win probability using play-by-play from cdn.nba.com

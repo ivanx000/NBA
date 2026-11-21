@@ -31,6 +31,14 @@ const SKIN_SATURATION = 0.25; // skin is more saturated than this, fabric (even 
 const COLLAR_MIN_M = 1.52; // trim only at the collar (above this) or the armholes (beyond ARMHOLE_MIN_X)
 const ARMHOLE_MIN_X = 0.12;
 const ARMHOLE_MIN_Y = 1.32; // below this the hanging arms touch the jersey sides
+/**
+ * Collar and armhole edges: the per-triangle uniform/skin split is blurred in 3D (a Gaussian of
+ * this many meters over the mesh's vertices), and the jersey's edge is where the blurred value
+ * crosses one half. A blurred step has a smooth contour, so the neckline and armholes come out as
+ * clean curves instead of following triangle edges. The trim is the band just inside that edge.
+ */
+const EDGE_SIGMA_M = 0.013;
+const TRIM_FIELD = 0.8; // the trim band: blurred uniform value between 0.5 and this (about 1.1 cm, piping-thin)
 
 const MIN_VALUE = 0.42; // fabric in shadow is still lighter than this
 const MAX_SATURATION = 0.16; // skin is well above this
@@ -227,6 +235,45 @@ async function bakeChannels(uniform: Uint8Array, maskSize: number, size: number)
     const k = key(p[0], p[1], p[2]);
     (grid.get(k) ?? grid.set(k, []).get(k)!).push(p);
   }
+  // Blurred uniform value at a point, from the per-vertex votes of the upper body (see EDGE_SIGMA_M).
+  const uniformTrisForField = classifyTriangles(pos, idx, uv, base, maskSize, minY, scale);
+  const sum = new Float32Array(nVerts);
+  const count = new Float32Array(nVerts);
+  for (let t = 0; t < idx.length; t += 3)
+    for (let k = 0; k < 3; k++) {
+      sum[idx[t + k]] += uniformTrisForField[t / 3];
+      count[idx[t + k]] += 1;
+    }
+  const fieldCell = EDGE_SIGMA_M * 3;
+  const field = new Map<string, number[][]>();
+  const fkey = (x: number, y: number, z: number) =>
+    `${Math.floor(x / fieldCell)},${Math.floor(y / fieldCell)},${Math.floor(z / fieldCell)}`;
+  for (let v = 0; v < nVerts; v++) {
+    if (!count[v]) continue;
+    const p = [pos[v * 3] * scale, (pos[v * 3 + 1] - minY) * scale, pos[v * 3 + 2] * scale];
+    if (p[1] < ARMHOLE_MIN_Y - 0.1) continue;
+    const k = fkey(p[0], p[1], p[2]);
+    (field.get(k) ?? field.set(k, []).get(k)!).push([p[0], p[1], p[2], sum[v] / count[v]]);
+  }
+  const blurred = (x: number, y: number, z: number) => {
+    const [cx, cy, cz] = [Math.floor(x / fieldCell), Math.floor(y / fieldCell), Math.floor(z / fieldCell)];
+    let w = 0;
+    let acc = 0;
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dz = -1; dz <= 1; dz++)
+          for (const p of field.get(`${cx + dx},${cy + dy},${cz + dz}`) ?? []) {
+            const d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2 + (p[2] - z) ** 2;
+            const g = Math.exp(-d2 / (2 * EDGE_SIGMA_M * EDGE_SIGMA_M));
+            w += g;
+            acc += g * p[3];
+          }
+    return w > 0 ? acc / w : 0;
+  };
+  // The collar and armholes, where the edge is drawn from the blurred field.
+  const edgeZone = (x: number, y: number) =>
+    y > WAIST_M && (y > COLLAR_MIN_M - 0.06 || (Math.abs(x) > ARMHOLE_MIN_X && y > ARMHOLE_MIN_Y));
+
   const nearSkin = (x: number, y: number, z: number) => {
     const [cx, cy, cz] = [Math.floor(x / cell), Math.floor(y / cell), Math.floor(z / cell)];
     for (let dx = -1; dx <= 1; dx++)
@@ -239,8 +286,9 @@ async function bakeChannels(uniform: Uint8Array, maskSize: number, size: number)
 
   const out = Buffer.alloc(size * size * 3);
   const covered = new Uint8Array(size * size);
+  const edge = new Uint8Array(size * size); // texels decided by the blurred field: no color OR
   const ratio = maskSize / size;
-  const uniformTris = classifyTriangles(pos, idx, uv, base, maskSize, minY, scale);
+  const uniformTris = uniformTrisForField;
   for (let t = 0; t < idx.length; t += 3) {
     const [a, b, c] = [idx[t], idx[t + 1], idx[t + 2]];
     const [ax, ay, bx, by, cx, cy] = [a, b, c].flatMap((v) => [uv[v * 2] * size, uv[v * 2 + 1] * size]);
@@ -260,11 +308,19 @@ async function bakeChannels(uniform: Uint8Array, maskSize: number, size: number)
         if (w0 < -0.01 || w1 < -0.01 || w2 < -0.01) continue;
         const o = y * size + x;
         covered[o] = 1;
-        if (!triUniform) continue;
         const lerp = (arr: ArrayLike<number>, k: number) => arr[a * 3 + k] * w0 + arr[b * 3 + k] * w1 + arr[c * 3 + k] * w2;
         const px = lerp(pos, 0) * scale;
         const py = (lerp(pos, 1) - minY) * scale;
         const pz = lerp(pos, 2) * scale;
+        if (edgeZone(px, py)) {
+          // A smooth edge: uniform where the blurred split is over a half, trim just inside it.
+          edge[o] = 1;
+          const f = blurred(px, py, pz);
+          out[o * 3] = f > 0.5 ? 255 : 0;
+          out[o * 3 + 1] = f > 0.5 && f < TRIM_FIELD ? 255 : 0;
+          continue;
+        }
+        if (!triUniform) continue;
         const nx = lerp(nor, 0);
         const nLen = Math.hypot(nx, lerp(nor, 1), lerp(nor, 2)) || 1;
         out[o * 3] = 255;
@@ -284,7 +340,7 @@ async function bakeChannels(uniform: Uint8Array, maskSize: number, size: number)
       let hit = 0;
       for (let dy = 0; dy < ratio && !hit; dy++)
         for (let dx = 0; dx < ratio && !hit; dx++) hit = uniform[(my + dy) * maskSize + mx + dx];
-      if (hit) {
+      if (hit && !edge[y * size + x]) {
         out[(y * size + x) * 3] = 255;
         covered[y * size + x] = 1;
       }

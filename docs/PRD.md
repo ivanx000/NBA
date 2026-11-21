@@ -60,7 +60,7 @@ Land on home
 Full storyboard and timings: `docs/DESIGN.md §4`. Requirements:
 - The picked player shoots. **Right or wrong:** before the game ends, a pick is right when it matches the model's pick; once the game is final, when it matches the real winner.
 - Right: it goes in, and how depends on the model's confidence in that team (clean swish, off the back iron, or a rattle in). Wrong: it misses (around the rim and out if the team had a fair chance, off the front of the rim if not).
-- About 5 to 6 seconds, with a **Skip** control (and Esc) throughout.
+- About 4 to 5 seconds, with a **Skip** control (and Esc) throughout.
 - With `prefers-reduced-motion`, skip straight to results.
 
 ### 3.3 Results screen

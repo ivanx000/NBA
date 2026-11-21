@@ -40,11 +40,11 @@ const LEFT_HAND_BONE = "mixamorigLeftHand";
 /** The middle fingers' second joints: the ball sits on the fingers, not at the wrists. */
 const FINGERS = ["mixamorigLeftHandMiddle2", "mixamorigRightHandMiddle2"] as const;
 /** Timeline marks, in seconds (DESIGN.md section 4). */
-const T = { vanish: 0.05, swing: 0.1, swingFor: 1.55, turn: 0.55, hoop: 0.9, shot: 1.75 };
+const T = { vanish: 0.05, swing: 0.05, swingFor: 0.95, turn: 0.3, hoop: 0.45, shot: 1.0 };
 /** The swing's midpoint: how far the camera pulls back (share of its distance), rises (m) and widens (deg). */
 const SWING = { pull: 0.15, rise: 0.35, fov: 3 };
 /** How long the camera takes to settle on the results shot after the shot is decided. */
-const HERO_S = 1.4;
+const HERO_S = 0.85;
 const HERO_FOV = 32;
 /** Hover: how much a player grows, and how far (m) he steps toward the camera. */
 const HOVER_SCALE = 0.035;
@@ -339,7 +339,7 @@ export function Matchup({
       const outcome = pickShot(correct, winProb(game, shooter.side) ?? 0.5);
       // A long shot: more time in the air and a higher arc than a two.
       const distance = Math.abs(r.rim.x - feet.x);
-      const flightS = 1.1 + Math.max(0, distance - 6.8) * 0.08;
+      const flightS = 0.95 + Math.max(0, distance - 6.8) * 0.07;
       const apexM = 2.5 + Math.max(0, distance - 6.8) * 0.2;
       // Durations depend only on the outcome and the flight; the real path is computed at release.
       const plan = shotPath(r.rim, r.rim, outcome, flightS, apexM);
@@ -364,7 +364,7 @@ export function Matchup({
 
       const release = T.shot + JUMPSHOT_RELEASE_TIME;
       const decided = release + plan.decidedAt;
-      const resultsAt = decided + 0.9;
+      const resultsAt = decided + 0.55;
       // One clock drives the camera for the whole shot (placeShotCamera), so it moves as one piece.
       const path: ShotCamera = {
         pivot: feet,
@@ -384,8 +384,8 @@ export function Matchup({
       const tl = gsap.timeline();
       tl.addLabel("reveal", 0)
         .to(clock, { t: camEnd, duration: camEnd, ease: "none", onUpdate: () => placeShotCamera(path, clock.t) }, 0)
-        .to(spin.rotation, { y: faceYaw, duration: 0.9, ease: "sine.inOut" }, T.turn);
-      showHoop(1, 0.6, T.hoop, tl)
+        .to(spin.rotation, { y: faceYaw, duration: 0.6, ease: "sine.inOut" }, T.turn);
+      showHoop(1, 0.4, T.hoop, tl)
         .addLabel("shot", T.shot)
         .call(
           () => {
@@ -419,11 +419,11 @@ export function Matchup({
           [],
           "decided",
         )
-        .call(() => setShooterClip(plan.made ? CLIPS.celebrate[0] : CLIPS.miss), [], "decided+=0.35")
-        .to(spin.rotation, { y: 0, duration: 0.9, ease: "power2.inOut" }, "decided+=0.5")
+        .call(() => setShooterClip(plan.made ? CLIPS.celebrate[0] : CLIPS.miss), [], "decided+=0.2")
+        .to(spin.rotation, { y: 0, duration: 0.6, ease: "power2.inOut" }, "decided+=0.3")
         .addLabel("results", resultsAt)
         .call(() => send({ type: "shotDone" }), [], "results");
-      showHoop(0, 0.8, "results+=0.4", tl);
+      showHoop(0, 0.5, "results+=0.2", tl);
       r.timeline = tl;
       return;
     }
@@ -441,12 +441,12 @@ export function Matchup({
       const tl = gsap.timeline({ onComplete: () => send({ type: "returned" }) });
       showAll();
       tl.call(() => setShooterClip(CLIPS.idle[0]), [], 0)
-        .to(cameraOverride, { weight: 0, duration: 1, ease: "power2.inOut" }, 0)
+        .to(cameraOverride, { weight: 0, duration: 0.7, ease: "power2.inOut" }, 0)
         .to(r.hoop, { opacity: 0, duration: 0.4, onUpdate: () => hoop.current?.setOpacity(r.hoop.opacity) }, 0);
       if (spin) {
         // Back to rest the short way round.
         spin.rotation.y %= Math.PI * 2;
-        tl.to(spin.rotation, { y: spin.rotation.y > Math.PI ? Math.PI * 2 : 0, duration: 0.8, ease: "power2.inOut" }, 0);
+        tl.to(spin.rotation, { y: spin.rotation.y > Math.PI ? Math.PI * 2 : 0, duration: 0.6, ease: "power2.inOut" }, 0);
       }
       r.timeline = tl;
     }
@@ -463,7 +463,7 @@ export function Matchup({
     const hero = heroShot(side.x, side.x * playerX, aspect);
     const o = cameraOverride;
     // One glide across to the other player while one fades out and the other fades in.
-    const glide = { duration: 1.3, ease: "sine.inOut" };
+    const glide = { duration: 0.85, ease: "sine.inOut" };
     const tl = gsap.timeline();
     tl.to(o, { weight: 1, fov: HERO_FOV, ...glide }, 0)
       .to(o.position, { x: hero.position.x, y: hero.position.y, z: hero.position.z, ...glide }, 0)

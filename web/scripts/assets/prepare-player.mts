@@ -8,7 +8,8 @@
  * 1. Rename clips to the names the scene uses and drop clips we don't need.
  * 2. Check every clip is in place: the hips must not drift sideways.
  * 3. Report the right-hand bone, the model height and the JumpShot jump peak (the release).
- * 4. Optimize: dedup, prune, resample keyframes, WebP textures, meshopt compression.
+ * 4. Smooth the skin weights around the neck and shoulders (skin-weights.mts).
+ * 5. Optimize: dedup, prune, resample keyframes, WebP textures, meshopt compression.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -29,6 +30,7 @@ import sharp from "sharp";
 
 import { BATCH_DIR, copyAnimation, libraryName } from "./build-motion-library.mjs";
 import { clipReports, findNode, MAX_DRIFT_M, trimWithLeadIn } from "./clips.mjs";
+import { smoothShoulderWeights } from "./skin-weights.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_IN = path.join(repoRoot, "assets-src/base/meshy_rigged.glb");
@@ -163,6 +165,10 @@ async function main() {
   const shot = reports.find((r) => r.name === "JumpShot")!;
   console.log(`JumpShot jump peak (release estimate): ${shot.peakTime.toFixed(2)} s`);
   if (reportOnly) return;
+
+  // Softer shoulders: the jersey bends at the collar and armholes instead of pinching.
+  const smoothed = smoothShoulderWeights(doc);
+  console.log(`skin weights smoothed on ${smoothed.vertices} vertices (neck and shoulders)`);
 
   await doc.transform(
     dedup(),

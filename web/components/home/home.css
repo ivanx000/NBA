@@ -68,7 +68,7 @@
   transform-origin: left;
   background: linear-gradient(90deg, var(--nba-red), var(--red-hi));
   box-shadow: 0 0 14px rgba(255, 77, 94, 0.9);
-  animation: cinematic-fill 5.5s cubic-bezier(0.3, 0.1, 0.3, 1) forwards;
+  animation: cinematic-fill 4s cubic-bezier(0.3, 0.1, 0.3, 1) forwards;
 }
 @keyframes cinematic-fill {
   from {
