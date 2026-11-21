@@ -262,7 +262,7 @@ held-out seasons its edge over Elo is small and it loses in three of them.
 - [x] Elo-anchored model kind (adjustments on Elo's log-odds, penalty on the adjustments only), with contributions for the "Why" factors and factor copy for lineup strength
 - [x] Model selection on rolling validation (2019-20..2024-25) instead of one season
 - [x] Champion refit (`tipoff-game` v3, local registry) and 2025-26 walk-forward
-- [ ] Deploy: push the code, then `tipoff state push --what champion --target prod` for the cloud job (in that order: the cloud job needs `features/lineup.py` before the v3 model)
+- [x] Deploy: code pushed (`f74dedb`, CI and Vercel green), then the v3 champion pushed to prod state (`game-v3`); the cloud job needs `features/lineup.py` before the v3 model, so keep that order
 - [ ] The one-time re-test on 2025-26 for the new major version (`--force-retest`), with the user's OK
 - [ ] Later: official injury reports (worth up to about 0.004 more log loss)
 
