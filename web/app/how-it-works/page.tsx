@@ -7,7 +7,14 @@ import { StoryProgress } from "@/components/how-it-works/story-progress";
 import { ChanceFigure, FeatureBars, Figure, GamesGrid, Scorecard, Waterfall } from "@/components/how-it-works/visuals";
 import "@/components/how-it-works/story.css";
 import { pageMeta } from "@/lib/site";
-import { FACTOR_COUNT, FEATURE_COUNT, LEARNED_GAMES, SEASON_GAMES, TEST_SEASON } from "@/lib/story";
+import {
+  ADJUSTED_FEATURE_COUNT,
+  FACTOR_COUNT,
+  FEATURE_COUNT,
+  LEARNED_GAMES,
+  SEASON_GAMES,
+  TEST_SEASON,
+} from "@/lib/story";
 
 export const metadata: Metadata = pageMeta({
   title: "How it works · NBA Game Predictor",
@@ -104,12 +111,14 @@ export default function Page() {
         visual={<Waterfall />}
       >
         <p>
-          The model is a logistic regression: each number nudges the odds toward one team or the other, and it
-          learned how hard each one nudges from {LEARNED_GAMES.toLocaleString("en-US")} past games. Fancier models
-          were tried; this plain one did as well and is easy to explain.
+          The model starts from Elo, a simple rating that rises when a team wins and falls when it loses, and lets {ADJUSTED_FEATURE_COUNT} of the numbers nudge it toward one
+          team or the other: rest, travel, who&apos;s missing, recent form. It learned how hard each one nudges from{" "}
+          {LEARNED_GAMES.toLocaleString("en-US")} past games, and the nudges are kept small, so one noisy number
+          can&apos;t pull it far from Elo. Fancier models were tried; this plain one beat Elo in each of the six
+          seasons it was checked on, and it&apos;s easy to explain.
         </p>
         <p>
-          Its {FEATURE_COUNT} nudges are grouped into {FACTOR_COUNT} reasons you can read, and they add up exactly to
+          Elo&apos;s part and the nudges are grouped into {FACTOR_COUNT} reasons you can read, and they add up exactly to
           the prediction. In the example, rest, ratings and Boston&apos;s missing players outweigh the Celtics&apos;
           better form.
         </p>
@@ -132,9 +141,10 @@ export default function Page() {
           prediction can&apos;t change, and when it ends it&apos;s graded against the final score.
         </p>
         <p>
-          On the season kept back for the test, it called 67% of games right: far better than always picking the
-          home team, and about two points behind Elo, a simple rating system that&apos;s hard to beat. Good NBA
-          game models land in the mid to high 60s, so the site doesn&apos;t promise more.
+          On the season kept back for the test, it called 68% of games right: far better than always picking the
+          home team, and a point behind Elo, which is hard to beat. Its win chances were more accurate than
+          Elo&apos;s, though, and that&apos;s what it&apos;s built for. Good NBA game models land in the mid to high
+          60s, so the site doesn&apos;t promise more.
         </p>
         <p>
           <Link href="/performance" className="story-link">

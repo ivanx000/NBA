@@ -22,6 +22,8 @@ export const SEASON_GAMES: readonly { season: string; games: number; test?: bool
 export const LEARNED_GAMES = SEASON_GAMES.filter((s) => !s.test).reduce((n, s) => n + s.games, 0);
 export const TEST_GAMES = SEASON_GAMES.filter((s) => s.test).reduce((n, s) => n + s.games, 0);
 export const FEATURE_COUNT = 57;
+/** Model v3 (Elo-anchored) adjusts Elo with this many of the features (`ANCHOR_FEATURES` in ml/src/tipoff/features/columns.py). */
+export const ADJUSTED_FEATURE_COUNT = 35;
 export const FACTOR_COUNT = 12;
 
 export const EXAMPLE = { home: "NYK", away: "BOS" } as const;
@@ -81,7 +83,7 @@ export function runningTotals(base = EXAMPLE_BASE, reasons = EXAMPLE_REASONS): {
 export const TEST_SEASON = {
   season: "2025-26",
   games: 1230,
-  accuracy: { model: 0.6707, elo: 0.6919, home: 0.5545 },
+  accuracy: { model: 0.6797, elo: 0.6919, home: 0.5545 },
 } as const;
 
 /**
