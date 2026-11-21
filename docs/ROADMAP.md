@@ -254,6 +254,23 @@ Notes:
 - Name and mark on 2026-11-20: the site dropped the "Tip-Off" name (title "NBA Game Predictor", no wordmark) and its icon became a plain basketball (`components/ball-mark.tsx`, icons from `web/scripts/make-icons.mjs`); the spinning CSS ball loader was replaced by `ArenaLoader`. Vercel saves a project's avatar from the favicon once, so the new mark has to be uploaded by hand (`web/public/brand/avatar.png`, Settings → General → Project Avatar).
 - The launchd fallback (Phase 4) was removed on 2026-11-20: the cloud daily job had run clean every day since 2026-11-15, and the fallback only ever acted when the cloud hadn't published, so a seventh day added little. `ml/scripts/install_launchd.sh` reinstalls it.
 
+## Phase 11: Model v2 (beat Elo reliably)
+Study: `ml/reports/elo_gap_study.md`. The v1 champion lost to Elo on the 2025-26 test; across six
+held-out seasons its edge over Elo is small and it loses in three of them.
+- [x] Study: rolling validation over 2019-20..2024-25, input groups, margin rating, lineup headroom
+- [x] Lineup strength as a pre-game feature (player Game Score ratings x last-5 minutes; bump `FEATURES_VERSION`), computable from cdn box scores in the cloud job
+- [x] Elo-anchored model kind (adjustments on Elo's log-odds, penalty on the adjustments only), with contributions for the "Why" factors and factor copy for lineup strength
+- [x] Model selection on rolling validation (2019-20..2024-25) instead of one season
+- [x] Champion refit (`tipoff-game` v3, local registry) and 2025-26 walk-forward
+- [ ] Deploy: push the code, then `tipoff state push --what champion --target prod` for the cloud job (in that order: the cloud job needs `features/lineup.py` before the v3 model)
+- [ ] The one-time re-test on 2025-26 for the new major version (`--force-retest`), with the user's OK
+- [ ] Later: official injury reports (worth up to about 0.004 more log loss)
+
+Notes:
+- Rolling validation (2019-20..2024-25), pooled log loss: Elo 0.6287, LogReg 0.6228, LightGBM 0.6297, ensemble 0.6227, Elo-anchored (λ = 100) 0.6212, better than Elo in all 6 seasons: champion v3 with Platt. 2025-26 walk-forward: v3 0.5950 vs Elo 0.5979 (v2: 0.6024); accuracy 67.9% vs Elo 69.0%.
+- Adding lineup strength also lifted the plain logistic regression from −0.0030 to −0.0059 vs Elo: it's the feature, not just the anchoring.
+- The study scripts in `ml/notebooks/elo_gap/` have relaxed ruff rules (math-style names); nothing imports them.
+
 ## Later ideas
 - Predicted final score / spread (regression model)
 - Live in-game win probability using play-by-play from cdn.nba.com

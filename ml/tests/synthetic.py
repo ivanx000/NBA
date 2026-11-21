@@ -26,8 +26,11 @@ def _player_box(rng: np.random.Generator, minutes: int) -> dict[str, int]:
     share = minutes / 36
     oreb, dreb = int(rng.poisson(1.2 * share)), int(rng.poisson(4 * share))
     fg3a = int(rng.poisson(4 * share))
+    fga, fta = fg3a + int(rng.poisson(9 * share)), int(rng.poisson(3 * share))
     return dict(reb=oreb + dreb, oreb=oreb, dreb=dreb, ast=int(rng.poisson(3 * share)),
-                fga=fg3a + int(rng.poisson(9 * share)), fg3a=fg3a, fta=int(rng.poisson(3 * share)),
+                fga=fga, fgm=int(rng.binomial(fga, 0.46)), fg3a=fg3a, fta=fta,
+                ftm=int(rng.binomial(fta, 0.78)), stl=int(rng.poisson(0.8 * share)),
+                blk=int(rng.poisson(0.5 * share)), pf=int(rng.poisson(2 * share)),
                 tov=int(rng.poisson(1.5 * share)))  # fmt: skip
 
 

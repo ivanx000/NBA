@@ -21,8 +21,8 @@ export const SEASON_GAMES: readonly { season: string; games: number; test?: bool
 
 export const LEARNED_GAMES = SEASON_GAMES.filter((s) => !s.test).reduce((n, s) => n + s.games, 0);
 export const TEST_GAMES = SEASON_GAMES.filter((s) => s.test).reduce((n, s) => n + s.games, 0);
-export const FEATURE_COUNT = 56;
-export const FACTOR_COUNT = 11;
+export const FEATURE_COUNT = 57;
+export const FACTOR_COUNT = 12;
 
 export const EXAMPLE = { home: "NYK", away: "BOS" } as const;
 
@@ -61,7 +61,7 @@ export const EXAMPLE_REASONS: readonly ExampleReason[] = [
   { factor: "Recent form", copy: "Celtics in better recent form", points: -3.0 },
   { factor: "Shooting", copy: "Knicks have the shooting edge", points: 1.1 },
   { factor: "Travel", copy: "Celtics on a tougher trip", points: 0.4 },
-  { factor: "Everything else", copy: "Five smaller factors", points: -0.9 },
+  { factor: "Everything else", copy: "Six smaller factors", points: -0.9 },
 ];
 
 /** The base plus every reason: the Knicks' win chance. */

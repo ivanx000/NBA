@@ -4,20 +4,21 @@ fact; they're an exact split of the model's own calculation.
 
 ## An exact split
 
-The champion is a logistic regression, which adds up its inputs in log-odds:
+The champion starts from Elo and adds adjustments, all in log-odds:
 
 ```text
-logit(p) = base + Σ coefficient × standardized feature
+logit(p) = base + a × Elo rating gap + a × Elo home edge + Σ coefficient × standardized feature
 ```
 
-So each feature's contribution is just its term in that sum, and the contributions plus the base
-equal the prediction exactly. (For LightGBM the same split comes from TreeSHAP, the algorithm in
+So each input's contribution is just its term in that sum, and the contributions plus the base
+equal the prediction exactly. Elo's part splits exactly into the rating gap ("Team rating") and the
+home edge ("Home court"). (For LightGBM the same split comes from TreeSHAP, the algorithm in
 `shap.TreeExplainer`; Platt scaling multiplies every term by its slope.) Tests check that the parts
 add up to the whole.
 
-## From 56 features to 11 reasons
+## From 57 features to 12 reasons
 
-The 56 contributions are summed into **11 factors** defined in `shared/factors.json`, each with
+The contributions are summed into **12 factors** defined in `shared/factors.json`, each with
 plain-language copy:
 
 | Factor | Copy (for the team it favors) |
@@ -32,6 +33,7 @@ plain-language copy:
 | Rest and schedule | Celtics better rested |
 | Travel | Knicks on a tougher trip |
 | Missing players | Knicks missing key players |
+| Rotation strength | Celtics have the stronger rotation lately |
 | Point in the season | The point in the season favors Celtics |
 
 (Travel and missing players name the opponent: the Knicks' tougher trip favors the Celtics.)
@@ -52,11 +54,10 @@ faithful one.
 
 ## What moves the predictions
 
-![Average effect of each factor on win probability in 2025-26: team rating about 10 points, recent form about 4, shooting about 3, rest about 2.6, home court about 2, turnovers and rebounding and missing players about 1.8 each, then season-long strength, travel, point in the season and pace below 1.](/docs/figures/factor_importance.webp)
+![Average effect of each factor on win probability in 2025-26: team rating about 12 points, rotation strength about 4, home court about 3, rest about 2.6, recent form about 1.8, missing players and turnovers and rebounding about 1.6 each, then shooting, pace and travel below 1. Season-long strength and point in the season aren't used by the model.](/docs/figures/factor_importance.webp)
 
-## A known quirk
+## Known quirks
 
-The Elo difference includes the home-court edge, so part of home advantage shows up as "Team
-rating" rather than "Home court". Correlated groups (Elo, season strength, recent form) also share
-credit in ways that can look arbitrary. Splitting Elo into a pure rating gap and a home edge would
-make the reasons cleaner; it's on the list.
+Correlated groups (Elo, recent form, rotation strength) share credit in ways that can look
+arbitrary to a stats-savvy reader. "Season-long strength" and "Point in the season" never appear:
+the current model leaves those inputs out, since Elo already carries them.

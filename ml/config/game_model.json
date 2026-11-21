@@ -1,48 +1,65 @@
 {
-  "kind": "ensemble",
+  "kind": "anchored",
   "calibration": "platt",
   "logreg_c": 0.1,
-  "ensemble_weight_logreg": 0.9,
+  "ensemble_weight_logreg": 0.8,
   "lgbm_params": {
     "n_estimators": 200,
-    "learning_rate": 0.061907214250656324,
-    "num_leaves": 4,
-    "min_child_samples": 74,
-    "subsample": 0.5265232772013329,
-    "colsample_bytree": 0.48393727372013756,
-    "reg_alpha": 0.07567582966934147,
-    "reg_lambda": 0.020856841887626668,
+    "learning_rate": 0.06486962989791227,
+    "num_leaves": 7,
+    "min_child_samples": 53,
+    "subsample": 0.710963749392852,
+    "colsample_bytree": 0.6208575181203039,
+    "reg_alpha": 0.017181780694278052,
+    "reg_lambda": 0.006431843731066128,
     "subsample_freq": 1
   },
-  "selected_on": "2024-25",
-  "valid_log_loss": 0.59568,
-  "features_hash": "e0111c2b96b4c35c",
+  "anchor_lambda": 100.0,
+  "selected_on": "rolling 2019-20..2024-25",
+  "rolling_log_loss": {
+    "elo": 0.62873,
+    "logreg": 0.62279,
+    "lgbm": 0.62968,
+    "ensemble": 0.62268,
+    "anchored": 0.62118
+  },
+  "valid_log_loss": 0.59521,
+  "features_hash": "a7b0980c4623da92",
   "candidates": {
     "logreg": {
       "calibration": "platt",
-      "valid_log_loss": 0.59572,
+      "valid_log_loss": 0.59345,
       "calibration_log_loss": {
-        "none": 0.59625,
-        "platt": 0.59572,
-        "isotonic": 0.6055
+        "none": 0.59397,
+        "platt": 0.59345,
+        "isotonic": 0.5983
       }
     },
     "lgbm": {
       "calibration": "platt",
-      "valid_log_loss": 0.59987,
+      "valid_log_loss": 0.59814,
       "calibration_log_loss": {
-        "none": 0.60033,
-        "platt": 0.59987,
-        "isotonic": 0.62498
+        "none": 0.5983,
+        "platt": 0.59814,
+        "isotonic": 0.60702
       }
     },
     "ensemble": {
       "calibration": "platt",
-      "valid_log_loss": 0.59568,
+      "valid_log_loss": 0.59306,
       "calibration_log_loss": {
-        "none": 0.59624,
-        "platt": 0.59568,
-        "isotonic": 0.59899
+        "none": 0.59361,
+        "platt": 0.59306,
+        "isotonic": 0.60032
+      }
+    },
+    "anchored": {
+      "calibration": "platt",
+      "valid_log_loss": 0.59521,
+      "calibration_log_loss": {
+        "none": 0.5956,
+        "platt": 0.59521,
+        "isotonic": 0.5977
       }
     }
   }

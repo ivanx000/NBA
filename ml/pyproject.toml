@@ -45,6 +45,8 @@ extend-ignore-names = ["X", "X_*"]  # ML convention for feature matrices
 # pandera: @dataframe_check methods are classmethods; Config uses class-level lists.
 "src/tipoff/ingest/schemas.py" = ["N805", "RUF012"]
 "src/tipoff/features/schemas.py" = ["N805", "RUF012"]
+# Exploration scripts (nothing imports them): math-style names and sys.path setup are fine.
+"notebooks/**/*.py" = ["N802", "N806", "N812", "E402", "E501", "RUF005", "RUF017"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

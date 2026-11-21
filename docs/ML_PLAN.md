@@ -51,6 +51,7 @@ Each row is one game, with features as **home − away differences** (plus a few
 | Style/efficiency | off rating, def rating, pace, eFG%, TOV%, OREB%, FT rate (the "four factors"): season-to-date and last-10 diffs |
 | Schedule | rest days (home, away), back-to-back flags, games in last 7 days, 3-in-4 flags, travel km since last game, time zones crossed |
 | Availability | sum of season minutes share of rotation players out (home, away), star-out flag (top-2 by season-to-date points per game, since usage isn't ingested yet) |
+| Lineup (v3) | lineup strength diff: Σ over players in the team's previous 5 games of (average minutes) × (Game Score per minute, decayed with a 25-game half-life, shrunk with a 300-minute prior to the 2015-16..2023-24 league average 0.3576) |
 | Context | season phase (game number / 82), home team's home record, away team's road record, neutral-site flag |
 
 **As built (Phase 2):** 56 features in `ml/src/tipoff/features/columns.py`, built by `features/build.py`.
@@ -58,6 +59,7 @@ Each row is one game, with features as **home − away differences** (plus a few
 - "Out" = rotation players (≥ 20 mpg over the team's last 10 games) who didn't appear in the team's previous game, excluding players whose most recent appearance was for another team (traded). This is exactly what's known at 10 AM on game day. No injury report yet.
 - Travel is measured between arenas. For neutral-site games the designated home team's arena stands in for the real venue (a known limitation). Time zones crossed compares both arenas' UTC offsets on the same date, so a DST change isn't counted as travel.
 - Scheduled (unplayed) games go through the same code path, so training and prediction features can't drift.
+- **v3 (Nov 2026, `FEATURES_VERSION = 3`):** 57 features; `features/lineup.py` adds lineup strength. A player's rating comes from his games strictly before the date; players whose latest appearance was for another team don't count. Needs the full player box score, so `PlayerGames` now validates FGM, FGA, FTM, FTA, OREB, DREB, STL, BLK, PF and TOV (cdn.nba.com box scores have them, so the cloud job computes it too).
 
 Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g. `rest_days_diff` → "{team} more rested ({n} days vs {m})").
 
@@ -78,12 +80,15 @@ Store the human-readable copy for each feature in `web/lib/factor-copy.ts` (e.g.
 
 **As built (Phase 3):** LightGBM tuned with Optuna (100 trials, TPE, seed 26) settled on very shallow trees (5 leaves, 350 trees, learning rate 0.024) and still trailed LogReg on validation (0.6001 vs 0.5955). The log-odds ensemble's best weight was 0.9 LogReg and added nothing (0.5956). **Champion: LogReg (C = 0.1) with Platt calibration.** Calibration was chosen out of time: each calibrator is fit on one season's predictions from a model trained only on earlier seasons. Platt won for every candidate, and isotonic was worst every time. The fitted Platt map is close to identity (a ≈ 1.01), so LogReg was already nearly calibrated. Settings: `ml/config/game_model.json`.
 
+**Model v3 (Nov 2026, `tipoff-game` v3):** the v1/v2 champions lost to Elo on the 2025-26 test, and a study over six held-out seasons (`ml/reports/elo_gap_study.md`) showed their edge over Elo was small and lost in three of six seasons. Selection now uses **rolling validation**: each season 2019-20..2024-25 predicted by the candidate trained on all earlier seasons; lowest pooled log loss wins. New candidate **Elo-anchored**: `logit p = a · Elo log-odds + b + w · z` on `ANCHOR_FEATURES` (35: rest and travel, availability, lineup strength, last-10 form, venue records), L2 penalty on `w` only (λ = 100, chosen on the same rolling seasons from 100/300/1000/3000). Pooled rolling log loss: Elo 0.6287, LogReg 0.6228, LightGBM 0.6297, ensemble 0.6227, **anchored 0.6212 (beats Elo in 6 of 6 seasons) = champion, Platt calibration**. 2025-26 walk-forward (information only): Elo 0.5979 / 69.0%, v2 0.6024 / 67.0%, **v3 0.5950 / 67.9%**. Source: `ml/reports/model_selection_validation.md`, `ml/reports/backtest_2025-26.md`.
+
 ### Explanations
 - Every model variant is additive in log-odds, so explanations are exact. LogReg uses `coef × standardized value`. LightGBM uses its built-in TreeSHAP (`pred_contrib=True`), the same algorithm as `shap.TreeExplainer`, without the extra dependency. The ensemble mixes both with its weight. Platt scaling multiplies them by `a`. Tests check that contributions plus base equal the predicted log-odds.
 - Features are summed into 11 human factors defined in `shared/factors.json`, which `web/lib/factor-copy.ts` uses for copy. Each game stores its top 5 factors (≥ 0.5 points) in `game_predictions.factors` as `{factor, label, favors, pp, logit}`.
 - **Probability points are an approximation:** `pp = contribution × (p − p_base) / (logit p − logit p_base)`, where p_base is the model's prediction for an average game. Signs are always kept, and the factors add up to `p − p_base`.
 - Average effect over 2025-26 (model trained through 2024-25): Team rating 10.6 pts, Recent form 4.1, Shooting 3.3, Rest and schedule 2.6, Turnovers and rebounding 2.1, Home court 2.1, Missing players 1.8, Season-long strength 1.7, Travel 0.6, Point in the season 0.5, Pace 0.3 (`ml/reports/figures/factor_importance.png`).
-- **Known quirk:** `elo_diff` includes the home-court edge, so part of home advantage shows up as "Team rating". Correlated groups (Elo, season strength, form) also share credit in ways that look arbitrary to a stats-savvy reader. Splitting `elo_diff` into a pure rating gap plus the home edge would make this cleaner (Phase 8, with the copy).
+- **v3:** 12 factors (new: "Rotation strength"). The anchored model splits Elo's log-odds exactly into the rating gap (`elo_diff − elo_hfa` → Team rating) and the home edge (`elo_hfa` → Home court), which fixes the old quirk where home advantage showed up as Team rating. Average effect over 2025-26: Team rating 11.8 pts, Rotation strength 4.0, Home court 3.2, Rest 2.6, Recent form 1.8, Missing players 1.7, Turnovers and rebounding 1.6, Shooting 1.0, Pace 0.8, Travel 0.6; Season-long strength and Point in the season are unused by the anchored model.
+- **Known quirk (v1/v2):** `elo_diff` included the home-court edge, so part of home advantage showed up as "Team rating". Correlated groups still share credit in ways that can look arbitrary.
 
 ## 5. Evaluation protocol
 

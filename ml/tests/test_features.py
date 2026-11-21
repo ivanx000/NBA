@@ -9,6 +9,7 @@ from tipoff.features.availability import availability_features
 from tipoff.features.build import build_features
 from tipoff.features.columns import FEATURE_COLUMNS
 from tipoff.features.elo import EloParams, expected_home, rate_to_elo_points, run_elo
+from tipoff.features.lineup import lineup_features
 from tipoff.features.schedule import haversine_km, schedule_features
 from tipoff.features.team_form import K_SEASON, team_form
 from tipoff.features.timeline import prepare_games, team_timeline
@@ -118,3 +119,25 @@ def test_build_shapes_and_upcoming(league):
     assert df[FEATURE_COLUMNS].notna().all().all()
     assert df["home_win"].isna().sum() == (~df["played"]).sum() == 2
     assert np.isfinite(df[FEATURE_COLUMNS].to_numpy()).all()
+
+
+def test_lineup_strength_drops_when_players_sit(league):
+    """A team whose rotation sat out its last games looks weaker; the game's own box is unused."""
+    games = prepare_games(league["games"])
+    tl = team_timeline(games, league["team_games"])
+    pg = league["player_games"]
+    base = pd.concat([tl, lineup_features(tl, pg)], axis=1)
+    team = tl["team_id"].iloc[0]
+    rows = base[(base["team_id"] == team) & base["played"]].reset_index(drop=True)
+    target = rows.iloc[60]
+    recent = rows.iloc[55:60]["game_id"]
+    stars = pg[pg["game_id"].isin(recent) & (pg["team_id"] == team)].nlargest(10, "minutes")
+    benched = pg.drop(stars.index)
+    after = pd.concat([tl, lineup_features(tl, benched)], axis=1)
+    row = after[(after["game_id"] == target["game_id"]) & (after["team_id"] == team)].iloc[0]
+    assert row["lineup_strength"] < target["lineup_strength"]
+    # Tonight's own box score never counts.
+    tonight = pg[(pg["game_id"] == target["game_id"]) & (pg["team_id"] == team)]
+    same = pd.concat([tl, lineup_features(tl, pg.drop(tonight.index))], axis=1)
+    row2 = same[(same["game_id"] == target["game_id"]) & (same["team_id"] == team)].iloc[0]
+    assert row2["lineup_strength"] == pytest.approx(target["lineup_strength"])

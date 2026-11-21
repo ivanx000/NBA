@@ -45,7 +45,7 @@ from tipoff.seasons import season_start_year
 
 warnings.filterwarnings("ignore", message=".*Inferred schema contains integer column.*")
 REGISTERED_MODEL = "tipoff-game"
-LABELS = {"logreg": "LogReg", "lgbm": "LightGBM", "ensemble": "Ensemble"}
+LABELS = {"logreg": "LogReg", "lgbm": "LightGBM", "ensemble": "Ensemble", "anchored": "Anchored"}
 
 
 class TestAlreadyRunError(RuntimeError):
@@ -60,7 +60,8 @@ def load_config() -> dict[str, Any]:
 
 def template(cfg: dict[str, Any], kind: str | None = None) -> GameModel:
     return GameModel(kind or cfg["kind"], dict(cfg["lgbm_params"]), cfg["logreg_c"],
-                     cfg["ensemble_weight_logreg"])  # fmt: skip
+                     cfg["ensemble_weight_logreg"],
+                     anchor_lambda=cfg.get("anchor_lambda") or 1000.0)  # fmt: skip
 
 
 def fit_calibrated(cfg, df, kind: str, fit: Split, cal_season: str) -> GameModel:

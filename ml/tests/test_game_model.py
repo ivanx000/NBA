@@ -27,7 +27,8 @@ def features():
 
 
 def _cfg(kind="logreg", calibration="none"):
-    candidates = {k: {"calibration": calibration} for k in ("logreg", "lgbm", "ensemble")}
+    candidates = {k: {"calibration": calibration}
+                  for k in ("logreg", "lgbm", "ensemble", "anchored")}  # fmt: skip
     return {"kind": kind, "lgbm_params": SMALL_GBM, "logreg_c": 0.1,
             "ensemble_weight_logreg": 0.5, "candidates": candidates}  # fmt: skip
 
@@ -39,7 +40,7 @@ def test_factor_groups_cover_every_feature_once():
     assert all("{team}" in g["template"] or "{opponent}" in g["template"] for g in doc["groups"])
 
 
-@pytest.mark.parametrize("kind", ["logreg", "lgbm", "ensemble"])
+@pytest.mark.parametrize("kind", ["logreg", "lgbm", "ensemble", "anchored"])
 @pytest.mark.parametrize("method", ["none", "platt"])
 def test_contributions_sum_to_log_odds(features, kind, method):
     train = make_split(features, "t", ("2015-16", "2016-17"))
@@ -49,6 +50,20 @@ def test_contributions_sum_to_log_odds(features, kind, method):
     contrib, base = m.contributions(test.X)
     np.testing.assert_allclose(contrib.sum(axis=1) + base, logit(m.predict_proba(test.X)),
                                atol=1e-9)  # fmt: skip
+
+
+def test_anchored_starts_from_elo(features):
+    """With a huge penalty the adjustments vanish: the anchored model is Elo, rescaled."""
+    train = make_split(features, "t", ("2015-16", "2016-17"))
+    m = GameModel("anchored", anchor_lambda=1e9).fit(train.X, train.y)
+    assert np.abs(m.anchor.coef).max() < 1e-4
+    elo_logit = train.X["elo_diff"].to_numpy() * np.log(10) / 400
+    np.testing.assert_allclose(m.raw(train.X), m.anchor.a * elo_logit + m.anchor.b, atol=1e-6)
+    # Elo's part splits exactly into the rating gap and the home edge.
+    contrib, _ = m.contributions(train.X)
+    np.testing.assert_allclose(contrib["elo_diff"] + contrib["elo_hfa"], m.anchor.a * elo_logit,
+                               atol=1e-9)  # fmt: skip
+    assert m.describe()["anchor_lambda"] == 1e9
 
 
 def test_top_factors_signs_and_totals(features):

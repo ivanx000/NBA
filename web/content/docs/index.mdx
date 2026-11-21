@@ -11,26 +11,28 @@ Each team's top 8 players also get projected minutes, points, rebounds and assis
 
 ## How good it is
 
-Honest numbers first. On the 2025-26 season, which was held out of every decision and scored once:
+Honest numbers first. On the 2025-26 season, predicted month by month by models trained only on
+earlier games (log loss rewards confident right calls and punishes confident wrong ones; lower is
+better):
 
 | Model | Accuracy | Log loss |
 | --- | --- | --- |
-| Always pick the home team | 55.5% | 0.687 |
-| Elo ratings | 69.2% | 0.598 |
-| **The model** (logistic regression, calibrated) | 67.1% | 0.602 |
+| Always pick the home team | 55.5% | 0.688 |
+| Elo ratings | 69.0% | 0.598 |
+| **The model** (Elo-anchored, calibrated) | 67.9% | **0.595** |
 
-The model clearly beats picking the home team, and it's close to Elo, a simple rating system, but
-behind it on that season. The gap isn't statistically meaningful, and the model led Elo on the
-validation season, so it stays the champion while Elo is tracked as the challenger on live games.
-The [performance page](/performance) grades both every day. Good NBA game models land in the mid
-to high 60s for accuracy; the site doesn't promise more.
+The model beats picking the home team by a wide margin and beats Elo, a strong rating system, on
+log loss, though Elo picked a few more winners that season. Across the six seasons before it, the
+model beat Elo every time ([Models](/docs/models)). The [performance page](/performance) grades
+both every day. Good NBA game models land in the mid to high 60s for accuracy; the site doesn't
+promise more.
 
 ## How it fits together
 
 1. **Data:** box scores and schedules from NBA.com, cached on disk ([Data sources](/docs/data-sources)).
-2. **Features:** 56 numbers per game, each computed only from games before it ([Features](/docs/features), [Leakage](/docs/leakage)).
-3. **Model:** a calibrated logistic regression, chosen against Elo, LightGBM and an ensemble on a validation season ([Models](/docs/models), [Calibration](/docs/calibration)).
-4. **Explanations:** each prediction split exactly into 11 human factors ([Explaining predictions](/docs/explaining-predictions)).
+2. **Features:** 57 numbers per game, each computed only from games before it ([Features](/docs/features), [Leakage](/docs/leakage)).
+3. **Model:** Elo plus learned adjustments, calibrated, chosen against logistic regression, LightGBM and an ensemble on six held-out seasons ([Models](/docs/models), [Calibration](/docs/calibration)).
+4. **Explanations:** each prediction split exactly into 12 human factors ([Explaining predictions](/docs/explaining-predictions)).
 5. **Production:** a GitHub Actions job predicts each morning and writes to Postgres; the website only reads ([Daily pipeline](/docs/pipeline), [Architecture](/docs/architecture)).
 
 > These predictions are not betting advice.

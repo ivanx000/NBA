@@ -2,6 +2,10 @@
 
 - **Splits by time:** train on 2015-16 to 2023-24 (10,749 games), tune and calibrate on 2024-25,
   and test once on 2025-26. Nothing is ever chosen on test numbers.
+- **Rolling validation picks the champion** (since model v3, Nov 2026): each season from 2019-20
+  to 2024-25 is predicted by the candidate trained only on the seasons before it, and the lowest
+  pooled log loss wins. One season (1,230 games) turned out to be too few to choose between models
+  this close.
 - **Primary metric:** log loss, because the site shows probabilities, not just picks. Brier score,
   accuracy, AUC and calibration error are reported too, always next to the baselines.
 - Every run is logged to MLflow with its parameters, metrics and model.
@@ -12,9 +16,25 @@
 | --- | --- |
 | Home team | Always picks home, at the training home win rate (56.8%) |
 | Elo | The Elo win probability on its own ([Features](/docs/features)) |
-| Logistic regression | All 56 features, standardized; regularization picked on validation (C = 0.1) |
-| LightGBM | Tuned with Optuna (100 trials); settled on very shallow trees (5 leaves, 350 trees) |
-| Ensemble | A log-odds blend of the two; its best weight was 0.9 logistic regression |
+| Logistic regression | All 57 features, standardized; regularization picked on validation (C = 0.1) |
+| LightGBM | Tuned with Optuna (100 trials); settles on very shallow trees |
+| Ensemble | A log-odds blend of the two; its best weight was 0.8 logistic regression |
+| **Elo-anchored** | Starts from Elo's log-odds and learns adjustments from 35 features (rest, travel, availability, lineup strength, last-10 form, home and road records), with a penalty on the adjustments only, so noisy inputs can't pull it far from Elo |
+
+## Rolling validation, 2019-20 to 2024-25 (picks the champion)
+
+Each season predicted by the candidate trained only on the seasons before it (7,059 games in all).
+
+| Model | Log loss | vs Elo | Seasons better than Elo | Accuracy |
+| --- | --- | --- | --- | --- |
+| Elo | 0.6287 | — | — | 64.5% |
+| Logistic regression | 0.6228 | −0.0059 | 5 of 6 | 65.4% |
+| LightGBM | 0.6297 | +0.0009 | 3 of 6 | 64.6% |
+| Ensemble | 0.6227 | −0.0061 | 4 of 6 | 65.3% |
+| **Elo-anchored** | **0.6212** | **−0.0076** | **6 of 6** | **65.6%** |
+
+The Elo-anchored model is the champion (v3), with Platt calibration. It's the only candidate that
+beat Elo in every season. Its penalty (100) was picked the same way.
 
 ## Validation season (2024-25)
 
@@ -22,17 +42,31 @@
 | --- | --- | --- | --- | --- |
 | Home team | 0.6905 | 0.2487 | 54.4% | 0.500 |
 | Elo | 0.6083 | 0.2107 | 66.4% | 0.723 |
-| Logistic regression + Platt | **0.5955** | 0.2049 | 68.1% | 0.741 |
-| LightGBM + Platt | 0.6001 | 0.2065 | 67.9% | 0.737 |
-| Ensemble + Platt | 0.5956 | 0.2049 | 68.0% | 0.741 |
+| Logistic regression + Platt | 0.5935 | 0.2039 | 69.0% | 0.743 |
+| LightGBM + Platt | 0.5981 | 0.2058 | 68.5% | 0.739 |
+| Ensemble + Platt | **0.5931** | 0.2037 | 69.2% | 0.744 |
+| Elo-anchored + Platt | 0.5952 | 0.2047 | 68.8% | 0.741 |
 
-LightGBM never caught the linear model: with these features, the relationships are close to
-additive in log-odds. The champion was the **calibrated logistic regression**, by the rule chosen
-in advance: lowest validation log loss.
+On this one season the ensemble is a hair ahead; across six it isn't. LightGBM never catches the
+linear models: with these features, the relationships are close to additive in log-odds.
 
-## Test season (2025-26), scored once
+## Walk-forward on 2025-26
 
-All models were refit on 2015-16 to 2024-25 (11,979 games) and scored on the 1,230 games of 2025-26.
+Each month predicted by the champion's setup refit on every game before it, as it runs live:
+
+| Model | Log loss | Brier | Accuracy | AUC |
+| --- | --- | --- | --- | --- |
+| Home team | 0.6875 | 0.2472 | 55.5% | 0.488 |
+| Elo | 0.5979 | 0.2054 | 69.0% | 0.738 |
+| Model v2 (ensemble) | 0.6024 | 0.2074 | 67.0% | 0.733 |
+| **Model v3 (Elo-anchored)** | **0.5950** | **0.2046** | 67.9% | **0.741** |
+
+v3 beats Elo on log loss, Brier score and AUC that season; Elo still picks a few more winners.
+
+## Test season (2025-26), scored once (model v1)
+
+The one-time test of the first model. All models were refit on 2015-16 to 2024-25 (11,979 games)
+and scored on the 1,230 games of 2025-26.
 
 | Model | Log loss | Brier | Accuracy | AUC |
 | --- | --- | --- | --- | --- |
@@ -42,19 +76,17 @@ All models were refit on 2015-16 to 2024-25 (11,979 games) and scored on the 1,2
 | LightGBM + Platt | 0.6020 | 0.2071 | 68.1% | 0.735 |
 | Ensemble + Platt | 0.6018 | 0.2072 | 67.1% | 0.734 |
 
-A walk-forward run (refit every month on everything before it) agrees: Elo 0.598, logistic
-regression 0.602.
-
 ## Reading it honestly
 
-On the test season, plain Elo edged out the champion. The per-game log-loss gap is +0.004 with a
-paired-bootstrap 95% interval of −0.004 to +0.011, so it isn't statistically meaningful; the two
-models' probabilities correlate at 0.956, and the champion led by 0.013 on validation. Swapping in
-Elo because of test numbers would turn the test season into a tuning set, so the champion stays,
-and Elo is compared on live games nobody has seen, on the [performance page](/performance).
+On that test, plain Elo edged out the first model (a gap of +0.004, not statistically meaningful).
+Rather than swap in Elo because of test numbers, which would turn the test season into a tuning
+set, the models were studied on six earlier seasons. The first model's edge over Elo there was
+small and lost in three of the six. Two changes fixed it: anchoring on Elo, and a lineup-strength
+feature ([Features](/docs/features)). Elo is still graded next to the model on live games, on the
+[performance page](/performance).
 
 ## In production
 
 The champion is refit on every finished game since 2015-16 and registered in MLflow as
-`tipoff-game@champion`; its calibrator is fit out of time on 2025-26. A weekly retrain that only promotes
-a challenger beating the champion on the latest window is planned; for now it's refit by hand.
+`tipoff-game@champion`; its calibrator is fit out of time on 2025-26. A weekly job refits it and
+promotes the refit only if it's no worse on the latest four weeks than what was published.

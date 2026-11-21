@@ -121,6 +121,17 @@ class PlayerGames(pa.DataFrameModel):
     pts: Series[int] = pa.Field(ge=0, le=100)
     reb: Series[int] = pa.Field(ge=0, le=40)
     ast: Series[int] = pa.Field(ge=0, le=35)
+    # The rest of the box score, used by lineup strength's Game Score (features/lineup.py).
+    fgm: Series[int] = pa.Field(ge=0)
+    fga: Series[int] = pa.Field(ge=0)
+    ftm: Series[int] = pa.Field(ge=0)
+    fta: Series[int] = pa.Field(ge=0)
+    oreb: Series[int] = pa.Field(ge=0)
+    dreb: Series[int] = pa.Field(ge=0)
+    stl: Series[int] = pa.Field(ge=0)
+    blk: Series[int] = pa.Field(ge=0)
+    pf: Series[int] = pa.Field(ge=0)
+    tov: Series[int] = pa.Field(ge=0)
 
     class Config:
         strict = False

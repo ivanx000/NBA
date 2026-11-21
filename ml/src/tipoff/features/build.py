@@ -29,6 +29,7 @@ from tipoff.features.columns import (
     TARGET,
 )
 from tipoff.features.elo import EloParams, run_elo
+from tipoff.features.lineup import lineup_features
 from tipoff.features.schedule import schedule_features
 from tipoff.features.schemas import GameFeatures
 from tipoff.features.team_form import team_form
@@ -39,7 +40,8 @@ from tipoff.seasons import season_start_year
 def team_level_features(tl: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
     """All pre-game team features, one row per team-game (aligned with ``tl``)."""
     tl = tl.reset_index(drop=True)
-    parts = [team_form(tl), schedule_features(tl), availability_features(tl, player_games)]
+    parts = [team_form(tl), schedule_features(tl), availability_features(tl, player_games),
+             lineup_features(tl, player_games)]  # fmt: skip
     feats = pd.concat(parts, axis=1)
     return pd.concat([tl[["game_id", "team_id", "game_date"]], feats], axis=1)
 
@@ -113,7 +115,8 @@ def build_features(
 
 # Bump whenever a feature's definition changes (the hash must change with it).
 # v1: stats.nba.com advanced ratings. v2: box-score possession formula for pace and ratings.
-FEATURES_VERSION = 2
+# v3: lineup strength (features/lineup.py).
+FEATURES_VERSION = 3
 
 
 def features_hash(df: pd.DataFrame, elo_params: EloParams) -> str:

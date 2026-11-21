@@ -130,6 +130,14 @@
       ]
     },
     {
+      "id": "lineup",
+      "label": "Rotation strength",
+      "template": "{team} have the stronger rotation lately",
+      "features": [
+        "diff_lineup_strength"
+      ]
+    },
+    {
       "id": "season_phase",
       "label": "Point in the season",
       "template": "The point in the season favors {team}",
