@@ -16,14 +16,14 @@ anyone at a keyboard.
 | Time (ET) | Job | What it does |
 | --- | --- | --- |
 | ~06:07 | `schedule-sync` | Updates the season's games (dates, times, final scores) from the cdn schedule |
+| Mon ~07:17 | `retrain` | Refits the game and player models on every completed game, scores each refit on a walk-forward over the last 4 complete weeks, and promotes it only if it's no worse than what was published for those games (log loss within 0.005; player MAE within 1%). Otherwise it keeps the champion and opens an issue |
 | Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion models, adds box scores for newly finished games, fetches the official injury report as of 9 AM, builds features, predicts today and projects its players, publishes, then fills in yesterday's real player lines. Stops once today is published. A missing injury report never stops it |
 | ~17:52 | `daily --refresh` | Fetches the 5:45 PM injury report, re-predicts today's games and players, and re-publishes the games that haven't started. Once a day |
 | ~10:37 | `freshness-check` | Fails (and emails) if any of today's games lacks a live prediction |
 | Hourly ~18:17–02:17 | `results-sync` | Live status and final scores, which grade the predictions |
 
-GitHub's cron runs in UTC and can start late, so times drift by an hour with daylight saving. A
-weekly retrain, promoting a challenger only if it beats the champion on the latest window, is
-planned (Phase 10); until then the champion is refit by hand.
+GitHub's cron runs in UTC and can start late, so times drift by an hour with daylight saving.
+The retrain shares the daily job's queue, so the two never touch the stored state at once.
 
 ## State between runs
 
