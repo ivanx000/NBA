@@ -1,6 +1,7 @@
 name: freshness-check
 
 # Fails (GitHub emails the repo owner) if any of today's games has no live pregame prediction.
+# Started at 10:40 ET by a Vercel Schedule (web/vercel.json); the cron below is a backstop.
 # Syncs games first so today's slate is current. Never calls stats.nba.com.
 on:
   schedule:

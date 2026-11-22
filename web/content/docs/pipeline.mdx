@@ -2,11 +2,11 @@ Predictions are made every morning, published before tip-off, and graded when ga
 anyone at a keyboard.
 
 <Diagram
-  label="The daily jobs: schedule sync early morning, prediction hourly until today's games are published, a freshness check, an evening refresh with the latest injury report, and results sync through the night."
+  label="The daily jobs: schedule sync early morning, prediction in the morning with a midday retry, a freshness check, an evening refresh with the latest injury report, and results sync through the night."
   chart={`flowchart LR
-  A["06:07 ET<br/>schedule-sync"] --> B["09:07–18:07 hourly<br/>daily: predict + publish"]
-  B --> C["10:37<br/>freshness-check"]
-  C --> E["~17:52<br/>daily --refresh"]
+  A["06:07 ET<br/>schedule-sync"] --> B["09:05, 12:05<br/>daily: predict + publish"]
+  B --> C["10:40<br/>freshness-check"]
+  C --> E["17:55<br/>daily --refresh"]
   E --> D["18:17–02:17 hourly<br/>results-sync"]
   D -. "next morning" .-> A`}
 />
@@ -17,12 +17,17 @@ anyone at a keyboard.
 | --- | --- | --- |
 | ~06:07 | `schedule-sync` | Updates the season's games (dates, times, final scores) from the cdn schedule |
 | Mon ~07:17 | `retrain` | Refits the game and player models on every completed game, scores each refit on a walk-forward over the last 4 complete weeks, and promotes it only if it's no worse than what was published for those games (log loss within 0.005; player MAE within 1%). Otherwise it keeps the champion and opens an issue |
-| Hourly ~09:07–18:07 | `daily` | Pulls the staged history and champion models, adds box scores for newly finished games, fetches the official injury report as of 9 AM, builds features, predicts today and projects its players, publishes, then fills in yesterday's real player lines. Stops once today is published. A missing injury report never stops it |
-| ~17:52 | `daily --refresh` | Fetches the 5:45 PM injury report, re-predicts today's games and players, and re-publishes the games that haven't started. Once a day |
-| ~10:37 | `freshness-check` | Fails (and emails) if any of today's games lacks a live prediction |
+| 09:05, retried 12:05 | `daily` | Pulls the staged history and champion models, adds box scores for newly finished games, fetches the official injury report as of 9 AM, builds features, predicts today and projects its players, publishes, then fills in yesterday's real player lines. Stops once today is published. A missing injury report never stops it |
+| 17:55 | `daily --refresh` | Fetches the 5:45 PM injury report, re-predicts today's games and players, and re-publishes the games that haven't started. Once a day |
+| 10:40 | `freshness-check` | Fails (and emails) if any of today's games lacks a live prediction |
 | Hourly ~18:17–02:17 | `results-sync` | Live status and final scores, which grade the predictions |
 
-GitHub's cron runs in UTC and can start late, so times drift by an hour with daylight saving.
+GitHub runs scheduled workflows as best effort, and in this repo they started 5 to 11 hours late,
+so the site's host starts the prediction jobs instead: Vercel Schedules fire at the ET times above
+(within 15 minutes) and call a small protected route that asks GitHub to run the workflow now.
+Each workflow keeps its own GitHub schedule as a backstop, and every job does nothing if its work
+is already done, so a second run is harmless. The other jobs still run on GitHub's schedule, whose
+UTC times drift by an hour with daylight saving.
 The retrain shares the daily job's queue, so the two never touch the stored state at once.
 
 ## State between runs

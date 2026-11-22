@@ -3,6 +3,8 @@ name: daily
 # The daily prediction job, in the cloud: pull staged history + champion from Postgres, add newly
 # finished games from cdn.nba.com box scores, predict today's games (ET), publish to prod, push the
 # history back. Never calls stats.nba.com. Each scheduled run exits early once today is published.
+# Vercel Schedules (web/vercel.json) start it at 09:05, 12:05 and 17:55 ET (refresh) through
+# workflow_dispatch, because GitHub starts scheduled runs hours late; the crons below are a backstop.
 # The morning run uses the official injury report as of 09:00 ET; the evening refresh re-predicts
 # and re-publishes the games that haven't started with the 17:45 ET report (once a day).
 on:

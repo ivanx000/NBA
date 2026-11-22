@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "schedules": {
+    "daily-morning": {
+      "schedule": "5 9 * * *",
+      "timezone": "America/New_York",
+      "path": "/api/cron/morning"
+    },
+    "freshness-check": {
+      "schedule": "40 10 * * *",
+      "timezone": "America/New_York",
+      "path": "/api/cron/freshness"
+    },
+    "daily-midday": {
+      "schedule": "5 12 * * *",
+      "timezone": "America/New_York",
+      "path": "/api/cron/midday"
+    },
+    "daily-refresh": {
+      "schedule": "55 17 * * *",
+      "timezone": "America/New_York",
+      "path": "/api/cron/refresh"
+    }
+  }
+}

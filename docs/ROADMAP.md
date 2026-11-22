@@ -307,6 +307,8 @@ Study: `ml/reports/injury_report_study.md`.
 - [x] One-time re-test on 2025-26 for the new major versions (user's OK, `--force-retest`): game v4 0.5866 vs Elo 0.5978 (CI −0.0200..−0.0023) and v3 0.5952; players minutes 4.658 vs v1 4.729. v3's and player v1's reports kept as `*_v3.*` / `*_v1.*`. Walk-forward 2025-26: v4 0.5862
 - [x] Deploy (2026-11-21): prod migration `0004`, `state push --what injuries`, code pushed (`10848aa`, CI and Vercel green), `game-v4` and `player-v2` pushed to prod state, a manual cloud run published the day with v4 and the morning report, then backfill to prod (`game-v4-wf`: 1,456 games over 2025-26 and this season; `player-v2-wf`: 3,532 lines for 226 games). Live picks untouched
 - [ ] Watch the first live week: morning vs evening picks, late scratches
+- [x] Fixed-time triggers: Vercel Schedules (`web/vercel.json`, ET) call `/api/cron/<job>`, which dispatches `daily.yml` (09:05, 12:05, refresh 17:55) and `freshness-check.yml` (10:40); GitHub's crons stay as a backstop
+- [ ] Set `CRON_SECRET` and `GITHUB_DISPATCH_TOKEN` in Vercel (Production), redeploy, and check the first scheduled runs
 
 Notes:
 - Rolling validation, chosen variant vs v3: morning report −0.0026 ± 0.0017 (5 of 6 seasons; 2019-20 can't change), evening report −0.0052 ± 0.0022 (6 of 6). Full selection: anchored 0.6186 pooled (Elo 0.6287), 2024-25 validation 0.5901 (v3 0.5952).
@@ -316,6 +318,7 @@ Notes:
 - "Available" plays less often than "Probable" (74% vs 87%): it's mostly fringe and two-way players.
 - Deploy-order trap: the pushed injury tables make the stored archive hold five files, and the code before this change refused any archive that wasn't exactly three, so the code had to go out before the next hourly cloud run (it did, 14 minutes before).
 - This season after the backfill (189 graded games, v4 walk-forward): log loss 0.5946 vs Elo 0.5974, accuracy 67.2% vs 69.8%.
+- GitHub ran every scheduled workflow in this repo 5–11 hours late from 2026-11-16 to 11-21 and skipped most hourly slots (about two `daily` runs a day), so the first publish of each day landed around 4:45–6:20 PM ET, and the first evening refresh (11-21) only ran by hand at 19:44. Manual dispatches start at once, hence the Vercel Schedules.
 - The `current_player_projections` view selects `p.*`, which Postgres expands at creation, so the migration has to recreate it to show the new column.
 
 ## Later ideas

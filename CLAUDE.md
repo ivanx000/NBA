@@ -140,7 +140,7 @@ LightGBM on macOS needs `brew install libomp` (CI's Ubuntu image already has it)
 - Commands write to the dev branch by default. Only the daily job (and explicit `--target prod`) writes to prod.
 
 **Secrets**
-- Never commit `.env*` files except `.env.example`. Secrets: `DATABASE_URL`, `DATABASE_URL_PROD`, `MESHY_API_KEY`. Don't print them or ask the user to paste them into chat.
+- Never commit `.env*` files except `.env.example`. Secrets: `DATABASE_URL`, `DATABASE_URL_PROD`, `MESHY_API_KEY`, and in Vercel only `CRON_SECRET` and `GITHUB_DISPATCH_TOKEN` (the Vercel Schedules that start the daily workflow). Don't print them or ask the user to paste them into chat.
 
 ## Tech stack (decided)
 

@@ -117,11 +117,14 @@ Historical ingest (`uv run tipoff ingest`) calls stats.nba.com, which blocks clo
 
 | When (ET) | Job | What it does |
 |---|---|---|
-| Hourly, about 9 AM to 6 PM | `daily` | New box scores and season stats, then today's predictions and player lines, published before tip-off; stops once today is done |
+| 9:05 AM, retried 12:05 PM | `daily` | New box scores and season stats, then today's predictions and player lines, published before tip-off; stops once today is done |
+| 5:55 PM | `daily --refresh` | Re-publishes the games that haven't started with the 5:45 PM injury report |
 | Mondays, about 7 AM | `retrain` | Refits both models; promotes a refit only if it's no worse than what was published over the last 4 weeks; opens an issue otherwise |
 | Daily, about 6 AM | `schedule-sync` | Schedule changes (times, postponements, new games) |
 | Hourly, about 6 PM to 2 AM | `results-sync` | Live scores and finals |
-| Daily, about 10:30 AM | `freshness-check` | Fails (and GitHub emails) if a game has no prediction |
+| 10:40 AM | `freshness-check` | Fails (and GitHub emails) if a game has no prediction |
+
+GitHub starts scheduled workflows hours late, so Vercel Schedules (`web/vercel.json`) start `daily` and `freshness-check` at these times through a protected route that dispatches the workflow; their GitHub schedules stay as a backstop. The other jobs run on GitHub's schedule.
 
 A local fallback for the daily job can be installed on a Mac (`ml/scripts/install_launchd.sh`); it acts only if the cloud job hasn't published. It isn't installed now: the cloud job has run cleanly every day.
 
