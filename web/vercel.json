@@ -17,7 +17,7 @@
       "path": "/api/cron/midday"
     },
     "daily-refresh": {
-      "schedule": "55 17 * * *",
+      "schedule": "50 17 * * *",
       "timezone": "America/New_York",
       "path": "/api/cron/refresh"
     }

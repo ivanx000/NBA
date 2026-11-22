@@ -118,7 +118,7 @@ Historical ingest (`uv run tipoff ingest`) calls stats.nba.com, which blocks clo
 | When (ET) | Job | What it does |
 |---|---|---|
 | 9:05 AM, retried 12:05 PM | `daily` | New box scores and season stats, then today's predictions and player lines, published before tip-off; stops once today is done |
-| 5:55 PM | `daily --refresh` | Re-publishes the games that haven't started with the 5:45 PM injury report |
+| 5:50 PM | `daily --refresh` | Re-publishes the games that haven't started with the 5:45 PM injury report |
 | Mondays, about 7 AM | `retrain` | Refits both models; promotes a refit only if it's no worse than what was published over the last 4 weeks; opens an issue otherwise |
 | Daily, about 6 AM | `schedule-sync` | Schedule changes (times, postponements, new games) |
 | Hourly, about 6 PM to 2 AM | `results-sync` | Live scores and finals |

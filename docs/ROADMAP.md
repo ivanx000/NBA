@@ -307,7 +307,7 @@ Study: `ml/reports/injury_report_study.md`.
 - [x] One-time re-test on 2025-26 for the new major versions (user's OK, `--force-retest`): game v4 0.5866 vs Elo 0.5978 (CI −0.0200..−0.0023) and v3 0.5952; players minutes 4.658 vs v1 4.729. v3's and player v1's reports kept as `*_v3.*` / `*_v1.*`. Walk-forward 2025-26: v4 0.5862
 - [x] Deploy (2026-11-21): prod migration `0004`, `state push --what injuries`, code pushed (`10848aa`, CI and Vercel green), `game-v4` and `player-v2` pushed to prod state, a manual cloud run published the day with v4 and the morning report, then backfill to prod (`game-v4-wf`: 1,456 games over 2025-26 and this season; `player-v2-wf`: 3,532 lines for 226 games). Live picks untouched
 - [ ] Watch the first live week: morning vs evening picks, late scratches
-- [x] Fixed-time triggers: Vercel Schedules (`web/vercel.json`, ET) call `/api/cron/<job>`, which dispatches `daily.yml` (09:05, 12:05, refresh 17:55) and `freshness-check.yml` (10:40); GitHub's crons stay as a backstop
+- [x] Fixed-time triggers: Vercel Schedules (`web/vercel.json`, ET) call `/api/cron/<job>`, which dispatches `daily.yml` (09:05, 12:05, refresh 17:50: moved from 17:55 on 2026-11-22, when the dispatch landed at 18:04 and missed a 6 PM tip) and `freshness-check.yml` (10:40); GitHub's crons stay as a backstop
 - [x] `CRON_SECRET` and `GITHUB_DISPATCH_TOKEN` set in Vercel (Production; token `nba-vercel-schedules` expires 2027-07-01), redeployed; a manual run of `daily-morning` dispatched `daily` (run 44984923813, exited: already published)
 
 Notes:
