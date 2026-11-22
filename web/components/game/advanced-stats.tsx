@@ -5,44 +5,6 @@ import type { GameAdvanced } from "@/lib/slate";
 
 import "./advanced.css";
 
-/** The headline numbers for one team, each with its league rank. */
-const TILE_KEYS = ["offRating", "defRating", "netRating", "pace", "ts", "efg", "tovPct", "orebPct", "ftRate"] as const;
-
-/** Rank tiers for color: top third, middle, bottom third. */
-function tier(rank: number, of: number): "top" | "mid" | "low" {
-  if (rank <= Math.ceil(of / 3)) return "top";
-  if (rank > of - Math.ceil(of / 3)) return "low";
-  return "mid";
-}
-
-/**
- * One team's season numbers as open tiles: ratings, pace and its own Four Factors, each with its
- * league rank (pointing at one explains it).
- */
-export function TeamAdvancedTiles({ stats }: { stats: TeamAdvanced }) {
-  return (
-    <dl className="adv-tiles">
-      {TILE_KEYS.map((key) => {
-        const def = TEAM_STATS.find((s) => s.key === key)!;
-        const rank = stats.ranks[key];
-        return (
-          <div key={key} className="adv-tiles__tile" title={`${def.label}: ${def.note}`}>
-            <dt>{def.short}</dt>
-            <dd className="tabular">
-              {showStat(key, stats.values[key], def.kind)}
-              {/* Pace has no better or worse, so its rank isn't colored. */}
-              <span className="adv-tiles__rank" data-tier={key === "pace" ? "mid" : tier(rank, stats.of)}>
-                {ordinal(rank)}
-              </span>
-            </dd>
-            <span className="sr-only">{`${ordinal(rank)} of ${stats.of}. ${def.note}.`}</span>
-          </div>
-        );
-      })}
-    </dl>
-  );
-}
-
 /**
  * Both teams side by side on every stat: the better number bold in its team's color, and a bar
  * from the middle toward the team that ranks higher, as long as the gap in ranks.

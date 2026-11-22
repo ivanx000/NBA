@@ -165,10 +165,11 @@ function heroShot(sideX: number, wx: number, aspect: number) {
   if (aspect < 1) {
     return { position: new THREE.Vector3(wx, 1.95, 3.9), target: new THREE.Vector3(wx, 1.2, 0) };
   }
-  const distance = 2.55;
+  const distance = 2.7;
   const halfWidth = distance * Math.tan(((HERO_FOV / 2) * Math.PI) / 180) * aspect;
-  // Centered in his half: half of that half off the screen's middle.
-  const x = wx - sideX * halfWidth * 0.5;
+  // Near his edge, about a fifth of the way across, so the results' numbers get the rest of the
+  // screen (--stage in components/home/results-view.css).
+  const x = wx - sideX * halfWidth * 0.6;
   return { position: new THREE.Vector3(x, 1.5, distance), target: new THREE.Vector3(x, 1.4, 0) };
 }
 

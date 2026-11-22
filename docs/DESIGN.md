@@ -125,35 +125,38 @@ If it's wrong (`pickShot` in `lib/shot-path.ts`):
 ## 5. Results screen
 
 ```
-[← HOME]                                   YOUR PICK · CELTICS
-                                           YOU'RE RIGHT.
-        (close-up of the viewed            The model gives the Celtics 58%
-         player: his upper body
-         fills this half)                  BOSTON · AWAY · MODEL'S PICK
-                                           CELTICS ───
-                                           Record  Home   Away
-                                           Last 10 Streak Rest
-                                           Points  Allowed Margin
-                                           LAST 10  W W L W …
-                                           PROJECTED LINES
-                                           J. Tatum                 35 min
-                                            27 PTS 19–35  8 REB  5 AST …
-                                           SCROLL FOR THE FULL BREAKDOWN ↓
-                                           (the game, why, season series,
-                                            the opponent, every player)
-                                                      SEE THE KNICKS →
+[← HOME]                YOUR PICK · CELTICS  [MODEL'S PICK]           58%  BOS WIN CHANCE
+                        YOU'RE RIGHT.                            ●●●●●●○○○○
+ (close-up of the       The model gives the Celtics 58%          Play it 10 times: BOS 6, NYK 4
+  viewed player, about  ─────────────────────────────────────────────────────────────────
+  a fifth of the way    CELTICS   THE GAME   PLAYERS         (tabs)
+  across; his upper     BOSTON · AWAY                   SCORING   110 ●━━━━━● 116
+  body fills his side)  CELTICS ───                     LAST 10 · POINTS SCORED AND ALLOWED
+                        (9-4) (5-2) (4-2) (7-3)          ╱╲__╱‾‾╲_╱  (gap shaded green/red)
+                        donuts: season, home, away, L10
+                        (Streak W3) (Rest 1 day off)    ADVANCED · WHERE THEY RANK
+                                                        Off rtg |||||||||●|| 118.2 3rd ...
+ SEE THE KNICKS →
 ```
-- No panel and no boxes (decided Nov 2026): the camera holds the viewed player close on his half, and the stats sit straight on the scene on the other half over a soft shade from the screen's edge (`components/home/results-view.tsx`). Each block rises in on a short stagger.
-- **The column scrolls through the whole breakdown,** same background, no new page: the verdict, the viewed team's numbers, last 10 and projected lines (top 8 by minutes), a "Scroll for the full breakdown" cue, then the game (win chances counting up, the split bar, Elo, live or backtest, the reasons), the season series, the opponent's numbers and last 10, and every projected player for both teams (`PlayerTable`). The last 10 and series come with the slate (`Slate.details`). No scrollbar; the column's top and bottom fade into the scene. `/game/[id]` still has the same breakdown as a shareable page.
+- No panel and no boxes (decided Nov 2026): the stats sit straight on the scene over a soft shade from the screen's edge (`components/home/results-view.tsx`). Each block rises in on a short stagger.
+- **The numbers take the whole screen past the player** (decided Nov 2026, replacing a single narrow column): the camera (`heroShot` in `components/scene/matchup.tsx`) holds the viewed player about a fifth of the way across from his edge, and the stats fill everything past him (`--stage` in `results-view.css`: 39% of the width, 42% on 3:2 and narrower screens, 35% on 2:1 and wider). Inside, a two-column grid that drops to one column when the area is under 40rem wide (a container query).
+- **On top,** the eyebrow ("Your pick · Celtics", with a "Model's pick" tag when the model agrees), the verdict, one line of detail and the Final badge; beside them the **win chance as ten basketballs** ("play it 10 times"): the viewed team's share lit in its glow color, the rest in the opponent's, the exact number counting up above and the Elo baseline in the caption. Without a prediction they're replaced by when it will be published.
+- **Only the viewed team** (decided Nov 2026): every number in the tabs is about the team being viewed. The other team's stats appear only after the corner switch ("See the Knicks →"); nothing in the panel switches teams or shows both teams side by side.
+- **Three tabs** under the top (text with a sliding underline in the team's glow color, arrow keys move between them; they keep their place when switching teams). The chart types were chosen in Nov 2026 to replace an earlier set (a ring, fill bars, a radar, mirrored bars and range cards) that read as too samey:
+  - **The team** (named after it): season, home, away and last-10 records as small **donuts** (the share won in the team's color, the record in the middle); streak and rest as chips. Scoring as a **dumbbell** on a 95–130 scale (points scored and allowed per game, the line between them green or red by the sign of the margin). The last 10 as a **line chart** of points scored (team color) and allowed (dashed white), oldest first, the gap between the lines shaded green where they won and red where they lost; pointing at a game names the opponent and the score. "Advanced · where they rank": all 13 advanced stats (offensive, defensive and net rating, pace, true shooting, eFG%, turnover rate, offensive rebounding, free-throw rate, and on defense opponents' eFG%, forced turnovers, defensive rebounding and opponents' free-throw rate) as **rank strips**, each a rail with a notch per team in the league (1st on the right, the middle third faintly lit) and the team's dot on it, green in the top third and red in the bottom third (pace isn't colored); pointing at one explains the stat.
+  - **The game:** "How the model got there", full width: the reasons as a **waterfall** in the viewed team's terms, from an even game (50%) each reason a step toward the team it favors (in that team's glow color), then "Everything else the model weighs" landing on the prediction; the axis zooms to the steps' range and a dashed line marks 50%. Step sizes are the stored factors' approximate effects (`game_predictions.factors`), so the note says they're approximate. Then the season series (each game's winner bold) and the tip-off time.
+  - **Players** (when the viewed team has lines): a **box score**. On top, the team's three projected leaders (scoring, rebounding, playmaking): the number large in the team color, the player's number and short name, the 80% range and once final the real number. Then a table of its projected players, sorted by minutes and re-sorted by clicking a heading (minutes, points, rebounds, assists, TS%, USG%): minutes as the number over a bar out of 48, and points, rebounds and assists each as the projection beside a **whisker** on the column's shared scale (the 80% range as a capped line, the projection as a dot, once final the real number as a tick, green inside the range and red outside), the range in faint mono under it with the real number and ✓/✗. Injury status and "Didn't play" show under the name. A key explains the marks; the note says the lines assume he plays. The table scrolls sideways when narrow; on phones the leaders shrink into one row.
+- Charts answer the pointer, focus and a tap by filling a caption line under them; the caption is `aria-live`, and every mark has a text equivalent for screen readers. With reduced motion nothing grows or draws in.
 - **Home** sits top left in the nav's row (the nav lets clicks through its empty middle on the home page), above the stats.
-- **The switch:** a button in the bottom corner of the player's half, never over the stats ("See the Knicks →", underlined in their color; on phones top right under Menu) views the other team. The camera glides to its player, who appears as if he'd been picked from the start, and every number changes; the eyebrow then reads "If you'd picked the Knicks" and the headline "That one wins." or "Not that one." Focus moves to the new headline and the column scrolls back to the top.
+- **The switch:** a button in the bottom corner of the player's half, never over the stats ("See the Knicks →", underlined in their color; on phones top right under Menu) views the other team. The camera glides to its player, who appears as if he'd been picked from the start, and every number changes; the eyebrow then reads "If you'd picked the Knicks" and the headline "That one wins." or "Not that one." Focus moves to the new headline and the area scrolls back to the top.
+- **Phones and portrait screens** (under 768px wide, or taller than wide, where the camera centers the player): the player in the top part, the stats scrolling over the lower part, full width, one column, a smaller ring.
 - The verdict is red when wrong, white with a blue glow when right; the team name is underlined in its color. Finished games show the Final badge as colored text.
-- The reasons are bars (`components/game/factor-bars.tsx`): each in the color of the team it favors, its length the effect's size. Factor copy comes from `web/lib/factor-copy.ts`. Never show raw feature names.
+- On the game page the reasons are bars (`components/game/factor-bars.tsx`; the results screen uses the waterfall above): each in the color of the team it favors, its length the effect's size. Factor copy comes from `web/lib/factor-copy.ts`. Never show raw feature names.
 - **Advanced stats** (decided Nov 2026; `components/game/advanced-stats.tsx`, `lib/advanced-stats.ts`), season to date before the game, from the box scores in `team_game_stats` and `player_game_stats`:
-  - Under the viewed team's numbers, "Advanced · league rank": nine open tiles (offensive, defensive and net rating, pace, true shooting, eFG%, turnover rate, offensive rebounding, free-throw rate), each with its league rank in mono, green in the top third and red in the bottom third (pace isn't colored: it has no better side). Pointing at a tile explains the stat.
-  - After the reasons, "Advanced matchup": both teams on all 13 stats (the nine plus the opponents' Four Factors and defensive rebounding), away on the left and home on the right, each value with its rank; the better value is bold in its team's glow color and a thin bar grows from the middle toward the higher-ranked team, as long as the gap in ranks. The game page shows the same matchup as its own section after the two teams.
+  - On the results screen they are the team tab's rank strips (above).
+  - "Advanced matchup" (on the game page only): both teams on all 13 stats (the nine plus the opponents' Four Factors and defensive rebounding), away on the left and home on the right, each value with its rank; the better value is bold in its team's glow color and a thin bar grows from the middle toward the higher-ranked team, as long as the gap in ranks. The game page shows the same matchup as its own section after the two teams.
   - Each projected player gets a mono line under his projection: true shooting, usage and points per game over his last 5 (with his season average). The player tables add TS% and USG% columns. Rates need at least 60 minutes played; three-point percentage needs 10 attempts.
-- Projected lines (`components/game/player-lines.tsx`, `PlayerList`): a short name ("J. Tatum", no initials badge), projected minutes in mono, then points, rebounds and assists as bold numbers with their 80% range in faint mono; once final, the real line below ("Didn't play" for a player who didn't). A small note says they assume he plays.
+- Projected lines on the results screen are the Players tab's box score (`PlayerBoard` in `components/home/results-visuals.tsx`, above). `PlayerList` and `PlayerTable` in `components/game/player-lines.tsx` remain for the game page.
 - The verdict is announced in an `aria-live` region and focus moves to it.
 
 ## 6. Other pages
