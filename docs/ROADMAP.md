@@ -308,7 +308,7 @@ Study: `ml/reports/injury_report_study.md`.
 - [x] Deploy (2026-11-21): prod migration `0004`, `state push --what injuries`, code pushed (`10848aa`, CI and Vercel green), `game-v4` and `player-v2` pushed to prod state, a manual cloud run published the day with v4 and the morning report, then backfill to prod (`game-v4-wf`: 1,456 games over 2025-26 and this season; `player-v2-wf`: 3,532 lines for 226 games). Live picks untouched
 - [ ] Watch the first live week: morning vs evening picks, late scratches
 - [x] Fixed-time triggers: Vercel Schedules (`web/vercel.json`, ET) call `/api/cron/<job>`, which dispatches `daily.yml` (09:05, 12:05, refresh 17:55) and `freshness-check.yml` (10:40); GitHub's crons stay as a backstop
-- [ ] Set `CRON_SECRET` and `GITHUB_DISPATCH_TOKEN` in Vercel (Production), redeploy, and check the first scheduled runs
+- [x] `CRON_SECRET` and `GITHUB_DISPATCH_TOKEN` set in Vercel (Production; token `nba-vercel-schedules` expires 2027-07-01), redeployed; a manual run of `daily-morning` dispatched `daily` (run 44984923813, exited: already published)
 
 Notes:
 - Rolling validation, chosen variant vs v3: morning report −0.0026 ± 0.0017 (5 of 6 seasons; 2019-20 can't change), evening report −0.0052 ± 0.0022 (6 of 6). Full selection: anchored 0.6186 pooled (Elo 0.6287), 2024-25 validation 0.5901 (v3 0.5952).
